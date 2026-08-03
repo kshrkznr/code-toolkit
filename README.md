@@ -251,9 +251,12 @@ Primary concepts:
 
 # Installation
 
-The current macOS and Windows binaries are published under
-[`release/current`](release/current/). Start from a repository checkout so the
-executable can discover the accompanying Cookbook and documentation.
+The current macOS and Windows binaries are published on the
+[GitHub Releases page](https://github.com/kshrkznr/code-toolkit/releases/latest).
+Start from a repository checkout so the executable can discover the accompanying
+Cookbook and documentation. Create `release/current` in the checkout, then
+download `checksums.txt` and the archive for your platform from the release
+Assets into that directory.
 
 ## macOS
 
@@ -262,14 +265,15 @@ and place `ctk` on `PATH`:
 
 ```bash
 cd release/current
-shasum -a 256 -c checksums.txt
+shasum -a 256 ctk_v0.1.0_darwin_arm64.tar.gz
 tar -xzf ctk_v0.1.0_darwin_arm64.tar.gz
 mkdir -p "$HOME/.local/bin"
 install -m 0755 ctk "$HOME/.local/bin/ctk"
 ```
 
-Use `ctk_v0.1.0_darwin_amd64.tar.gz` instead on an Intel Mac. Add
-`$HOME/.local/bin` to `PATH` when it is not already available.
+Compare the displayed SHA-256 value with the corresponding entry in
+`checksums.txt`. Use `ctk_v0.1.0_darwin_amd64.tar.gz` instead on an Intel Mac.
+Add `$HOME/.local/bin` to `PATH` when it is not already available.
 
 ## Windows
 
