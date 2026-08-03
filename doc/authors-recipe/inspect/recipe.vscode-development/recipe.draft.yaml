@@ -1,0 +1,27 @@
+name: vscode-development
+
+os: macos
+
+platform: code
+
+runtime:
+  - common
+  - vim
+  - theme.solarized_light
+  - terminal
+  - git
+  - language
+  - remote-development
+  - dev-container
+
+profile:
+  - core
+  - inspect
+  - ops
+  - review
+  - struct
+
+config:
+  dist-strategy:
+    default-profile:
+      extensions: clean

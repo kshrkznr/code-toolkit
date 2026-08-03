@@ -1,0 +1,26 @@
+name: vscode-default
+
+os: macos
+
+platform: code
+
+runtime:
+  - common
+  - theme.monokai
+  - terminal
+  - git
+  - language
+  - chatgpt
+
+profile:
+  - core
+  - inspect
+  - ops
+  - review
+  - connect
+  - struct
+
+config:
+  dist-strategy:
+    default-profile:
+      extensions: clean

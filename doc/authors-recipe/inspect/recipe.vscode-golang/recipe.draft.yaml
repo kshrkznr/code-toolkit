@@ -1,0 +1,26 @@
+name: vscode-golang
+
+os: macos
+
+platform: code
+
+runtime:
+  - common
+  - theme.solarized_light
+  - terminal
+  - git
+  - language
+  - golang
+  - chatgpt
+
+profile:
+  - core
+  - inspect
+  - ops
+  - review
+  - struct
+
+config:
+  dist-strategy:
+    default-profile:
+      extensions: clean

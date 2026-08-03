@@ -1,0 +1,124 @@
+# Recipe View Summary
+
+> Source: `vscode-golang`  
+> Recipe: `vscode-golang`  
+> OS: `macos`  
+> Platform: `code`
+
+## Result
+
+| Artifact | Status | Added | Removed | Changed | Review |
+| --- | --- | ---: | ---: | ---: | --- |
+| Recipe | INVENTORY | - | - | - | [recipe.draft.yaml](recipe.draft.yaml) |
+| Settings | INVENTORY | 251 | 0 | 0 | [settings.draft.md](settings.draft.md) |
+| Extensions | INVENTORY | 65 | 0 | 0 | [extensions.draft.md](extensions.draft.md) |
+| Keybindings | INVENTORY | 0 | 0 | 1 | [keybindings.draft.md](keybindings.draft.md) |
+| Mcp | INVENTORY | 0 | 0 | 0 | [mcp.draft.md](mcp.draft.md) |
+| Snippets | INVENTORY | 0 | 0 | 1 | [snippets.draft.md](snippets.draft.md) |
+| Tasks | INVENTORY | 0 | 0 | 1 | [tasks.draft.md](tasks.draft.md) |
+
+## Profiles
+
+| Profile | Settings | Extensions | Inherits Settings |
+| --- | ---: | ---: | --- |
+| default | 158 | 0 | - |
+| core | 158 | 7 | true |
+| inspect | 158 | 13 | true |
+| ops | 158 | 16 | true |
+| review | 158 | 9 | true |
+| struct | 158 | 20 | true |
+
+## Extensions Used by Recipe
+
+- alefragnani.bookmarks
+- asciidoctor.asciidoctor-vscode
+- bierner.markdown-mermaid
+- bpruitt-goddard.mermaid-markdown-syntax-highlighting
+- christian-kohler.path-intellisense
+- chrmarti.regex
+- cwan.native-ascii-converter
+- davidanson.vscode-markdownlint
+- davidwang.ini-for-vscode
+- eamodio.gitlens
+- earshinov.filter-lines
+- emilast.logfilehighlighter
+- gehdoc.vscode-textile-preview
+- golang.go
+- idleberg.textile
+- janisdd.vscode-edit-csv
+- jeff-hykin.code-eol
+- mechatroner.rainbow-csv
+- mhutchie.git-graph
+- ms-vscode-remote.remote-ssh
+- ms-vscode-remote.remote-ssh-edit
+- ms-vscode.hexeditor
+- ms-vscode.remote-explorer
+- nhoizey.gremlins
+- oderwat.indent-rainbow
+- openai.chatgpt
+- redhat.vscode-xml
+- redhat.vscode-yaml
+- ryu1kn.partial-diff
+- shardulm94.trailing-spaces
+- tamasfe.even-better-toml
+- timonwong.shellcheck
+- usernamehw.errorlens
+- yzhang.markdown-all-in-one
+
+## Resolved Ingredient Resources
+
+- extension/alefragnani.bookmarks.settings.json
+- extension/asciidoctor.asciidoctor-vscode.settings.json
+- extension/bierner.markdown-mermaid.settings.json
+- extension/bpruitt-goddard.mermaid-markdown-syntax-highlighting.settings.json
+- extension/christian-kohler.path-intellisense.settings.json
+- extension/chrmarti.regex.settings.json
+- extension/cwan.native-ascii-converter.settings.json
+- extension/davidanson.vscode-markdownlint.settings.json
+- extension/davidwang.ini-for-vscode.settings.json
+- extension/eamodio.gitlens.settings.json
+- extension/earshinov.filter-lines.settings.json
+- extension/emilast.logfilehighlighter.settings.json
+- extension/gehdoc.vscode-textile-preview.settings.json
+- extension/idleberg.textile.settings.json
+- extension/janisdd.vscode-edit-csv.settings.json
+- extension/jeff-hykin.code-eol.settings.json
+- extension/mechatroner.rainbow-csv.settings.json
+- extension/mhutchie.git-graph.settings.json
+- extension/ms-vscode-remote.remote-ssh-edit.settings.json
+- extension/ms-vscode-remote.remote-ssh.settings.json
+- extension/ms-vscode.hexeditor.settings.json
+- extension/ms-vscode.remote-explorer.settings.json
+- extension/nhoizey.gremlins.settings.json
+- extension/oderwat.indent-rainbow.settings.json
+- extension/redhat.vscode-xml.settings.json
+- extension/redhat.vscode-yaml.settings.json
+- extension/ryu1kn.partial-diff.settings.json
+- extension/shardulm94.trailing-spaces.settings.json
+- extension/tamasfe.even-better-toml.settings.json
+- extension/timonwong.shellcheck.settings.json
+- extension/usernamehw.errorlens.settings.json
+- extension/yzhang.markdown-all-in-one.settings.json
+- os.macos.settings.json
+- profile.core.extensions
+- profile.inspect.extensions
+- profile.ops.extensions
+- profile.review.extensions
+- profile.struct.extensions
+- runtime.chatgpt.extensions
+- runtime.chatgpt.settings.json
+- runtime.common.extensions
+- runtime.common.macos.settings.json
+- runtime.common.settings.json
+- runtime.common.snippets.shellscript.json
+- runtime.git.settings.json
+- runtime.golang.extensions
+- runtime.language.settings.json
+- runtime.terminal.settings.json
+- runtime.theme.solarized_light.settings.json
+
+## Resolution
+
+- Recipe source: `$CTK_HOME/cookbook/recipe/vscode-golang.macos.yaml`
+- Resolver: Cookbook Resolver with declared Go Merge Rules
+- Generated: `2026-08-03T13:45:45+09:00`

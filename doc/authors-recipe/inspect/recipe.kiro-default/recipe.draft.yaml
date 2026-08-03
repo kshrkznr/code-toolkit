@@ -1,0 +1,25 @@
+name: kiro-default
+
+os: macos
+
+platform: kiro
+
+runtime:
+  - common
+  - theme.kiro-dark
+  - terminal
+  - git
+  - language
+
+profile:
+  - core
+  - inspect
+  - ops
+  - review
+  - connect
+  - struct
+
+config:
+  dist-strategy:
+    default-profile:
+      extensions: clean

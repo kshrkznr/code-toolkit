@@ -1,0 +1,29 @@
+# A small executable Recipe for exploring CTK.
+# Recipe and Ingredient concepts:
+# ../../doc/core/core.cookbook.md
+name: vscode-sample
+
+# Supported operating systems: macos, windows
+os: macos
+
+# Supported Platform commands: code, kiro
+# This sample targets Visual Studio Code through the code command.
+platform: code
+
+# Ingredient representation and resolution:
+# ../../doc/contract/contract.cookbook.md
+runtime:
+  - common
+  - text
+  - markdown
+
+# Distribution assembly strategy:
+# ../../doc/note/note.recipe-build-strategy.md
+config:
+  dist-strategy:
+    extension-marketplace: true
+    lock-mode: refresh
+    default-profile:
+      settings: runtime
+      extensions: runtime
+      mcp: unmanaged

@@ -1,0 +1,256 @@
+# CTK Go
+
+This directory contains the primary native Go implementation of CTK.
+
+The Windows release is a native executable. Using the primary Go
+implementation on Windows does not require Git Bash.
+
+This README is the current entry point for Go behavior and implementation
+decisions. Historical observations from the Bash-to-Go migration are secondary
+context in the Project Knowledge
+[Responsibility-First Implementation Migration](../doc/project-knowledge/experiment/experiment.responsibility-first-implementation-migration.md)
+Experiment. The preserved Bash implementation remains available under `bash/`
+as a historical and behavioral reference.
+
+## Implementation principles
+
+- Write idiomatic Go rather than translating Bash functions and pipelines.
+- Model domain responsibilities explicitly with Go types and packages.
+- Keep filesystem and Platform integration at clear boundaries.
+- Prefer deterministic behavior and explicit errors.
+- Introduce interfaces only for a concrete second implementation or useful
+  test boundary.
+- Add tests against Contracts and observable behavior.
+- Preserve unknown source data when a read-modify-write workflow requires it.
+- Avoid host mutation until its recovery boundary is documented and tested.
+
+## Applied Kitchen Notes
+
+The Go implementation currently adopts the Merge Rules Kitchen Note for
+Settings composition:
+
+- Settings Resources enter the merge stream in Cookbook Core resolution order.
+- Objects merge recursively.
+- Arrays, scalars, and `null` use the later value.
+- Array paths absent from Merge Rules use later-value `replace`.
+- Cookbook-wide exact paths may use deterministic, canonical-value-deduplicated
+  `union` through `cookbook/kitchen-notes/go.merge-rules.yaml`.
+- Merge Rules are not selected per Recipe.
+
+Notes not declared here are not part of Go Cookbook interpretation.
+
+## Implementation Contracts
+
+Observable behavior and persisted representations selected by the Go
+implementation are indexed under
+[`doc/contract`](doc/contract/README.md). Read them together with the shared
+Contracts under [`../doc/contract`](../doc/contract/README.md).
+
+The shared Contract defines the implementation-independent agreement. The Go
+Contract records concrete choices such as trusted Manifest formats, Native CLI
+selection, CodeVenv recovery, and Workbench Commit syntax.
+
+## Package layout
+
+```text
+go/
+├── doc/contract/          Go implementation Contracts
+├── cmd/ctk/              CLI entry point
+├── release.sh            Cross-platform Release artifact builder
+└── internal/
+    ├── archive/          Hashed snapshot packaging and validation
+    ├── buildinfo/        Binary version and build provenance
+    ├── cli/selector/     Native single-selection boundary
+    ├── codevenv/         Runtime selection and transactions
+    ├── converge/         Settings and Extension convergence reports
+    ├── cookbook/         Pure Cookbook-to-Runtime-Plan resolution
+    ├── directlauncher/   Generated host-facing command launchers
+    ├── distribution/     Distribution discovery and metadata
+    ├── flatformat/       Editable Workbench Settings representation
+    ├── launcher/         Override and native launch resolution
+    ├── lifecycle/        Recipe/Archive Build, Apply, and Lock orchestration
+    ├── mergerules/       Go Kitchen Note merge-rule loading
+    ├── platform/         Host-specific process integration
+    ├── recipe/           Recipe representation and loading
+    ├── recovery/         Internal trusted-Lock Runtime reconstruction
+    ├── runtimeio/        Platform Runtime capability boundary
+    ├── runtimelock/      Runtime observation and trusted Lock publication
+    ├── settings/         JSONC parsing and VS Code merge semantics
+    └── workbench/        Freeze and Inspect Artifact lifecycle
+```
+
+## Build and test
+
+Build the repository binary:
+
+```bash
+go -C go build -o ../bin/ctk ./cmd/ctk
+```
+
+Run tests and static analysis:
+
+```bash
+go -C go test ./...
+go -C go vet ./...
+```
+
+The repository entry points are:
+
+```text
+bin/ctk        Primary Go implementation
+bash/bin/ctk   Bash reference implementation
+bash/scripts/  Bash reference source
+```
+
+## Release artifacts
+
+Create versioned macOS and Windows artifacts with checksums:
+
+```bash
+go/release.sh v0.1.0
+```
+
+The builder produces:
+
+```text
+release/v0.1.0/
+├── ctk_v0.1.0_darwin_arm64.tar.gz
+├── ctk_v0.1.0_darwin_amd64.tar.gz
+├── ctk_v0.1.0_windows_amd64.zip
+└── checksums.txt
+```
+
+Each platform archive contains the executable, the CTK `LICENSE`, and generated
+`THIRD_PARTY_NOTICES`. Regenerate the checked-in notice inventory after
+dependency changes:
+
+```bash
+go/third-party-notices.sh
+```
+
+Repository builds remain the development path. Versioned Releases are the
+intended source for future Homebrew and Scoop distribution.
+
+The module path remains the local `code-toolkit` name until a publicly
+resolvable canonical repository or mirror is selected. Binary Releases and the
+`ctk` command name do not depend on changing it.
+
+## Workspace discovery
+
+CTK resolves its workspace in this order:
+
+1. `CTK_HOME`, when explicitly configured.
+2. The current directory or its ancestors.
+3. The repository-local location relative to the executable.
+
+A valid workspace contains both `cookbook/recipe` and
+`cookbook/ingredient`. This allows a Homebrew or Scoop binary to operate on
+Cookbook state without installing that state alongside the executable.
+
+## Commands
+
+```text
+ctk activate [platform] [--force]
+ctk build [recipe-or-archive] [--on-conflict suffix|abort] [--keep-staging] [--force]
+ctk apply [recipe-or-archive] [dist] [--force]
+ctk archive [dist] [--on-conflict suffix|replace|abort]
+ctk lock [dist]
+ctk freeze draft [dist] [--on-conflict abort|replace]
+ctk freeze commit [--force]
+ctk view [source] [--on-conflict abort|replace]
+ctk view dist [dist] [--on-conflict abort|replace]
+ctk view recipe [recipe] [--on-conflict abort|replace]
+ctk view ingredient [all|layer|layer.name] [--on-conflict abort|replace]
+ctk sync [left] [right] [--on-conflict abort|replace]
+ctk list
+ctk current [platform]
+ctk deactivate [platform] [--force|--force-empty]
+ctk use [dist]
+ctk launch [dist] [--] [args...]
+ctk workbench [draft|inspect] [viewpoint] [--editor command]
+ctk select
+ctk version
+ctk help
+```
+
+`launch` forwards trailing file, directory, and Platform arguments without
+changing them. Use an empty Distribution slot or `--` to select a Distribution
+interactively while still providing launch targets:
+
+```text
+ctk launch vscode-default .
+ctk launch "" .
+ctk launch -- .
+ctk launch vscode-default -- file.go another-directory
+```
+
+Relative launch targets remain relative to the caller's working directory.
+
+## Open a Workbench
+
+Open an existing Draft or Inspect Workbench in an editor:
+
+```text
+ctk workbench
+ctk workbench draft
+ctk workbench inspect
+ctk workbench inspect dist.vscode-default --editor code
+```
+
+Omitting the kind selects between the available Draft and Inspect areas.
+Omitting an Inspect viewpoint selects one generated viewpoint. The editor is
+resolved from `--editor`, then `$EDITOR`, then `code` when available, with
+`vim` as the final fallback. CTK opens the Workbench directory so its Summary
+and typed Draft Artifacts can be reviewed together.
+
+Invoking `ctk` without a command opens the Native command Selector. Explicit
+commands remain available for automation and shell history.
+
+## Current implementation
+
+The Go implementation provides the complete M0-M8 lifecycle:
+
+- Native CLI selection, launch, and Runtime switching.
+- Cookbook resolution with Settings variants and Merge Rules.
+- Recipe and Archive Build/Apply with trusted Locks and Extension Pool support.
+- CodeVenv activation and deactivation with recovery and safety gates.
+- Freeze Draft/Commit, View, and Sync Workbench operations.
+- Exact-version, hashed Archive creation and offline reconstruction.
+- Direct Launcher generation for macOS command files and Windows `.cmd` files.
+- Primary `ctk` binary and versioned Release artifact generation.
+
+Windows builds and generated `.cmd` files have automated coverage and
+cross-build validation. Host-specific behavior continues to be refined from
+real-machine feedback.
+
+## Observed Platform behavior
+
+On Kiro for Windows, an Open VSX installation of
+`emilast.logfilehighlighter` initially failed and CTK continued to its
+secondary Visual Studio Marketplace Pool candidate. Kiro CLI reported
+`unable to verify the first certificate`; this was a TLS certificate
+validation failure rather than an Extension ID or registry identity problem.
+
+In the observed environment, applying the VS Code-family setting
+`"http.proxyStrictSSL": false` allowed Kiro CLI to install the extension from
+Open VSX. Disabling strict certificate validation is an environment security
+decision, not a general CTK recommendation; installing the required CA trust
+is preferable when available. This observation does not currently require an
+OS or Platform Extension Resource Variant.
+
+Marketplace-facing spelling remains Cookbook input. Independently, the Go
+implementation normalizes only its internal VSIX Pool filename key to lower
+case.
+
+## Future
+
+- Optional log and Operation Report presentation modes: normal, verbose,
+  quiet, and JSON.
+- Release signing, notarization, and concrete Homebrew Tap/Scoop Bucket setup.
+- The relationship among the CLI, `CTK_HOME`, and multiple Workspaces for
+  binary distribution, including placement boundaries for Cookbook, Dist,
+  Archive, and Pool. The open questions remain in
+  `doc/future/future.candidates.md`.
+- A stable public Go module path after a canonical repository URL exists.
+- Configurable no-argument behavior if a concrete non-interactive use case
+  requires it.

@@ -1,0 +1,9 @@
+{
+  "[markdown]": {
+    "editor.wordWrap": "on",
+    "files.trimTrailingWhitespace": false
+  },
+  "[plaintext]": {
+    "editor.wordWrap": "on"
+  }
+}

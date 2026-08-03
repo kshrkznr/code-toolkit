@@ -1,0 +1,259 @@
+package lifecycle
+
+import (
+	"archive/zip"
+	"context"
+	"errors"
+	"os"
+	"path/filepath"
+	"testing"
+
+	ctkarchive "code-toolkit/internal/archive"
+	"code-toolkit/internal/converge"
+	"code-toolkit/internal/cookbook"
+	"code-toolkit/internal/distribution"
+	"code-toolkit/internal/recipe"
+	"code-toolkit/internal/runtimeio"
+	"code-toolkit/internal/runtimelock"
+	"code-toolkit/internal/settings"
+)
+
+type archiveRuntime struct {
+	settings   settings.Document
+	extensions []runtimeio.Extension
+}
+
+func (r *archiveRuntime) Scopes(context.Context) ([]runtimeio.Scope, error) {
+	return []runtimeio.Scope{runtimeio.DefaultScope()}, nil
+}
+func (r *archiveRuntime) EnsureProfile(context.Context, string) error { return nil }
+func (r *archiveRuntime) SetInheritance(context.Context, runtimeio.Scope, cookbook.Inheritance) error {
+	return nil
+}
+func (r *archiveRuntime) ReadInheritance(context.Context, runtimeio.Scope) (cookbook.Inheritance, error) {
+	return cookbook.Inheritance{}, nil
+}
+func (r *archiveRuntime) ReadSettings(context.Context, runtimeio.Scope) (settings.Document, error) {
+	return r.settings, nil
+}
+func (r *archiveRuntime) WriteSettings(_ context.Context, _ runtimeio.Scope, value settings.Document) error {
+	r.settings = value
+	return nil
+}
+func (r *archiveRuntime) Extensions(context.Context, runtimeio.Scope) ([]runtimeio.Extension, error) {
+	return r.extensions, nil
+}
+func (r *archiveRuntime) InstallExtension(_ context.Context, _ runtimeio.Scope, _ string) error {
+	r.extensions = []runtimeio.Extension{{ID: "sample.ext", Version: "2.0"}}
+	return nil
+}
+func (r *archiveRuntime) UninstallExtension(context.Context, runtimeio.Scope, string) error {
+	return nil
+}
+
+type fakeRuntime struct{ installErr error }
+
+type unresolvedUpdater struct{}
+
+func (unresolvedUpdater) Update(_ context.Context, _ string, _ runtimelock.Snapshot, report *converge.Report) {
+	report.Add(converge.Operation{Action: "update Extension Pool", Status: converge.Unresolved})
+}
+
+func (*fakeRuntime) Scopes(context.Context) ([]runtimeio.Scope, error) {
+	return []runtimeio.Scope{runtimeio.DefaultScope()}, nil
+}
+func (*fakeRuntime) EnsureProfile(context.Context, string) error { return nil }
+func (*fakeRuntime) SetInheritance(context.Context, runtimeio.Scope, cookbook.Inheritance) error {
+	return nil
+}
+func (*fakeRuntime) ReadInheritance(context.Context, runtimeio.Scope) (cookbook.Inheritance, error) {
+	return cookbook.Inheritance{}, nil
+}
+func (*fakeRuntime) ReadSettings(context.Context, runtimeio.Scope) (settings.Document, error) {
+	return settings.Document{}, nil
+}
+func (*fakeRuntime) WriteSettings(context.Context, runtimeio.Scope, settings.Document) error {
+	return nil
+}
+func (*fakeRuntime) Extensions(context.Context, runtimeio.Scope) ([]runtimeio.Extension, error) {
+	return []runtimeio.Extension{}, nil
+}
+func (f *fakeRuntime) InstallExtension(context.Context, runtimeio.Scope, string) error {
+	return f.installErr
+}
+func (*fakeRuntime) UninstallExtension(context.Context, runtimeio.Scope, string) error { return nil }
+
+func TestBuildPublishesCompletedStaging(t *testing.T) {
+	root := t.TempDir()
+	recipePath, ingredients := fixture(t, root, "runtime: [empty]\n")
+	service := Service{Cookbook: cookbook.Repository{Root: ingredients}, Runtime: func(distribution.Distribution) (runtimeio.Runtime, error) { return &fakeRuntime{}, nil }}
+	result, err := service.Build(context.Background(), recipePath, filepath.Join(root, "dist"), "sample", false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Distribution.Name != "sample" || result.StagingPath != "" {
+		t.Fatalf("result = %#v", result)
+	}
+	for _, required := range []string{".meta/recipe.yaml", ".lock/manifest.json", ".lock/runtime.extensions.lock", "sample"} {
+		if _, err := os.Stat(filepath.Join(result.Distribution.Path, required)); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestBuildArchiveUsesExactAssetsAndPublishesFreshLock(t *testing.T) {
+	root := t.TempDir()
+	bundleRoot := filepath.Join(root, "archive", "sample")
+	mustWrite(t, filepath.Join(bundleRoot, "lock", "recipe.yaml"), "name: sample\nos: macos\nplatform: code\n")
+	writeLifecycleVSIX(t, filepath.Join(bundleRoot, "vsix", "sample.ext-2.0.vsix"))
+	snapshot := runtimelock.Snapshot{FormatVersion: runtimelock.FormatVersion, RecipeName: "sample", Platform: "code", Default: runtimelock.ScopeSnapshot{Settings: settings.Document{"value": "archived"}, Extensions: []runtimeio.Extension{{ID: "sample.ext", Version: "2.0"}}}}
+	bundle := ctkarchive.Bundle{Path: bundleRoot, Manifest: ctkarchive.Manifest{RecipeName: "sample", OS: "macos", Platform: "code", LaunchOverrides: []string{"run.sh"}}, Recipe: recipe.Recipe{Name: "sample", OS: "macos", Platform: "code"}, Snapshot: snapshot}
+	runtime := &archiveRuntime{}
+	service := Service{Runtime: func(distribution.Distribution) (runtimeio.Runtime, error) { return runtime, nil }, Locks: runtimelock.Store{}}
+	result, err := service.BuildArchive(context.Background(), bundle, filepath.Join(root, "dist"), "sample", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Distribution.Name != "sample" || len(result.Warnings) != 1 {
+		t.Fatalf("result = %#v", result)
+	}
+	if runtime.settings["value"] != "archived" || len(runtime.extensions) != 1 || runtime.extensions[0].Version != "2.0" {
+		t.Fatalf("runtime = %#v", runtime)
+	}
+	if _, err := os.Stat(filepath.Join(result.Distribution.Path, ".lock", "manifest.json")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(result.Distribution.Path, "sample")); err != nil {
+		t.Fatal(err)
+	}
+	runtime.settings = settings.Document{"value": "changed"}
+	runtime.extensions = []runtimeio.Extension{{ID: "sample.ext", Version: "1.0"}}
+	applied, err := service.ApplyArchive(context.Background(), bundle, result.Distribution)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if applied.Distribution.Name != "sample" || runtime.settings["value"] != "archived" || runtime.extensions[0].Version != "2.0" {
+		t.Fatalf("applied=%#v runtime=%#v", applied, runtime)
+	}
+}
+
+func writeLifecycleVSIX(t *testing.T, path string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		t.Fatal(err)
+	}
+	file, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writer := zip.NewWriter(file)
+	entry, err := writer.Create("extension/package.json")
+	if err == nil {
+		_, err = entry.Write([]byte(`{"publisher":"sample","name":"ext","version":"2.0"}`))
+	}
+	if closeErr := writer.Close(); err == nil {
+		err = closeErr
+	}
+	if closeErr := file.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestBuildFailureRemovesOrKeepsStaging(t *testing.T) {
+	root := t.TempDir()
+	recipePath, ingredients := fixture(t, root, "runtime: [broken]\n")
+	mustWrite(t, filepath.Join(ingredients, "runtime.broken.extensions"), "broken.id\n")
+	service := Service{Cookbook: cookbook.Repository{Root: ingredients}, Runtime: func(distribution.Distribution) (runtimeio.Runtime, error) {
+		return &fakeRuntime{installErr: errors.New("rejected")}, nil
+	}}
+	removed, err := service.Build(context.Background(), recipePath, filepath.Join(root, "dist"), "removed", false, false)
+	if err == nil {
+		t.Fatal("expected failure")
+	}
+	if _, statErr := os.Stat(removed.StagingPath); !os.IsNotExist(statErr) {
+		t.Fatalf("staging remains: %v", statErr)
+	}
+	kept, err := service.Build(context.Background(), recipePath, filepath.Join(root, "dist"), "kept", true, false)
+	if err == nil {
+		t.Fatal("expected failure")
+	}
+	if _, statErr := os.Stat(kept.StagingPath); statErr != nil {
+		t.Fatalf("staging missing: %v", statErr)
+	}
+}
+
+func TestBuildForcePublishesWithUnresolvedExtension(t *testing.T) {
+	root := t.TempDir()
+	recipePath, ingredients := fixture(t, root, "runtime: [broken]\n")
+	mustWrite(t, filepath.Join(ingredients, "runtime.broken.extensions"), "broken.id\n")
+	service := Service{Cookbook: cookbook.Repository{Root: ingredients}, Runtime: func(distribution.Distribution) (runtimeio.Runtime, error) {
+		return &fakeRuntime{installErr: errors.New("rejected")}, nil
+	}}
+	result, err := service.Build(context.Background(), recipePath, filepath.Join(root, "dist"), "forced", false, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Distribution.Name != "forced" || result.Report.HasFailures() {
+		t.Fatalf("result=%#v", result)
+	}
+	found := false
+	for _, operation := range result.Report.Operations {
+		if operation.Action == "install extension" && operation.Status == converge.Unresolved {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("report=%#v", result.Report)
+	}
+}
+
+func TestNextAvailableName(t *testing.T) {
+	root := t.TempDir()
+	if err := os.Mkdir(filepath.Join(root, "sample"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(root, "sample.1"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := NextAvailableName(root, "sample"); err != nil || got != "sample.2" {
+		t.Fatalf("name = %q", got)
+	}
+}
+
+func TestPoolUpdateUnresolvedDoesNotFailBuild(t *testing.T) {
+	root := t.TempDir()
+	recipePath, ingredients := fixture(t, root, "runtime: [empty]\n")
+	service := Service{
+		Cookbook:   cookbook.Repository{Root: ingredients},
+		Runtime:    func(distribution.Distribution) (runtimeio.Runtime, error) { return &fakeRuntime{}, nil },
+		PoolUpdate: unresolvedUpdater{},
+	}
+	result, err := service.Build(context.Background(), recipePath, filepath.Join(root, "dist"), "sample", false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Report.Operations) == 0 || result.Report.Operations[len(result.Report.Operations)-1].Status != converge.Unresolved {
+		t.Fatalf("report = %#v", result.Report)
+	}
+}
+
+func fixture(t *testing.T, root, extra string) (string, string) {
+	t.Helper()
+	recipePath := filepath.Join(root, "recipe", "sample.yaml")
+	ingredients := filepath.Join(root, "ingredient")
+	mustWrite(t, recipePath, "name: sample\nos: macos\nplatform: code\n"+extra)
+	return recipePath, ingredients
+}
+
+func mustWrite(t *testing.T, path, content string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
