@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"code-toolkit/internal/mergerules"
+	"github.com/kshrkznr/code-toolkit/go/internal/mergerules"
 
 	"github.com/tailscale/hujson"
 )

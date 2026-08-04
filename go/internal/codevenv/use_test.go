@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"code-toolkit/internal/distribution"
-	"code-toolkit/internal/recipe"
+	"github.com/kshrkznr/code-toolkit/go/internal/distribution"
+	"github.com/kshrkznr/code-toolkit/go/internal/recipe"
 )
 
 type fakeStopper struct {

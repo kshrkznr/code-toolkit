@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"sort"
 
-	"code-toolkit/internal/cookbook"
-	"code-toolkit/internal/runtimeio"
-	"code-toolkit/internal/runtimelock"
+	"github.com/kshrkznr/code-toolkit/go/internal/cookbook"
+	"github.com/kshrkznr/code-toolkit/go/internal/runtimeio"
+	"github.com/kshrkznr/code-toolkit/go/internal/runtimelock"
 )
 
 type ExactArtifactResolver interface {

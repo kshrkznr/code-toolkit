@@ -512,6 +512,10 @@ are provisional and do not define a canonical Cookbook layout.
 
 # Primary CLI Commands
 
+The Go and Bash implementations are independent implementations of CTK. Go is
+the current primary implementation; Bash is retained as historical and
+behavioral evidence, not as a helper layer used by Go.
+
 The commands below are the primary interfaces used by the onboarding and
 review workflows. See the [Go Language README](go/README.md#commands) for the
 complete current command syntax. The retained Bash implementation documents

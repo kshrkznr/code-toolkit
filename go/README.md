@@ -131,9 +131,9 @@ go/third-party-notices.sh
 Repository builds remain the development path. Versioned Releases are the
 intended source for future Homebrew and Scoop distribution.
 
-The module path remains the local `code-toolkit` name until a publicly
-resolvable canonical repository or mirror is selected. Binary Releases and the
-`ctk` command name do not depend on changing it.
+The module path is `github.com/kshrkznr/code-toolkit/go`, matching the public
+repository and the `go/` module root. Binary Releases and the `ctk` command name
+remain independent of the module path.
 
 ## Workspace discovery
 
@@ -251,6 +251,5 @@ case.
   binary distribution, including placement boundaries for Cookbook, Dist,
   Archive, and Pool. The open questions remain in
   `doc/future/future.candidates.md`.
-- A stable public Go module path after a canonical repository URL exists.
 - Configurable no-argument behavior if a concrete non-interactive use case
   requires it.

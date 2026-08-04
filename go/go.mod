@@ -1,4 +1,4 @@
-module code-toolkit
+module github.com/kshrkznr/code-toolkit/go
 
 go 1.26
 

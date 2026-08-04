@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 
-	"code-toolkit/internal/cookbook"
-	"code-toolkit/internal/runtimeartifact"
-	"code-toolkit/internal/settings"
+	"github.com/kshrkznr/code-toolkit/go/internal/cookbook"
+	"github.com/kshrkznr/code-toolkit/go/internal/runtimeartifact"
+	"github.com/kshrkznr/code-toolkit/go/internal/settings"
 )
 
 var ErrUnsupported = errors.New("Runtime Artifact unsupported")

@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"code-toolkit/internal/runtimeio"
-	"code-toolkit/internal/runtimelock"
+	"github.com/kshrkznr/code-toolkit/go/internal/runtimeio"
+	"github.com/kshrkznr/code-toolkit/go/internal/runtimelock"
 )
 
 type fakeDownloader struct{ fail map[string]bool }

@@ -3,9 +3,9 @@ package workbench
 import (
 	"testing"
 
-	"code-toolkit/internal/cookbook"
-	"code-toolkit/internal/runtimeartifact"
-	"code-toolkit/internal/runtimelock"
+	"github.com/kshrkznr/code-toolkit/go/internal/cookbook"
+	"github.com/kshrkznr/code-toolkit/go/internal/runtimeartifact"
+	"github.com/kshrkznr/code-toolkit/go/internal/runtimelock"
 )
 
 func TestTasksDraftIgnoresSemanticEmptyEnvelope(t *testing.T) {

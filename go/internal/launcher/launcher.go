@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"code-toolkit/internal/distribution"
+	"github.com/kshrkznr/code-toolkit/go/internal/distribution"
 )
 
 type Launcher struct {

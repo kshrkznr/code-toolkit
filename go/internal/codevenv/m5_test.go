@@ -8,12 +8,12 @@ import (
 	"strings"
 	"testing"
 
-	"code-toolkit/internal/converge"
-	"code-toolkit/internal/cookbook"
-	"code-toolkit/internal/recovery"
-	"code-toolkit/internal/runtimeio"
-	"code-toolkit/internal/runtimelock"
-	"code-toolkit/internal/settings"
+	"github.com/kshrkznr/code-toolkit/go/internal/converge"
+	"github.com/kshrkznr/code-toolkit/go/internal/cookbook"
+	"github.com/kshrkznr/code-toolkit/go/internal/recovery"
+	"github.com/kshrkznr/code-toolkit/go/internal/runtimeio"
+	"github.com/kshrkznr/code-toolkit/go/internal/runtimelock"
+	"github.com/kshrkznr/code-toolkit/go/internal/settings"
 )
 
 type lifecycleStopper struct{ selectionCalls [][]string }

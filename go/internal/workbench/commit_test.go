@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"code-toolkit/internal/mergerules"
-	"code-toolkit/internal/settings"
+	"github.com/kshrkznr/code-toolkit/go/internal/mergerules"
+	"github.com/kshrkznr/code-toolkit/go/internal/settings"
 )
 
 func TestCommitAllowsPartialSettingsAndWritesUnionRule(t *testing.T) {

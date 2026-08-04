@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"code-toolkit/internal/runtimeio"
-	"code-toolkit/internal/runtimelock"
+	"github.com/kshrkznr/code-toolkit/go/internal/runtimeio"
+	"github.com/kshrkznr/code-toolkit/go/internal/runtimelock"
 )
 
 type Downloader interface {

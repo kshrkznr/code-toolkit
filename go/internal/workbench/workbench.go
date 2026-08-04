@@ -10,12 +10,12 @@ import (
 	"strings"
 	"time"
 
-	"code-toolkit/internal/cookbook"
-	"code-toolkit/internal/distribution"
-	"code-toolkit/internal/flatformat"
-	"code-toolkit/internal/recipe"
-	"code-toolkit/internal/runtimeio"
-	"code-toolkit/internal/runtimelock"
+	"github.com/kshrkznr/code-toolkit/go/internal/cookbook"
+	"github.com/kshrkznr/code-toolkit/go/internal/distribution"
+	"github.com/kshrkznr/code-toolkit/go/internal/flatformat"
+	"github.com/kshrkznr/code-toolkit/go/internal/recipe"
+	"github.com/kshrkznr/code-toolkit/go/internal/runtimeio"
+	"github.com/kshrkznr/code-toolkit/go/internal/runtimelock"
 )
 
 type Kind string

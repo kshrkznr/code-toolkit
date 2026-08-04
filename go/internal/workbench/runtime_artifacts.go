@@ -7,9 +7,9 @@ import (
 	"sort"
 	"strings"
 
-	"code-toolkit/internal/cookbook"
-	"code-toolkit/internal/runtimeartifact"
-	"code-toolkit/internal/runtimelock"
+	"github.com/kshrkznr/code-toolkit/go/internal/cookbook"
+	"github.com/kshrkznr/code-toolkit/go/internal/runtimeartifact"
+	"github.com/kshrkznr/code-toolkit/go/internal/runtimelock"
 )
 
 func renderRuntimeArtifacts(plan *cookbook.Plan, snapshot runtimelock.Snapshot) (map[string][]byte, map[string]artifactResult, error) {

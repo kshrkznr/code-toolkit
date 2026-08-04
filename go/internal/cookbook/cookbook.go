@@ -8,10 +8,10 @@ import (
 	"sort"
 	"strings"
 
-	"code-toolkit/internal/mergerules"
-	"code-toolkit/internal/recipe"
-	"code-toolkit/internal/runtimeartifact"
-	"code-toolkit/internal/settings"
+	"github.com/kshrkznr/code-toolkit/go/internal/mergerules"
+	"github.com/kshrkznr/code-toolkit/go/internal/recipe"
+	"github.com/kshrkznr/code-toolkit/go/internal/runtimeartifact"
+	"github.com/kshrkznr/code-toolkit/go/internal/settings"
 )
 
 type Repository struct{ Root string }

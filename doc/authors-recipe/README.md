@@ -66,10 +66,10 @@ adapt, not a preferred reading of CTK.
 VSCode   Kiro
 ```
 
-The same Recipe may be implemented on different Platforms.
+Related Recipes may realize the same workflow on different Platforms.
 
-VS Code, Kiro, or future Platforms may provide different implementations of
-the same workflow.
+VS Code, Kiro, or future Platforms may compose that workflow from different
+Platform-specific capabilities.
 
 ---
 

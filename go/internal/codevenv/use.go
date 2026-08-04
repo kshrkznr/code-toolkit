@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"code-toolkit/internal/distribution"
-	"code-toolkit/internal/platform"
+	"github.com/kshrkznr/code-toolkit/go/internal/distribution"
+	"github.com/kshrkznr/code-toolkit/go/internal/platform"
 )
 
 type UseResult struct {

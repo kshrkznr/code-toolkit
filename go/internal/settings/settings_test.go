@@ -1,7 +1,7 @@
 package settings
 
 import (
-	"code-toolkit/internal/mergerules"
+	"github.com/kshrkznr/code-toolkit/go/internal/mergerules"
 	"testing"
 )
 

@@ -4,10 +4,10 @@ import (
 	"context"
 	"testing"
 
-	"code-toolkit/internal/cookbook"
-	"code-toolkit/internal/runtimeio"
-	"code-toolkit/internal/runtimelock"
-	"code-toolkit/internal/settings"
+	"github.com/kshrkznr/code-toolkit/go/internal/cookbook"
+	"github.com/kshrkznr/code-toolkit/go/internal/runtimeio"
+	"github.com/kshrkznr/code-toolkit/go/internal/runtimelock"
+	"github.com/kshrkznr/code-toolkit/go/internal/settings"
 )
 
 type exactResolver struct{}

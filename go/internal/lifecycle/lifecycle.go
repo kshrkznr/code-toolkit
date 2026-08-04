@@ -6,14 +6,14 @@ import (
 	"os"
 	"path/filepath"
 
-	ctkarchive "code-toolkit/internal/archive"
-	"code-toolkit/internal/converge"
-	"code-toolkit/internal/cookbook"
-	"code-toolkit/internal/directlauncher"
-	"code-toolkit/internal/distribution"
-	"code-toolkit/internal/recipe"
-	"code-toolkit/internal/runtimeio"
-	"code-toolkit/internal/runtimelock"
+	ctkarchive "github.com/kshrkznr/code-toolkit/go/internal/archive"
+	"github.com/kshrkznr/code-toolkit/go/internal/converge"
+	"github.com/kshrkznr/code-toolkit/go/internal/cookbook"
+	"github.com/kshrkznr/code-toolkit/go/internal/directlauncher"
+	"github.com/kshrkznr/code-toolkit/go/internal/distribution"
+	"github.com/kshrkznr/code-toolkit/go/internal/recipe"
+	"github.com/kshrkznr/code-toolkit/go/internal/runtimeio"
+	"github.com/kshrkznr/code-toolkit/go/internal/runtimelock"
 )
 
 type RuntimeFactory func(distribution.Distribution) (runtimeio.Runtime, error)

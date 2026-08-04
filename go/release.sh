@@ -26,7 +26,7 @@ THIRD_PARTY_NOTICES="$STAGING_DIR/THIRD_PARTY_NOTICES"
 
 COMMIT="$(git -C "$PROJECT_ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
 BUILD_DATE="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-LDFLAGS="-s -w -X code-toolkit/internal/buildinfo.Version=$VERSION -X code-toolkit/internal/buildinfo.Commit=$COMMIT -X code-toolkit/internal/buildinfo.Date=$BUILD_DATE"
+LDFLAGS="-s -w -X github.com/kshrkznr/code-toolkit/go/internal/buildinfo.Version=$VERSION -X github.com/kshrkznr/code-toolkit/go/internal/buildinfo.Commit=$COMMIT -X github.com/kshrkznr/code-toolkit/go/internal/buildinfo.Date=$BUILD_DATE"
 
 build() {
     local goos="$1"

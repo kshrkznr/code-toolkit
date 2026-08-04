@@ -1,7 +1,11 @@
 # Knowledge.core.build-lifecycle.md
 ============================================================
 
-# Build Lifecycle
+# Concept API: Build Lifecycle
+
+## Concept Domain
+
+Core
 
 ## Definition
 

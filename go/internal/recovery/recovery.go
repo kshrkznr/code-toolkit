@@ -10,13 +10,13 @@ import (
 	"sort"
 	"strings"
 
-	"code-toolkit/internal/converge"
-	"code-toolkit/internal/cookbook"
-	"code-toolkit/internal/recipe"
-	"code-toolkit/internal/runtimeartifact"
-	"code-toolkit/internal/runtimeio"
-	"code-toolkit/internal/runtimelock"
-	"code-toolkit/internal/settings"
+	"github.com/kshrkznr/code-toolkit/go/internal/converge"
+	"github.com/kshrkznr/code-toolkit/go/internal/cookbook"
+	"github.com/kshrkznr/code-toolkit/go/internal/recipe"
+	"github.com/kshrkznr/code-toolkit/go/internal/runtimeartifact"
+	"github.com/kshrkznr/code-toolkit/go/internal/runtimeio"
+	"github.com/kshrkznr/code-toolkit/go/internal/runtimelock"
+	"github.com/kshrkznr/code-toolkit/go/internal/settings"
 )
 
 type Difference struct {

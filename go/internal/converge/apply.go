@@ -4,8 +4,8 @@ import (
 	"context"
 	"reflect"
 
-	"code-toolkit/internal/cookbook"
-	"code-toolkit/internal/runtimeio"
+	"github.com/kshrkznr/code-toolkit/go/internal/cookbook"
+	"github.com/kshrkznr/code-toolkit/go/internal/runtimeio"
 )
 
 func Plan(ctx context.Context, runtime runtimeio.Runtime, plan cookbook.Plan, pool ArtifactResolver, forceExtensions bool) Report {

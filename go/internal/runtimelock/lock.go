@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
-	"code-toolkit/internal/cookbook"
-	"code-toolkit/internal/runtimeartifact"
-	"code-toolkit/internal/runtimeio"
-	"code-toolkit/internal/settings"
+	"github.com/kshrkznr/code-toolkit/go/internal/cookbook"
+	"github.com/kshrkznr/code-toolkit/go/internal/runtimeartifact"
+	"github.com/kshrkznr/code-toolkit/go/internal/runtimeio"
+	"github.com/kshrkznr/code-toolkit/go/internal/settings"
 )
 
 const FormatVersion = 1

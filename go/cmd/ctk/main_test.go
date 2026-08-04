@@ -7,7 +7,7 @@ import (
 	"slices"
 	"testing"
 
-	"code-toolkit/internal/recipe"
+	"github.com/kshrkznr/code-toolkit/go/internal/recipe"
 )
 
 func TestDetectViewSourceFromContentAndKnownNames(t *testing.T) {

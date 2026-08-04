@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"code-toolkit/internal/runtimeio"
+	"github.com/kshrkznr/code-toolkit/go/internal/runtimeio"
 )
 
 type ArtifactResolver interface {

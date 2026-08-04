@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"code-toolkit/internal/recipe"
+	"github.com/kshrkznr/code-toolkit/go/internal/recipe"
 )
 
 type Distribution struct {
