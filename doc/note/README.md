@@ -23,6 +23,8 @@ the observation applies to the current work.
 
 Start with the question closest to the current work:
 
+- How can I stop using CTK or remove generated environments safely?
+  → [Leaving CTK](note.leaving-ctk.md)
 - How should a CodeVenv be selected, activated, or recovered?
   → [CodeVenv Operations](note.codevenv.md)
 - How should an origin Distribution be recovered cautiously?

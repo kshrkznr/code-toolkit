@@ -15,6 +15,8 @@ CTK captures those environments as reusable concepts rather than one-off configu
 
 You may want to:
 
+- start with a capable editor environment by describing how you want to work,
+  while an AI assistant handles the initial Cookbook and build workflow
 - keep an editor environment under explicit control
 - separate work, personal, and experimental environments without duplicating
   every setting
@@ -22,18 +24,36 @@ You may want to:
 - rebuild or evolve an environment incrementally
 - collaborate with AI without handing over architectural decisions
 
-CTK starts from the environment you already use. You can establish a small
-Cookbook first and introduce finer Ingredients, Layers, and workflows only when
-they become useful.
+CTK can start from the environment you already use or from a description of how
+you want to work. You can establish a small Cookbook first and introduce finer
+Ingredients, Layers, and workflows only when they become useful.
 
 ## Explore with AI
 
-AI-assisted onboarding is optional.
+AI-assisted onboarding is optional, but it does not need to stop at explaining
+the repository.
 
-If you are not sure whether CTK fits your workflow, describe how you currently
-use your editor and ask an AI assistant to explain only the relevant parts of
-this repository. Reading every document or learning every concept first is not
-required.
+If you do not yet know which editor settings or extensions you need, describe
+how you want to work. An AI assistant can navigate CTK's documentation and
+Cookbook, propose a small Recipe, build a separate Distribution, and adjust it
+from your feedback. You do not need to learn every setting, command, or CTK
+lifecycle before trying the resulting environment.
+
+For example, a valid first request is:
+
+> I want a lightweight editor for Markdown and Java. Use CTK to build an
+> environment for me and help me refine it.
+
+The same route also works after onboarding. Instead of providing physical
+settings paths, you can ask an AI assistant to inspect a Recipe or Distribution,
+create a View when useful, identify the responsible Ingredient, and prepare a
+Build or Apply. Freeze remains the review path for bringing observed Runtime
+changes back into the Cookbook; a clear Cookbook source change can be made at
+its responsible Ingredient directly.
+
+CTK's Concepts, Contracts, and review artifacts give the assistant a structured
+workspace. They also keep the resulting environment inspectable when you later
+want to understand or change it yourself.
 
 
 ============================================================
@@ -301,7 +321,14 @@ uses the workspace containing `cookbook/recipe` and `cookbook/ingredient`.
 
 # Getting Started
 
-The quickest way to start using CTK is to import your existing environment and let CTK generate the initial Cookbook structure.
+If you already use a VS Code-family editor, the quickest way to start is to
+import that environment and let CTK generate the initial Cookbook structure.
+
+If you are starting with a new editor or prefer not to operate CTK yourself,
+begin with [Explore with AI](#explore-with-ai): describe the work you want the
+editor to support and let an AI assistant prepare a small, separate
+Distribution. The import workflow below remains available when there is an
+existing environment you want to preserve.
 
 You do not need to understand Ingredient Layers or Variants before getting started.
 
@@ -322,6 +349,10 @@ ctk activate code
 
 Platform activation is an explicit user action. Activating one Platform command
 does not activate or change another Platform command.
+
+Activation is reversible through `ctk deactivate <platform>`. See
+[Leaving CTK](doc/note/note.leaving-ctk.md) for the boundary between restoring a
+managed Platform and removing generated environments or the CLI.
 
 CTK imports the current environment for that Platform and creates its initial
 `origin.<platform>` Distribution.
@@ -475,8 +506,9 @@ shared concepts and reviewable artifacts through which collaborators can:
 
 - navigate the project through the Documentation Resolver
 - understand responsibilities through stable Concept APIs
-- inspect Drafts and propose refinements
-- explain and evolve a Cookbook without bypassing its lifecycle
+- inspect Recipes, Distributions, Views, and Drafts
+- identify and edit the Ingredient responsible for a clear source change
+- build, apply, and evolve a Cookbook through explicit lifecycle operations
 
 CTK does not embed an AI service or require AI-assisted operation.
 
