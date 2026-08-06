@@ -9,17 +9,23 @@ CTK is a toolkit for transforming existing development environments into reusabl
 
 ## Why CTK?
 
-Modern development environments are highly personalized but difficult to reproduce, review, and evolve.
+You may use VS Code and Kiro side by side, but their Settings and Extensions
+gradually drift apart. You may change a shared setting in one Profile and
+forget to repeat it in the others.
 
-CTK captures those environments as reusable concepts rather than one-off configuration files.
+These are everyday examples of a broader problem: modern development
+environments are highly personalized but difficult to reproduce, review, and
+evolve.
 
-You may want to:
+CTK captures those environments as reusable Cookbook responsibilities rather
+than one-off configuration files. Shared parts can remain shared, while each
+editor or Profile keeps its explicit differences.
+
+You may also want to:
 
 - start with a capable editor environment by describing how you want to work,
   while an AI assistant handles the initial Cookbook and build workflow
 - keep an editor environment under explicit control
-- separate work, personal, and experimental environments without duplicating
-  every setting
 - review how an existing environment is composed
 - rebuild or evolve an environment incrementally
 - collaborate with AI without handing over architectural decisions
@@ -30,19 +36,25 @@ Ingredients, Layers, and workflows only when they become useful.
 
 ## Explore with AI
 
-AI-assisted onboarding is optional, but it does not need to stop at explaining
-the repository.
+The problems above may sound familiar, but you may not want to read a new
+toolkit's documentation just to find out whether it helps. You do not have to
+start there.
 
-If you do not yet know which editor settings or extensions you need, describe
-how you want to work. An AI assistant can navigate CTK's documentation and
-Cookbook, propose a small Recipe, build a separate Distribution, and adjust it
-from your feedback. You do not need to learn every setting, command, or CTK
-lifecycle before trying the resulting environment.
+You can begin with the annoyance itself:
 
-For example, a valid first request is:
+> I use VS Code and Kiro, but their settings have drifted apart. Show me how CTK
+> could organize them.
+
+Or describe only the environment you want:
 
 > I want a lightweight editor for Markdown and Java. Use CTK to build an
 > environment for me and help me refine it.
+
+An AI assistant can navigate CTK's documentation and Cookbook, propose a small
+Recipe, build a separate Distribution, and adjust it from your feedback. You do
+not need to learn every setting, command, or CTK lifecycle before trying the
+resulting environment. AI-assisted onboarding is optional; it is simply another
+way into the same inspectable CTK workflow.
 
 The same route also works after onboarding. Instead of providing physical
 settings paths, you can ask an AI assistant to inspect a Recipe or Distribution,
@@ -539,6 +551,26 @@ The Author's Recipe demonstrates how the Concept APIs are composed in a real env
 
 See [Author's Recipe](doc/authors-recipe/README.md). Its generated Inspect Views
 are provisional and do not define a canonical Cookbook layout.
+
+============================================================
+
+# Supported Platforms
+
+The current Go implementation provides host integration on macOS and Windows
+for these VS Code-family applications:
+
+| Application | Platform command | Current status |
+| --- | --- | --- |
+| Visual Studio Code | `code` | Primary supported Platform |
+| Kiro | `kiro` | Implemented; Platform-specific behavior continues to be refined from real-environment observations |
+
+Cursor and other applications are not currently supported Platform commands.
+Additional compatible IDEs, including AI-focused editors, are an intended area
+of exploration rather than a current compatibility or release commitment.
+
+The [Code Environment Concept API](doc/integration/integration.code-venv.md) and
+[Code Environment Integration Contract](doc/contract/contract.code-environment.md)
+define the Platform boundary independently from this current support list.
 
 ============================================================
 
