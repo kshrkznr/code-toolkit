@@ -78,6 +78,19 @@ review; do not infer it from the generated grouping alone.
 Review Artifacts are expected to be replaced or discarded. Preserve only the
 agreed Cookbook change or another intentionally durable outcome.
 
+## Repetition can reveal a shared responsibility
+
+When a Recipe contains several named Profiles, review whether the same Settings
+or Extensions repeatedly appear in those Profiles.
+
+Repeated material may indicate a shared baseline that could be represented by
+Runtime Ingredients. Profile Ingredients can then retain only the differences
+required by each named composition.
+
+Profile count alone does not determine Ingredient responsibility. Keep material
+in a Profile when its meaning remains specific to that composition, even when a
+similar representation appears elsewhere.
+
 ## CTK JSON Flat Format
 
 An implementation may use CTK JSON Flat Format for line-oriented review of

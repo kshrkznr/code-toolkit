@@ -291,6 +291,14 @@ It does not define development tools, editor configuration, or workflows.
 
 # Platform
 
+## Why
+
+Reusable environment responsibilities should not need to be rebuilt merely
+because the application hosting them changes.
+
+Platform keeps application-specific capabilities separate so Runtime and
+Profile responsibilities can be composed for another compatible application.
+
 ## Definition
 
 Platform represents the development application that hosts a development environment.
@@ -308,6 +316,13 @@ It does not define the user's workflow or personal preferences.
 ---
 
 ## Runtime
+
+### Why
+
+Named Profiles should be able to share a baseline without repeating each
+common responsibility.
+
+Runtime makes that baseline reusable across named compositions.
 
 ### Definition
 
@@ -327,6 +342,14 @@ feature, shared experience, or another interpretation.
 ---
 
 ## Profile
+
+### Why
+
+A named composition should express only the differences required beyond the
+Recipe's default Runtime.
+
+Profile keeps those differences explicit without redefining the shared
+baseline.
 
 ### Definition
 
