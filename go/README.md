@@ -114,16 +114,16 @@ bash/scripts/  Bash reference source
 Create versioned macOS and Windows artifacts with checksums:
 
 ```bash
-go/release.sh v0.1.0
+go/release.sh v0.2.0
 ```
 
 The builder produces:
 
 ```text
-release/v0.1.0/
-├── ctk_v0.1.0_darwin_arm64.tar.gz
-├── ctk_v0.1.0_darwin_amd64.tar.gz
-├── ctk_v0.1.0_windows_amd64.zip
+release/v0.2.0/
+├── ctk_v0.2.0_darwin_arm64.tar.gz
+├── ctk_v0.2.0_darwin_amd64.tar.gz
+├── ctk_v0.2.0_windows_amd64.zip
 └── checksums.txt
 ```
 
