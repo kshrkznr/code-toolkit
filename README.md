@@ -563,10 +563,12 @@ for these VS Code-family applications:
 | --- | --- | --- |
 | Visual Studio Code | `code` | Primary supported Platform |
 | Kiro | `kiro` | Implemented; Platform-specific behavior continues to be refined from real-environment observations |
+| Cursor | `cursor` | Implemented; macOS and Windows lifecycles including named Profiles and recovery are observed |
 
-Cursor and other applications are not currently supported Platform commands.
-Additional compatible IDEs, including AI-focused editors, are an intended area
-of exploration rather than a current compatibility or release commitment.
+Other compatible IDEs remain an intended area of exploration rather than a
+current compatibility or release commitment. The observations behind Cursor
+support and the reusable intake sequence are preserved in the
+[VS Code Ecosystem Platform Intake experiment](doc/project-knowledge/experiment/experiment.vscode-ecosystem-platform-intake.md).
 
 The [Code Environment Concept API](doc/integration/integration.code-venv.md) and
 [Code Environment Integration Contract](doc/contract/contract.code-environment.md)

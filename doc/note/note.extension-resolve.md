@@ -221,9 +221,26 @@ Check failures in this order:
 On Kiro for Windows, Open VSX installation of
 `emilast.logfilehighlighter` failed with `unable to verify the first
 certificate`. Both lower-case and Registry display spelling failed because the
-problem was TLS validation, not Extension identity. In that environment,
-applying the VS Code-family setting below before extension convergence allowed
-Kiro CLI to complete the Open VSX installation:
+problem was TLS validation, not Extension identity. The observed HTTPS scanner
+CA was trusted by Windows but absent from the Platform's bundled Node CA set.
+
+Prefer retaining strict TLS verification and adding the Windows trust store to
+the Platform CLI's Node process:
+
+```powershell
+$env:NODE_OPTIONS = '--use-system-ca'
+ctk build cookbook\recipe\kiro-default.windows.yaml
+```
+
+CTK inherits its caller's environment, and the Platform CLI inherits it from
+CTK; no CTK-specific CA injection is required. Scope the variable to the shell
+or operation that needs it when other Node applications should remain
+unaffected. This completed the observed Kiro Open VSX installation and also
+the observed Cursor Gallery installation while continuing certificate and
+Extension signature verification.
+
+The earlier Kiro observation used the VS Code-family setting below and also
+completed the Open VSX installation:
 
 ```json
 {
@@ -232,11 +249,11 @@ Kiro CLI to complete the Open VSX installation:
 ```
 
 The Go convergence order writes managed Settings before installing Extensions,
-so a Runtime-local proxy setting can affect the Platform CLI during the same
-Build or Apply. Disabling strict certificate validation weakens transport
-security and is not a general recommendation. Prefer installing or configuring
-the required CA trust when possible, and use this setting only as an explicit
-environment policy.
+so this Runtime-local setting can affect Kiro CLI during the same Build or
+Apply. It did not affect the observed Cursor 3.15.6 Extension CLI. More
+importantly, it disables strict certificate validation, so retain it only as an
+explicit environment policy when system or additional CA trust cannot be
+configured.
 
 Do not introduce an OS or Platform Extension Variant solely from a failed
 Marketplace lookup until transport and Registry policy have been ruled out.

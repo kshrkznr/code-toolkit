@@ -26,6 +26,8 @@ func stopWindowsProcesses(ctx context.Context, platform string, runtimeOnly bool
 		process = "Code.exe"
 	case "kiro":
 		process = "Kiro.exe"
+	case "cursor":
+		process = "Cursor.exe"
 	default:
 		return fmt.Errorf("platform process management is not configured for: %s", platform)
 	}
@@ -48,16 +50,25 @@ func stopWindowsProcesses(ctx context.Context, platform string, runtimeOnly bool
 		}
 		selection = strings.Join(pathChecks, " -or ")
 	}
-	script := strings.Join([]string{
-		"$items = Get-CimInstance Win32_Process | Where-Object {",
+	script := windowsStopScript(process, selection)
+	if output, err := exec.CommandContext(ctx, "powershell.exe", "-NoProfile", "-Command", script).CombinedOutput(); err != nil {
+		return fmt.Errorf("stop platform processes: %w: %s", err, strings.TrimSpace(string(output)))
+	}
+	return nil
+}
+
+func windowsStopScript(process, selection string) string {
+	return strings.Join([]string{
+		"$all = @(Get-CimInstance Win32_Process | Where-Object { $_.Name -eq '" + process + "' })",
+		"$items = $all | Where-Object {",
+		// Cursor can use Cursor.exe itself for language servers and other workers
+		// without a --type argument. Only a process without a same-name parent is
+		// a desktop root; stopping that root lets its process tree exit normally.
+		"  $all.ProcessId -notcontains $_.ParentProcessId -and",
 		"  $_.Name -eq '" + process + "' -and $_.CommandLine -notmatch '--type=' -and",
 		"  (" + selection + ")",
 		"}",
 		"$items | ForEach-Object { Stop-Process -Force -Id $_.ProcessId }",
 		"$items | ForEach-Object { Wait-Process -Id $_.ProcessId -ErrorAction SilentlyContinue }",
 	}, "\n")
-	if output, err := exec.CommandContext(ctx, "powershell.exe", "-NoProfile", "-Command", script).CombinedOutput(); err != nil {
-		return fmt.Errorf("stop platform processes: %w: %s", err, strings.TrimSpace(string(output)))
-	}
-	return nil
 }

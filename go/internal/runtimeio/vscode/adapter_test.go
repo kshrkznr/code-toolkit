@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/kshrkznr/code-toolkit/go/internal/cookbook"
 	"github.com/kshrkznr/code-toolkit/go/internal/runtimeartifact"
@@ -45,8 +46,48 @@ func TestEnsureProfileOwnsLaunchStopAndVerification(t *testing.T) {
 	if err := adapter.EnsureProfile(context.Background(), "work"); err != nil {
 		t.Fatal(err)
 	}
-	if len(runner.calls) != 1 || stops != 1 {
+	if len(runner.calls) != 2 || stops != 1 {
 		t.Fatalf("calls=%v stops=%d", runner.calls, stops)
+	}
+	if got := runner.calls[1].args; !reflect.DeepEqual(got, []string{"--user-data-dir", filepath.Join(root, "data"), "--extensions-dir", filepath.Join(root, "ext"), "--list-extensions"}) {
+		t.Fatalf("settle args = %v", got)
+	}
+}
+
+func TestEnsureProfileWaitsForPersistenceBeforeStop(t *testing.T) {
+	root := t.TempDir()
+	storage := filepath.Join(root, "data", "User", "globalStorage", "storage.json")
+	persisted := make(chan struct{})
+	runs := 0
+	runner := &fakeRunner{onRun: func() {
+		runs++
+		if runs != 1 {
+			return
+		}
+		go func() {
+			time.Sleep(150 * time.Millisecond)
+			if err := os.MkdirAll(filepath.Dir(storage), 0o755); err != nil {
+				return
+			}
+			if err := os.WriteFile(storage, []byte(`{"userDataProfiles":[{"name":"work","location":"abc"}]}`), 0o644); err != nil {
+				return
+			}
+			close(persisted)
+		}()
+	}}
+	adapter := Adapter{
+		Command: "code", UserDataDir: filepath.Join(root, "data"), ExtensionsDir: filepath.Join(root, "ext"), Runner: runner,
+		StopForDatabaseWrite: func(context.Context) error {
+			select {
+			case <-persisted:
+				return nil
+			default:
+				return errors.New("profile process stopped before persistence")
+			}
+		},
+	}
+	if err := adapter.EnsureProfile(context.Background(), "work"); err != nil {
+		t.Fatal(err)
 	}
 }
 

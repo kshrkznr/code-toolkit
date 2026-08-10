@@ -76,8 +76,22 @@ func (a Adapter) EnsureProfile(ctx context.Context, name string) error {
 	if err != nil {
 		return fmt.Errorf("create profile %q: %w", name, err)
 	}
+	created := false
+	for attempt := 0; attempt < 20; attempt++ {
+		if _, err := a.profile(name); err == nil {
+			created = true
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
 	if err := a.stopForDatabaseWrite(ctx); err != nil {
 		return err
+	}
+	if _, err := a.runner().Run(ctx, a.Command, append(a.baseArgs(runtimeio.DefaultScope()), "--list-extensions")); err != nil {
+		return fmt.Errorf("settle profile %q: %w", name, err)
+	}
+	if created {
+		return nil
 	}
 	for attempt := 0; attempt < 20; attempt++ {
 		if _, err := a.profile(name); err == nil {

@@ -2,11 +2,13 @@ package converge
 
 import (
 	"archive/zip"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -21,7 +23,16 @@ type Downloader interface {
 	Download(context.Context, string, runtimeio.Extension, string) error
 }
 
-type HTTPDownloader struct{ Client *http.Client }
+const (
+	cursorGalleryURL                = "https://marketplace.cursorapi.com/_apis/public/gallery"
+	cursorExtensionNameFilter       = 7
+	cursorGalleryIncludeExactAssets = 1 | 2 | 16 | 128 // versions, files, version properties, and asset URI
+)
+
+type HTTPDownloader struct {
+	Client           *http.Client
+	CursorGalleryURL string
+}
 
 func (d HTTPDownloader) Download(ctx context.Context, repository string, extension runtimeio.Extension, destination string) error {
 	parts := strings.SplitN(extension.ID, ".", 2)
@@ -34,10 +45,20 @@ func (d HTTPDownloader) Download(ctx context.Context, repository string, extensi
 		url = fmt.Sprintf("https://marketplace.visualstudio.com/_apis/public/gallery/publishers/%s/vsextensions/%s/%s/vspackage", parts[0], parts[1], extension.Version)
 	case "open-vsx":
 		url = fmt.Sprintf("https://open-vsx.org/api/%s/%s/%s/file/%s-%s.vsix", parts[0], parts[1], extension.Version, extension.ID, extension.Version)
+	case "cursor-marketplace":
+		var err error
+		url, err = d.cursorVSIXURL(ctx, extension)
+		if err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("unsupported Extension repository %q", repository)
 	}
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	return d.downloadURL(ctx, url, destination)
+}
+
+func (d HTTPDownloader) downloadURL(ctx context.Context, source, destination string) error {
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, source, nil)
 	if err != nil {
 		return err
 	}
@@ -64,6 +85,125 @@ func (d HTTPDownloader) Download(ctx context.Context, repository string, extensi
 		return copyErr
 	}
 	return closeErr
+}
+
+type cursorGalleryQuery struct {
+	Filters    []cursorGalleryFilter `json:"filters"`
+	AssetTypes []string              `json:"assetTypes"`
+	Flags      int                   `json:"flags"`
+}
+
+type cursorGalleryFilter struct {
+	Criteria  []cursorGalleryCriterion `json:"criteria"`
+	Page      int                      `json:"pageNumber"`
+	PageSize  int                      `json:"pageSize"`
+	SortBy    int                      `json:"sortBy"`
+	SortOrder int                      `json:"sortOrder"`
+}
+
+type cursorGalleryCriterion struct {
+	FilterType int    `json:"filterType"`
+	Value      string `json:"value"`
+}
+
+type cursorGalleryResponse struct {
+	Results []struct {
+		Extensions []struct {
+			Publisher struct {
+				Name string `json:"publisherName"`
+			} `json:"publisher"`
+			Name     string `json:"extensionName"`
+			Versions []struct {
+				Version string `json:"version"`
+				Files   []struct {
+					AssetType string `json:"assetType"`
+					Source    string `json:"source"`
+				} `json:"files"`
+			} `json:"versions"`
+		} `json:"extensions"`
+	} `json:"results"`
+}
+
+func (d HTTPDownloader) cursorVSIXURL(ctx context.Context, extension runtimeio.Extension) (string, error) {
+	gallery := d.CursorGalleryURL
+	if gallery == "" {
+		gallery = cursorGalleryURL
+	}
+	payload, err := json.Marshal(cursorGalleryQuery{
+		Filters: []cursorGalleryFilter{{
+			Criteria: []cursorGalleryCriterion{{FilterType: cursorExtensionNameFilter, Value: extension.ID}},
+			Page:     1, PageSize: 10,
+		}},
+		AssetTypes: []string{},
+		Flags:      cursorGalleryIncludeExactAssets,
+	})
+	if err != nil {
+		return "", fmt.Errorf("encode Cursor Marketplace query: %w", err)
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimRight(gallery, "/")+"/extensionquery", bytes.NewReader(payload))
+	if err != nil {
+		return "", err
+	}
+	request.Header.Set("User-Agent", "code-toolkit-go")
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Accept", "application/json;api-version=3.0-preview.1")
+	client := d.Client
+	if client == nil {
+		client = &http.Client{Timeout: 2 * time.Minute}
+	}
+	response, err := client.Do(request)
+	if err != nil {
+		return "", err
+	}
+	defer response.Body.Close()
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return "", fmt.Errorf("Cursor Marketplace query returned %s", response.Status)
+	}
+	var result cursorGalleryResponse
+	if err := json.NewDecoder(response.Body).Decode(&result); err != nil {
+		return "", fmt.Errorf("decode Cursor Marketplace query: %w", err)
+	}
+	for _, group := range result.Results {
+		for _, candidate := range group.Extensions {
+			identity := candidate.Publisher.Name + "." + candidate.Name
+			if !strings.EqualFold(identity, extension.ID) {
+				continue
+			}
+			for _, version := range candidate.Versions {
+				if version.Version != extension.Version {
+					continue
+				}
+				for _, file := range version.Files {
+					if file.AssetType != "Microsoft.VisualStudio.Services.VSIXPackage" {
+						continue
+					}
+					if err := validateCursorAssetURL(gallery, file.Source); err != nil {
+						return "", err
+					}
+					return file.Source, nil
+				}
+			}
+		}
+	}
+	return "", fmt.Errorf("Cursor Marketplace artifact unavailable: %s@%s", extension.ID, extension.Version)
+}
+
+func validateCursorAssetURL(gallery, source string) error {
+	galleryURL, err := url.Parse(gallery)
+	if err != nil {
+		return fmt.Errorf("parse Cursor Marketplace URL: %w", err)
+	}
+	assetURL, err := url.Parse(source)
+	if err != nil {
+		return fmt.Errorf("parse Cursor Marketplace asset URL: %w", err)
+	}
+	if (galleryURL.Scheme != "http" && galleryURL.Scheme != "https") ||
+		(assetURL.Scheme != "http" && assetURL.Scheme != "https") ||
+		(galleryURL.Scheme == "https" && assetURL.Scheme != "https") ||
+		!strings.EqualFold(assetURL.Host, galleryURL.Host) {
+		return fmt.Errorf("reject Cursor Marketplace asset URL: %s", source)
+	}
+	return nil
 }
 
 type PoolUpdater struct {
@@ -97,10 +237,7 @@ func (u PoolUpdater) updateOne(ctx context.Context, platform string, extension r
 		report.Add(Operation{Action: "update Extension Pool", Subject: subject, Status: Unresolved, Err: fmt.Errorf("versioned Extension observation required")})
 		return
 	}
-	repositories := []string{platformRepository(platform)}
-	if repositories[0] != "visual-studio-marketplace" {
-		repositories = append(repositories, "visual-studio-marketplace")
-	}
+	repositories := platformRepositories(platform)
 	artifact := poolArtifactName(extension)
 	for _, repository := range repositories {
 		matches, _ := poolArtifacts(filepath.Join(u.Root, repository), extension.ID)
@@ -155,10 +292,7 @@ func (u PoolUpdater) EnsureExact(ctx context.Context, platform string, extension
 	if extension.ID == "" || extension.Version == "" || strings.ContainsAny(extension.ID+extension.Version, `/\\`) {
 		return "", fmt.Errorf("versioned Extension observation required: %s@%s", extension.ID, extension.Version)
 	}
-	repositories := []string{platformRepository(platform)}
-	if repositories[0] != "visual-studio-marketplace" {
-		repositories = append(repositories, "visual-studio-marketplace")
-	}
+	repositories := platformRepositories(platform)
 	artifact := poolArtifactName(extension)
 	for _, repository := range repositories {
 		matches, _ := poolArtifacts(filepath.Join(u.Root, repository), extension.ID)

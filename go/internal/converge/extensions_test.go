@@ -101,7 +101,7 @@ func TestReportErrorWrapsFailures(t *testing.T) {
 	}
 }
 
-func TestPoolUsesPlatformRepositoryThenVisualStudioFallback(t *testing.T) {
+func TestPoolUsesKiroRepositoryThenVisualStudioFallback(t *testing.T) {
 	root := t.TempDir()
 	primary := filepath.Join(root, "open-vsx", "sample.id-2.0.vsix")
 	marketplace := filepath.Join(root, "visual-studio-marketplace", "sample.id-1.0.vsix")
@@ -116,6 +116,43 @@ func TestPoolUsesPlatformRepositoryThenVisualStudioFallback(t *testing.T) {
 	got, err := (Pool{Root: root}).ResolveCandidates("kiro", "sample.id")
 	if err != nil || len(got) != 2 || got[0].Path != primary || !got[0].Primary || got[1].Path != marketplace || got[1].Primary {
 		t.Fatalf("got=%#v err=%v", got, err)
+	}
+}
+
+func TestPoolUsesCursorMarketplaceThenVisualStudioFallback(t *testing.T) {
+	root := t.TempDir()
+	cursor := filepath.Join(root, "cursor-marketplace", "sample.id-2.0.vsix")
+	openVSX := filepath.Join(root, "open-vsx", "sample.id-3.0.vsix")
+	visualStudio := filepath.Join(root, "visual-studio-marketplace", "sample.id-1.0.vsix")
+	for _, path := range []string{cursor, openVSX, visualStudio} {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, nil, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, err := (Pool{Root: root}).ResolveCandidates("cursor", "sample.id")
+	if err != nil || len(got) != 2 || got[0].Path != cursor || !got[0].Primary || got[1].Path != visualStudio || got[1].Primary {
+		t.Fatalf("got=%#v err=%v", got, err)
+	}
+}
+
+func TestPlatformRepositories(t *testing.T) {
+	tests := []struct {
+		platform string
+		want     []string
+	}{
+		{"code", []string{"visual-studio-marketplace"}},
+		{"kiro", []string{"open-vsx", "visual-studio-marketplace"}},
+		{"cursor", []string{"cursor-marketplace", "visual-studio-marketplace"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.platform, func(t *testing.T) {
+			if got := platformRepositories(tt.platform); !slices.Equal(got, tt.want) {
+				t.Fatalf("platformRepositories() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
 

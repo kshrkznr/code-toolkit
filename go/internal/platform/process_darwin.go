@@ -24,7 +24,7 @@ func (darwinProcessStopper) StopRuntime(ctx context.Context, platform string, ru
 }
 
 func stopDarwinProcesses(ctx context.Context, platform string, runtimeOnly bool, runtimePaths ...string) error {
-	if platform != "code" && platform != "kiro" {
+	if platform != "code" && platform != "kiro" && platform != "cursor" {
 		return fmt.Errorf("platform process management is not configured for: %s", platform)
 	}
 	output, err := exec.CommandContext(ctx, "ps", "-axo", "pid=,args=").Output()
@@ -90,6 +90,8 @@ func relevantProcess(platform, args string, runtimePaths []string) bool {
 			strings.Contains(args, "Visual Studio Code.app/Contents/MacOS/Electron")
 	case "kiro":
 		return strings.Contains(args, "Kiro.app/Contents/MacOS/Electron")
+	case "cursor":
+		return strings.Contains(args, "Cursor.app/Contents/MacOS/Cursor")
 	default:
 		return false
 	}

@@ -225,6 +225,35 @@ real-machine feedback.
 
 ## Observed Platform behavior
 
+Cursor 3.15.6 for macOS exposes a Cursor-owned Extension Gallery at
+`marketplace.cursorapi.com`. Although the gallery is based on Open VSX, it is
+the Platform repository boundary: it also carries Anysphere-specific builds
+and may apply its own synchronization and selection behavior. CTK therefore
+uses `cursor-marketplace` as Cursor's primary VSIX Pool repository and
+`visual-studio-marketplace` as its fallback. It does not bypass the Cursor
+Gallery through a direct Open VSX fallback.
+
+Cursor Gallery acquisition resolves a full Extension ID through the Gallery
+query API, selects the exact observed version, and downloads its
+`Microsoft.VisualStudio.Services.VSIXPackage` asset. CTK validates the resulting
+VSIX identity and version before treating it as an exact Pool artifact.
+
+Cursor 3.15.6 for Windows x64 uses `%APPDATA%\Cursor\User` and
+`%USERPROFILE%\.cursor\extensions` as its managed Host paths. Cursor can run
+language servers and other workers through `Cursor.exe` without a `--type`
+argument, so process stopping identifies the desktop root by same-name process
+ancestry rather than treating every such process as a root. Stopping that root
+allowed its descendants to exit, while Runtime-only stopping during Build left
+the separately running default Host intact.
+
+The observed Windows lifecycle completed activation, Freeze Draft, Inspect,
+Archive, a four-Profile Build, Apply from Archive, `use`, `launch`, normal use,
+and deactivation with origin recovery. Host User and Extension redirection used
+junctions. Forced interruption after both backup planning and completed Host
+backup was recovered by the next lifecycle invocation without a remaining
+journal, partial Selection, transaction backup, or observable Host content
+drift.
+
 On Kiro for Windows, an Open VSX installation of
 `emilast.logfilehighlighter` initially failed and CTK continued to its
 secondary Visual Studio Marketplace Pool candidate. Kiro CLI reported
@@ -233,10 +262,13 @@ validation failure rather than an Extension ID or registry identity problem.
 
 In the observed environment, applying the VS Code-family setting
 `"http.proxyStrictSSL": false` allowed Kiro CLI to install the extension from
-Open VSX. Disabling strict certificate validation is an environment security
-decision, not a general CTK recommendation; installing the required CA trust
-is preferable when available. This observation does not currently require an
-OS or Platform Extension Resource Variant.
+Open VSX, but disabled strict TLS validation and did not affect the observed
+Cursor Extension CLI. The preferred observed resolution is to launch CTK with
+`NODE_OPTIONS=--use-system-ca`, allowing both Platform CLIs to use the Windows
+trust store while retaining certificate and Extension signature verification.
+CTK and its Platform subprocesses inherit this external environment setting;
+the Go binary does not inject it. This observation does not currently require
+an OS or Platform Extension Resource Variant.
 
 Marketplace-facing spelling remains Cookbook input. Independently, the Go
 implementation normalizes only its internal VSIX Pool filename key to lower
