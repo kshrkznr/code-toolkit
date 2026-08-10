@@ -225,7 +225,7 @@ func TestNextAvailableName(t *testing.T) {
 
 func TestPoolUpdateUnresolvedDoesNotFailBuild(t *testing.T) {
 	root := t.TempDir()
-	recipePath, ingredients := fixture(t, root, "runtime: [empty]\n")
+	recipePath, ingredients := fixture(t, root, "runtime: [empty]\nconfig:\n  dist-strategy:\n    extension-pool: refresh\n")
 	service := Service{
 		Cookbook:   cookbook.Repository{Root: ingredients},
 		Runtime:    func(distribution.Distribution) (runtimeio.Runtime, error) { return &fakeRuntime{}, nil },
@@ -237,6 +237,25 @@ func TestPoolUpdateUnresolvedDoesNotFailBuild(t *testing.T) {
 	}
 	if len(result.Report.Operations) == 0 || result.Report.Operations[len(result.Report.Operations)-1].Status != converge.Unresolved {
 		t.Fatalf("report = %#v", result.Report)
+	}
+}
+
+func TestPoolUpdateIsDisabledByDefault(t *testing.T) {
+	root := t.TempDir()
+	recipePath, ingredients := fixture(t, root, "runtime: [empty]\n")
+	service := Service{
+		Cookbook:   cookbook.Repository{Root: ingredients},
+		Runtime:    func(distribution.Distribution) (runtimeio.Runtime, error) { return &fakeRuntime{}, nil },
+		PoolUpdate: unresolvedUpdater{},
+	}
+	result, err := service.Build(context.Background(), recipePath, filepath.Join(root, "dist"), "sample", false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, operation := range result.Report.Operations {
+		if operation.Action == "update Extension Pool" {
+			t.Fatalf("default Build contacted Extension Pool updater: %#v", result.Report)
+		}
 	}
 }
 

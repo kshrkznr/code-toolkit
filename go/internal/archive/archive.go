@@ -121,9 +121,15 @@ func (s Service) Create(ctx context.Context, root string, dist distribution.Dist
 		return Result{}, err
 	}
 	for _, extension := range extensions {
-		artifact, ensureErr := s.Pool.EnsureExact(ctx, plan.Platform, extension)
+		artifact, ensureErr := s.Pool.ResolveExact(plan.Platform, extension)
+		if ensureErr != nil && plan.ExtensionPool == "refresh" {
+			artifact, ensureErr = s.Pool.EnsureExact(ctx, plan.Platform, extension)
+		}
 		if ensureErr != nil {
-			return Result{}, ensureErr
+			if plan.ExtensionPool == "refresh" {
+				return Result{}, fmt.Errorf("resolve Archive VSIX with extension-pool refresh: %w", ensureErr)
+			}
+			return Result{}, fmt.Errorf("resolve Archive VSIX: %w; set config.dist-strategy.extension-pool to refresh to permit Repository download", ensureErr)
 		}
 		if err := copyFile(artifact, filepath.Join(staging, "vsix", artifactName(extension))); err != nil {
 			return Result{}, err
@@ -290,7 +296,7 @@ func Plan(bundle Bundle) cookbook.Plan {
 		}
 		return cookbook.ScopePlan{Name: scope.Name, Settings: scope.Settings, Keybindings: scope.Keybindings, Tasks: scope.Tasks, MCP: scope.MCP, Snippets: scope.Snippets, Extensions: ids, Inheritance: scope.Inheritance}
 	}
-	plan := cookbook.Plan{Name: bundle.Manifest.RecipeName, OS: bundle.Manifest.OS, Platform: bundle.Manifest.Platform, ExtensionMarketplace: false, LockMode: "refresh", Default: convert(bundle.Snapshot.Default)}
+	plan := cookbook.Plan{Name: bundle.Manifest.RecipeName, OS: bundle.Manifest.OS, Platform: bundle.Manifest.Platform, ExtensionMarketplace: false, ExtensionPool: "reuse", LockMode: "refresh", Default: convert(bundle.Snapshot.Default)}
 	for _, scope := range bundle.Snapshot.Profiles {
 		plan.Profiles = append(plan.Profiles, convert(scope))
 	}

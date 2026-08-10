@@ -78,8 +78,9 @@ Extension as completed.
 
 ## Extension Pool publication
 
-Pool maintenance is not a Lock success condition. Go downloads into
-repository-local staging, validates a VSIX ZIP and its Extension Manifest,
-publishes the new artifact, and only then removes an older artifact for the same
-Extension and Repository. An incomplete or rejected download never replaces a
-usable Pool artifact.
+Pool maintenance is not a Lock success condition and is disabled by the
+default `extension-pool: reuse` strategy. When a Recipe explicitly selects
+`refresh`, Go downloads into repository-local staging, validates a VSIX ZIP and
+its Extension Manifest, publishes the new artifact, and only then removes an
+older artifact for the same Extension and Repository. An incomplete or
+rejected download never replaces a usable Pool artifact.

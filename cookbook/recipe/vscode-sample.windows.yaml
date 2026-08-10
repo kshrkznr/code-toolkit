@@ -22,6 +22,7 @@ runtime:
 config:
   dist-strategy:
     extension-marketplace: true
+    extension-pool: reuse
     lock-mode: refresh
     default-profile:
       settings: runtime

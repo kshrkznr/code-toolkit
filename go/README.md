@@ -50,6 +50,13 @@ The shared Contract defines the implementation-independent agreement. The Go
 Contract records concrete choices such as trusted Manifest formats, Native CLI
 selection, CodeVenv recovery, and Workbench Commit syntax.
 
+Recipe Extension installation uses the Platform-owned CLI by default. Exact
+VSIX acquisition into `.vsix` is separate: omitted
+`config.dist-strategy.extension-pool` means `reuse`, so Go reads existing Pool
+artifacts without downloading new ones. `refresh` explicitly enables Go-owned
+Repository download after Runtime observation and when an Archive requires a
+missing exact artifact.
+
 ## Package layout
 
 ```text

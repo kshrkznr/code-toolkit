@@ -93,9 +93,10 @@ It is the fixed second candidate because VS Code is treated as the reference imp
 
 ---
 
-## Marketplace connection policy
+## Platform installation policy
 
-Recipe Build Strategy controls whether Marketplace access is permitted for a Distribution.
+Recipe Build Strategy controls whether CTK may pass an Extension ID to the
+Platform's normal installation operation.
 
 ```yaml
 config:
@@ -103,7 +104,11 @@ config:
     extension-marketplace: false
 ```
 
-When Marketplace access is disabled:
+`extension-marketplace` defaults to `true`. Despite the historical field name,
+this permits a Platform-owned lookup; it does not permit CTK to download a VSIX
+into the Pool.
+
+When Platform Repository access is disabled:
 
 ```text
 Pool: Platform main Repository
@@ -113,7 +118,34 @@ Pool: Visual Studio Marketplace
 warning and install skip
 ```
 
-No network Repository is contacted. This supports intranet and offline Distributions while still allowing reuse of artifacts already present in the Pool. Existing extensions remain installed when their IDs are still expected by the Cookbook.
+No network Repository is contacted for installation. This supports intranet
+and offline Distributions while still allowing reuse of artifacts already
+present in the Pool. Existing extensions remain installed when their IDs are
+still expected by the Cookbook.
+
+## VSIX acquisition policy
+
+CTK-owned VSIX download and Pool update are a separate, opt-in Build Strategy.
+
+```yaml
+config:
+  dist-strategy:
+    extension-pool: reuse # reuse | refresh
+```
+
+`reuse` is the default. Build, Apply, CodeVenv recovery, and Archive may use
+matching local Pool artifacts but do not contact a Repository to obtain a
+VSIX. Lock observes the Runtime without updating the Pool. Archive creation
+fails when an exact required artifact is missing.
+
+`refresh` permits CTK to acquire missing exact-version VSIX artifacts through
+the Platform Repository order and store them in the local Pool. Build, Apply,
+Lock, and recovery perform this refresh after observing the resulting Runtime.
+Archive creation may download an exact artifact that is absent locally.
+
+This policy separates artifact handling from permission. CTK validates the
+artifact identity and version, but it does not determine whether an Extension
+license permits use with a target Platform or redistribution of the VSIX.
 
 ---
 
@@ -156,7 +188,11 @@ Platform main Pool miss + extension-marketplace: false
   → otherwise warning and install skip
 ```
 
-The Platform CLI remains responsible for its normal Marketplace lookup, installation, and extension update behavior. Uninstall always uses the extension IDs resolved from the Cookbook, independently of the Pool resolver. After Build or Apply refreshes its Lock, CTK uses the observed extension versions to update the Pool.
+The Platform CLI remains responsible for its normal Marketplace lookup,
+installation, and extension update behavior. Uninstall always uses the
+extension IDs resolved from the Cookbook, independently of the Pool resolver.
+When `extension-pool: refresh` is explicit, CTK uses versions observed by Lock
+to update the Pool.
 
 ```text
 Platform CLI
@@ -166,11 +202,12 @@ Platform CLI
   → download only when the artifact is absent
 ```
 
-Pool download is a Build / Apply side effect. Failure to refresh the Pool is
-reported as unresolved and does not invalidate a Runtime that was successfully
-constructed through the Platform Repository. Failure of every permitted
-installation candidate remains a Recipe convergence failure unless the user
-explicitly selects `--force`.
+With `extension-pool: refresh`, Pool download is an explicit Build, Apply,
+Lock, or recovery side effect. Failure to refresh the Pool is reported as
+unresolved and does not invalidate a Runtime that was successfully constructed
+through the Platform Repository. With the default `reuse`, no Pool download is
+attempted. Failure of every permitted installation candidate remains a Recipe
+convergence failure unless the user explicitly selects `--force`.
 
 ### Forced Recipe convergence
 
@@ -264,7 +301,8 @@ CTK does not reinterpret Platform CLI failures or rewrite Marketplace IDs.
 A VS Code-family Platform may be able to install a VSIX even when its main
 Repository does not publish that Extension. For example, an Extension may be
 absent from Open VSX but present in Visual Studio Marketplace. In that case, a
-successful `code` Recipe Build or Apply can populate CTK's
+successful `code` Recipe Build or Apply with `extension-pool: refresh` can
+populate CTK's
 `visual-studio-marketplace` Pool after Lock observation:
 
 ```text
@@ -294,22 +332,27 @@ Code-family Platform.
 
 ---
 
-## Archive VSIX download
+## Archive VSIX resolution
 
-When Archive is created, CTK reads the versioned extension Locks and resolves their artifacts through the Pool.
+When Archive is created, CTK reads the versioned extension Locks and resolves
+their exact artifacts through the local Pool. With the default
+`extension-pool: reuse`, a missing artifact is an error. `refresh` explicitly
+permits Archive creation to acquire it from a Repository.
 
 ```text
 Archive
   → extension Locks
   → Pool exact-version lookup
-  → download missing artifact from Visual Studio Marketplace
+  → when refresh is explicit, download a missing artifact
   → replace the Pool artifact for that extension
   → copy exact artifact into Archive
 ```
 
 The Pool source is selected by Platform. `code` uses `visual-studio-marketplace`; `kiro` uses `open-vsx` first and `visual-studio-marketplace` second. It is a cache for Archive creation; Archive reconstruction remains self-contained and never falls back to the Pool.
 
-An unavailable artifact is removed from its temporary download location and makes Archive creation fail. CTK never creates an Archive that is missing a locked extension artifact.
+An unavailable artifact makes Archive creation fail. A failed download is
+removed from its temporary location. CTK never creates an Archive that is
+missing a locked extension artifact.
 
 ---
 

@@ -220,9 +220,25 @@ this exact materialized merge.
 The reference implementation currently recognizes:
 
 - `config.dist-strategy.extension-marketplace`
+- `config.dist-strategy.extension-pool`
 - `config.dist-strategy.lock-mode`
 - `config.dist-strategy.default-profile.extensions`
 - `config.profile-strategy.<profile>.<content>`
+
+Extension installation and VSIX acquisition are separate strategies:
+
+- `extension-marketplace` permits the Platform-owned Extension installation
+  operation to resolve an Extension ID through that Platform's normal
+  Repository. It defaults to `true`.
+- `extension-pool` controls whether CTK may acquire exact VSIX artifacts from
+  configured Repositories. `reuse` uses only artifacts already present in the
+  local Pool and is the default. `refresh` permits Repository download and
+  Pool update.
+
+Neither strategy grants permission to use an Extension with a particular
+Platform or to redistribute its VSIX. The user remains responsible for the
+applicable Repository terms, Extension license, and target-Platform
+compatibility.
 
 Profile Artifact ownership accepts:
 

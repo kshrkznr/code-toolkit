@@ -27,6 +27,40 @@ Ingredient layer.
 
 ## Dist strategy
 
+### Extension installation and Pool acquisition
+
+Extension installation and VSIX artifact acquisition are independent choices.
+
+```yaml
+config:
+  dist-strategy:
+    extension-marketplace: true # true | false
+    extension-pool: reuse       # reuse | refresh
+```
+
+`extension-marketplace` permits CTK to pass an Extension ID to the Platform's
+normal install operation. The Platform owns its Repository lookup and install
+behavior. This remains `true` by default and is the normal online installation
+route.
+
+`extension-pool` controls CTK's own acquisition of exact VSIX artifacts:
+
+| Mode | Behavior |
+| --- | --- |
+| `reuse` | Use local Pool artifacts but do not download new VSIX files. This is the default. |
+| `refresh` | After observing exact installed versions, permit CTK to download and store missing VSIX artifacts. Archive creation may also acquire a missing exact artifact. |
+
+These modes deliberately allow a normal Build to use a Platform Repository
+without turning every Build, Apply, Lock, Recovery, or Archive into a CTK-owned
+VSIX download. A Recipe that needs offline preparation can explicitly choose
+`refresh`; a later `reuse` operation can consume the resulting local Pool.
+
+The strategy describes technical acquisition only. It does not assert that an
+Extension may be used with another IDE, copied to another person, or
+redistributed. Review the Repository terms, the individual Extension license,
+and the target Platform before using a cached artifact outside the Platform's
+normal path.
+
 ### Lock mode
 
 `lock-mode` chooses which Lock snapshot CTK trusts after Build, Apply, Freeze,

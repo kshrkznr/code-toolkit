@@ -28,9 +28,11 @@ Go preserves every distinct `Extension ID@version` observed across the default
 Runtime and selected Profiles. Different versions of one ID in different
 scopes remain distinct.
 
-Creation resolves exact VSIX artifacts from the Pool and may use the Platform
-repository downloader to fill a miss. Missing, invalid, or mismatched artifacts
-are hard errors. Reconstruction installs the archived VSIX per scope and
+Creation resolves exact VSIX artifacts from the Pool. The Recipe's
+`extension-pool` strategy controls whether a miss is a hard error (`reuse`, the
+default) or may use the Platform Repository downloader (`refresh`). Missing,
+invalid, or mismatched artifacts are hard errors after the permitted resolution
+path is exhausted. Reconstruction installs the archived VSIX per scope and
 verifies exact ID and version through fresh Platform observation.
 
 ## Directory representation

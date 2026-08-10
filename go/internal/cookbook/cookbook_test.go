@@ -20,6 +20,9 @@ func TestResolveExistingGolangRecipe(t *testing.T) {
 	if !plan.ExtensionMarketplace {
 		t.Fatal("extension marketplace should use the Recipe default")
 	}
+	if plan.ExtensionPool != "reuse" {
+		t.Fatalf("extension Pool mode = %q", plan.ExtensionPool)
+	}
 	if len(plan.Default.Extensions) != 0 {
 		t.Fatalf("default extensions = %v", plan.Default.Extensions)
 	}
@@ -31,6 +34,16 @@ func TestResolveExistingGolangRecipe(t *testing.T) {
 	}
 	if !slices.Contains(plan.Profiles[0].Extensions, "golang.go") || !slices.Contains(plan.Profiles[0].Extensions, "openai.chatgpt") {
 		t.Fatalf("core extensions = %v", plan.Profiles[0].Extensions)
+	}
+}
+
+func TestResolveRejectsUnknownExtensionPoolMode(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "recipe.yaml")
+	mustWrite(t, path, "name: test\nos: macos\nplatform: code\nconfig:\n  dist-strategy:\n    extension-pool: unknown\n")
+	_, err := (Repository{Root: filepath.Join(root, "ingredient")}).Resolve(path)
+	if err == nil || !strings.Contains(err.Error(), "unsupported extension-pool") {
+		t.Fatalf("error = %v", err)
 	}
 }
 

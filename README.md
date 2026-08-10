@@ -545,7 +545,9 @@ It composes three focused Runtime Ingredients: `common`, `text`, and
 `markdown`. The sample intentionally omits Profiles and environment-specific
 Settings Variants until a concrete difference needs them. Its Distribution
 strategy is written explicitly so the executable defaults are visible in the
-Recipe itself.
+Recipe itself. Extension IDs use the Platform's normal installation route,
+while `extension-pool: reuse` keeps CTK-owned VSIX download disabled unless a
+Recipe opts into artifact acquisition.
 
 The Author's Recipe demonstrates how the Concept APIs are composed in a real environment.
 
@@ -562,13 +564,11 @@ for these VS Code-family applications:
 | Application | Platform command | Current status |
 | --- | --- | --- |
 | Visual Studio Code | `code` | Primary supported Platform |
-| Kiro | `kiro` | Implemented; Platform-specific behavior continues to be refined from real-environment observations |
-| Cursor | `cursor` | Implemented; macOS and Windows lifecycles including named Profiles and recovery are observed |
+| Kiro | `kiro` | Implemented |
+| Cursor | `cursor` | Implemented |
 
 Other compatible IDEs remain an intended area of exploration rather than a
-current compatibility or release commitment. The observations behind Cursor
-support and the reusable intake sequence are preserved in the
-[VS Code Ecosystem Platform Intake experiment](doc/project-knowledge/experiment/experiment.vscode-ecosystem-platform-intake.md).
+current compatibility or release commitment.
 
 The [Code Environment Concept API](doc/integration/integration.code-venv.md) and
 [Code Environment Integration Contract](doc/contract/contract.code-environment.md)

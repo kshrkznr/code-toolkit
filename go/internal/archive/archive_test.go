@@ -103,6 +103,38 @@ func TestCreateRejectsMissingExtensionVersion(t *testing.T) {
 	}
 }
 
+func TestCreateRequiresCachedVSIXByDefault(t *testing.T) {
+	root := t.TempDir()
+	cookbookRoot := filepath.Join(root, "cookbook")
+	distPath := filepath.Join(root, "dist", "demo")
+	for _, directory := range []string{filepath.Join(distPath, ".data"), filepath.Join(distPath, ".ext"), filepath.Join(distPath, ".meta"), filepath.Join(cookbookRoot, "ingredient")} {
+		if err := os.MkdirAll(directory, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	recipePath := filepath.Join(distPath, ".meta", "recipe.yaml")
+	if err := os.WriteFile(recipePath, []byte("name: demo\nos: macos\nplatform: code\nconfig:\n  dist-strategy:\n    lock-mode: reuse\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := (cookbook.Repository{Root: filepath.Join(cookbookRoot, "ingredient")}).Resolve(recipePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	snapshot := runtimelock.Snapshot{FormatVersion: runtimelock.FormatVersion, RecipeName: "demo", Platform: "code", ObservedAt: time.Now(), Default: runtimelock.ScopeSnapshot{Settings: settings.Document{}, Extensions: []runtimeio.Extension{{ID: "sample.ext", Version: "1.0"}}}}
+	if err := (runtimelock.Store{}).Seal(distPath, recipePath, snapshot, plan); err != nil {
+		t.Fatal(err)
+	}
+	dist, err := distribution.Load(filepath.Join(root, "dist"), "demo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := Service{Cookbook: cookbook.Repository{Root: filepath.Join(cookbookRoot, "ingredient")}, Locks: runtimelock.Store{}, Pool: converge.PoolUpdater{Root: filepath.Join(root, ".vsix")}}
+	_, err = service.Create(context.Background(), filepath.Join(root, "archive"), dist, Options{OnConflict: "abort"})
+	if err == nil || !strings.Contains(err.Error(), "extension-pool to refresh") {
+		t.Fatalf("Create() error = %v", err)
+	}
+}
+
 func writeVSIX(t *testing.T, path string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {

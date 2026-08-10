@@ -267,3 +267,7 @@ The primary implementation's Selection links, origin representation,
 transaction and process-lock strategy, force recovery, and retained Bash
 interoperability are defined by the
 [Go Code Environment Contract](../../go/doc/contract/contract.code-environment.md).
+
+Platform-specific observations and the reusable intake sequence are preserved
+as Project Knowledge in the
+[VS Code Ecosystem Platform Intake experiment](../project-knowledge/experiment/experiment.vscode-ecosystem-platform-intake.md).
