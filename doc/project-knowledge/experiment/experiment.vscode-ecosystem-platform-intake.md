@@ -124,26 +124,42 @@ Cursor lifecycle from activation and Freeze Draft through Ingredient and Recipe
 review, Build, Apply, and normal use. This establishes the macOS observation;
 it does not substitute for the Windows pass.
 
-## Windows handoff — delete after reconciliation
+## Cursor observation: Windows 3.15.6
 
-Before claiming Cursor support on Windows, repeat the intake sequence and
-either promote each observation into the appropriate Platform documentation or
-delete this temporary checklist:
+Observed on Windows x64 after installing the per-user build and completing
+first-run onboarding:
 
-- confirm the installed `cursor` command, architecture, `%APPDATA%\Cursor\User`,
-  and `%USERPROFILE%\.cursor\extensions` paths;
-- distinguish the managed `Cursor.exe` root from helper processes and verify
-  both Runtime-only and default-Host stopping;
-- exercise `--user-data-dir`, `--extensions-dir`, CRLF-normalized Extension
-  listing, and named Profile creation with the persistence-before-stop settling
-  handshake;
-- verify Cursor Gallery installation, Cursor Pool acquisition, and the Visual
-  Studio Marketplace Pool fallback without adding direct Open VSX fallback;
-- run activate, Freeze Draft, Ingredient and Recipe review, Build, Apply, use,
-  launch, deactivate, and origin recovery against a recoverable environment;
-- inspect junction or symlink behavior and permissions for the Host User and
-  Extension paths, plus transaction journal cleanup after both success and an
-  intentionally interrupted operation.
+- the default managed paths are `%APPDATA%\Cursor\User` and
+  `%USERPROFILE%\.cursor\extensions`;
+- the desktop CLI accepts `--user-data-dir`, `--extensions-dir`,
+  `--list-extensions`, `--show-versions`, and `--profile`;
+- Extension listing uses CRLF output, which the reusable adapter normalizes;
+- temporary User data and Extension roots isolate Extension observation from
+  the default Host paths;
+- Cursor uses `Cursor.exe` not only for its desktop root and `--type=...`
+  helpers, but also for workers such as the bundled JSON language server and
+  Git worker. Those workers do not necessarily carry a `--type` argument.
+
+The desktop root is distinguished by process ancestry rather than by treating
+every `Cursor.exe` without `--type` as a root. Stopping only the top-level
+desktop root caused its helpers and workers to exit without separately forcing
+them to stop. Windows process stopping therefore selects a matching process
+whose parent is not another same-name Platform process, then waits for that
+root to exit.
+
+The Windows environment also completed activation, Freeze Draft, Inspect,
+Archive, Build with four named Profiles, Apply from Archive, `use`, `launch`,
+normal use, and deactivation with origin recovery. Runtime-only stopping during
+Build left the separately running default Host intact, while Selection stopping
+closed the default root and allowed all descendants to exit.
+
+Interrupted-transaction recovery was exercised at both
+`host-backups-planned` and `host-backed-up`. In the latter case, the Host User
+and Extension directories had already moved to transaction backups and the
+current Selection had been created before the activation process was forced to
+exit. The next lifecycle invocation restored the physical Host directories and
+the prior origin, removed the partial Selection and journal, left no transaction
+backups, and reproduced the pre-interruption Setting hash and Extension list.
 
 ## Earlier Kiro observations
 
@@ -168,12 +184,8 @@ identity, Cursor Marketplace query, exact VSIX asset, and Pool repository order
 alongside VS Code and Kiro. The reusable VS Code Runtime adapter is still the
 intended capability boundary.
 
-This does not yet claim:
-
-- completed Windows Cursor lifecycle observation;
-- end-to-end `activate` and `deactivate` recovery against a populated Cursor
-  environment; or
-- that every VS Code fork belongs in the supported Platform list.
+This does not claim that every VS Code fork belongs in the supported Platform
+list.
 
 Those claims should follow artifacts from the intake sequence rather than the
 similarity of the products' interfaces.
