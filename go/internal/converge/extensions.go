@@ -146,10 +146,7 @@ func sortedKeys(values map[string]struct{}) []string {
 type Pool struct{ Root string }
 
 func (p Pool) ResolveCandidates(platform, extensionID string) ([]ArtifactCandidate, error) {
-	repositories := []string{platformRepository(platform)}
-	if repositories[0] != "visual-studio-marketplace" {
-		repositories = append(repositories, "visual-studio-marketplace")
-	}
+	repositories := platformRepositories(platform)
 	var candidates []ArtifactCandidate
 	for index, repository := range repositories {
 		matches, err := poolArtifacts(filepath.Join(p.Root, repository), extensionID)
@@ -191,9 +188,13 @@ func poolArtifacts(directory, extensionID string) ([]string, error) {
 	return matches, nil
 }
 
-func platformRepository(platform string) string {
-	if platform == "kiro" {
-		return "open-vsx"
+func platformRepositories(platform string) []string {
+	switch platform {
+	case "kiro":
+		return []string{"open-vsx", "visual-studio-marketplace"}
+	case "cursor":
+		return []string{"cursor-marketplace", "visual-studio-marketplace"}
+	default:
+		return []string{"visual-studio-marketplace"}
 	}
-	return "visual-studio-marketplace"
 }

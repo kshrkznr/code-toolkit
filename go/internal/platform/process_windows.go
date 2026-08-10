@@ -26,6 +26,8 @@ func stopWindowsProcesses(ctx context.Context, platform string, runtimeOnly bool
 		process = "Code.exe"
 	case "kiro":
 		process = "Kiro.exe"
+	case "cursor":
+		process = "Cursor.exe"
 	default:
 		return fmt.Errorf("platform process management is not configured for: %s", platform)
 	}

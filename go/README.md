@@ -225,6 +225,19 @@ real-machine feedback.
 
 ## Observed Platform behavior
 
+Cursor 3.15.6 for macOS exposes a Cursor-owned Extension Gallery at
+`marketplace.cursorapi.com`. Although the gallery is based on Open VSX, it is
+the Platform repository boundary: it also carries Anysphere-specific builds
+and may apply its own synchronization and selection behavior. CTK therefore
+uses `cursor-marketplace` as Cursor's primary VSIX Pool repository and
+`visual-studio-marketplace` as its fallback. It does not bypass the Cursor
+Gallery through a direct Open VSX fallback.
+
+Cursor Gallery acquisition resolves a full Extension ID through the Gallery
+query API, selects the exact observed version, and downloads its
+`Microsoft.VisualStudio.Services.VSIXPackage` asset. CTK validates the resulting
+VSIX identity and version before treating it as an exact Pool artifact.
+
 On Kiro for Windows, an Open VSX installation of
 `emilast.logfilehighlighter` initially failed and CTK continued to its
 secondary Visual Studio Marketplace Pool candidate. Kiro CLI reported

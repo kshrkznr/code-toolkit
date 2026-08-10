@@ -3,18 +3,30 @@ package converge
 import (
 	"archive/zip"
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/kshrkznr/code-toolkit/go/internal/runtimeio"
 	"github.com/kshrkznr/code-toolkit/go/internal/runtimelock"
 )
 
-type fakeDownloader struct{ fail map[string]bool }
+type fakeDownloader struct {
+	fail     map[string]bool
+	attempts *[]string
+}
 
 func (f fakeDownloader) Download(_ context.Context, repository string, _ runtimeio.Extension, destination string) error {
+	if f.attempts != nil {
+		*f.attempts = append(*f.attempts, repository)
+	}
 	if f.fail[repository] {
 		return errors.New("unavailable")
 	}
@@ -34,6 +46,72 @@ func (f fakeDownloader) Download(_ context.Context, repository string, _ runtime
 		err = closeErr
 	}
 	return err
+}
+
+func TestPoolUpdaterUsesCursorMarketplaceThenVisualStudioFallback(t *testing.T) {
+	var attempts []string
+	updater := PoolUpdater{Root: t.TempDir(), Downloader: fakeDownloader{
+		fail: map[string]bool{"cursor-marketplace": true}, attempts: &attempts,
+	}}
+	report := Report{}
+	updater.Update(context.Background(), "cursor", runtimelock.Snapshot{Default: runtimelock.ScopeSnapshot{Extensions: []runtimeio.Extension{{ID: "sample.id", Version: "1.0"}}}}, &report)
+	if !slices.Equal(attempts, []string{"cursor-marketplace", "visual-studio-marketplace"}) {
+		t.Fatalf("attempts = %v", attempts)
+	}
+	if _, err := os.Stat(filepath.Join(updater.Root, "visual-studio-marketplace", "sample.id-1.0.vsix")); err != nil {
+		t.Fatal(err)
+	}
+	if report.HasFailures() {
+		t.Fatalf("report = %#v", report)
+	}
+}
+
+func TestHTTPDownloaderResolvesCursorMarketplaceVSIX(t *testing.T) {
+	const galleryURL = "https://marketplace.cursorapi.test/gallery"
+	client := &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		var body string
+		switch request.URL.Path {
+		case "/gallery/extensionquery":
+			if request.Method != http.MethodPost {
+				t.Errorf("method = %s", request.Method)
+			}
+			var query cursorGalleryQuery
+			if err := json.NewDecoder(request.Body).Decode(&query); err != nil {
+				return nil, err
+			}
+			if len(query.Filters) != 1 || len(query.Filters[0].Criteria) != 1 || query.Filters[0].Criteria[0].FilterType != cursorExtensionNameFilter || query.Filters[0].Criteria[0].Value != "anysphere.remote-containers" {
+				t.Errorf("query = %#v", query)
+			}
+			body = fmt.Sprintf(`{"results":[{"extensions":[{"publisher":{"publisherName":"Anysphere"},"extensionName":"remote-containers","versions":[{"version":"1.0.39","files":[]},{"version":"1.0.38","files":[{"assetType":"Microsoft.VisualStudio.Services.VSIXPackage","source":%q}]}]}]}]}`, "https://marketplace.cursorapi.test/vsix")
+		case "/vsix":
+			body = "cursor-vsix"
+		default:
+			return &http.Response{StatusCode: http.StatusNotFound, Status: "404 Not Found", Body: io.NopCloser(strings.NewReader("not found")), Header: make(http.Header), Request: request}, nil
+		}
+		return &http.Response{StatusCode: http.StatusOK, Status: "200 OK", Body: io.NopCloser(strings.NewReader(body)), Header: make(http.Header), Request: request}, nil
+	})}
+
+	destination := filepath.Join(t.TempDir(), "extension.vsix")
+	downloader := HTTPDownloader{Client: client, CursorGalleryURL: galleryURL}
+	if err := downloader.Download(context.Background(), "cursor-marketplace", runtimeio.Extension{ID: "anysphere.remote-containers", Version: "1.0.38"}, destination); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(destination)
+	if err != nil || string(data) != "cursor-vsix" {
+		t.Fatalf("data=%q err=%v", data, err)
+	}
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(request *http.Request) (*http.Response, error) {
+	return f(request)
+}
+
+func TestValidateCursorAssetURLRejectsAnotherHost(t *testing.T) {
+	if err := validateCursorAssetURL(cursorGalleryURL, "https://example.com/extension.vsix"); err == nil {
+		t.Fatal("expected foreign Cursor Marketplace asset URL to be rejected")
+	}
 }
 
 func TestPoolUpdaterFallsBackAndReplacesOldVersion(t *testing.T) {

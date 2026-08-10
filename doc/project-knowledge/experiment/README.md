@@ -63,3 +63,4 @@ These are useful entry points rather than an exhaustive catalog:
 - [Position and Lens in Design Review](experiment.position-and-lens.md)
 - [Can Past Thought Rejoin a Future Dialogue?](experiment.past-thought-in-future-dialogue.md)
 - [Unclassified Project Observations](experiment.unclassified-project-observations.md)
+- [VS Code Ecosystem Platform Intake](experiment.vscode-ecosystem-platform-intake.md)
