@@ -519,8 +519,8 @@ func (s Service) deactivateEmpty(ctx context.Context, platformName string, paths
 
 func observedRecipe(snapshot runtimelock.Snapshot) (recipe.Recipe, cookbook.Plan) {
 	marketplace := true
-	definition := recipe.Recipe{Name: snapshot.RecipeName, OS: hostOSName(), Platform: snapshot.Platform, Config: recipe.Config{DistStrategy: recipe.DistStrategy{ExtensionMarketplace: &marketplace, LockMode: "refresh", DefaultProfile: recipe.DefaultProfile{Extensions: "runtime"}}, ProfileStrategy: map[string]recipe.ProfileStrategy{}}}
-	plan := cookbook.Plan{Name: snapshot.RecipeName, OS: definition.OS, Platform: snapshot.Platform, ExtensionMarketplace: true, LockMode: "refresh"}
+	definition := recipe.Recipe{Name: snapshot.RecipeName, OS: hostOSName(), Platform: snapshot.Platform, Config: recipe.Config{DistStrategy: recipe.DistStrategy{ExtensionMarketplace: &marketplace, ExtensionPool: "reuse", LockMode: "refresh", DefaultProfile: recipe.DefaultProfile{Extensions: "runtime"}}, ProfileStrategy: map[string]recipe.ProfileStrategy{}}}
+	plan := cookbook.Plan{Name: snapshot.RecipeName, OS: definition.OS, Platform: snapshot.Platform, ExtensionMarketplace: true, ExtensionPool: "reuse", LockMode: "refresh"}
 	profiles := append([]runtimelock.ScopeSnapshot(nil), snapshot.Profiles...)
 	sort.Slice(profiles, func(i, j int) bool { return profiles[i].Name < profiles[j].Name })
 	for _, profile := range profiles {

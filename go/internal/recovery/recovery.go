@@ -60,7 +60,7 @@ func Prepare(lockRoot string) (Prepared, error) {
 }
 
 func planSkeleton(definition recipe.Recipe) cookbook.Plan {
-	plan := cookbook.Plan{Name: definition.Name, OS: definition.OS, Platform: definition.Platform, ExtensionMarketplace: definition.ExtensionMarketplace(), LockMode: "refresh"}
+	plan := cookbook.Plan{Name: definition.Name, OS: definition.OS, Platform: definition.Platform, ExtensionMarketplace: definition.ExtensionMarketplace(), ExtensionPool: definition.ExtensionPoolMode(), LockMode: "refresh"}
 	for _, name := range definition.Profile {
 		strategy := definition.ProfileContent(name)
 		plan.Profiles = append(plan.Profiles, cookbook.ScopePlan{Name: name, Inheritance: inheritance(strategy)})
@@ -149,7 +149,7 @@ func (s Service) RecoverAt(ctx context.Context, prepared Prepared, targetPath, e
 	}
 	result.Fresh = fresh
 	result.After = Compare(prepared.Plan, prepared.Source, fresh)
-	if s.PoolUpdate != nil {
+	if s.PoolUpdate != nil && prepared.Plan.ExtensionPool == "refresh" {
 		s.PoolUpdate.Update(ctx, prepared.Plan.Platform, fresh, &result.Operations)
 	}
 	return result, nil

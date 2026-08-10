@@ -266,6 +266,7 @@ lock_ask() {
 }
 
 lock_pool_update() {
+    [[ "$(recipe_extension_pool)" == refresh ]] || return 0
     vsix_pool_update "$(recipe_platform)" "$LOCK_DIR"
 }
 

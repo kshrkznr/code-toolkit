@@ -160,7 +160,7 @@ func (s Service) Apply(ctx context.Context, recipePath string, dist distribution
 	if err != nil {
 		return result, err
 	}
-	if s.PoolUpdate != nil {
+	if s.PoolUpdate != nil && plan.ExtensionPool == "refresh" {
 		s.PoolUpdate.Update(ctx, plan.Platform, snapshot, &result.Report)
 	}
 	if err := generateDirectLauncher(distribution.Distribution{Name: dist.Name, Path: dist.Path, Recipe: recipe.Recipe{Name: plan.Name, OS: plan.OS, Platform: plan.Platform}}, &result); err != nil {
@@ -185,7 +185,7 @@ func (s Service) Lock(ctx context.Context, dist distribution.Distribution) (conv
 		return report, err
 	}
 	snapshot, err := s.Locks.Refresh(ctx, dist.Path, recipePath, runtime, plan)
-	if err == nil && s.PoolUpdate != nil {
+	if err == nil && s.PoolUpdate != nil && plan.ExtensionPool == "refresh" {
 		s.PoolUpdate.Update(ctx, plan.Platform, snapshot, &report)
 	}
 	return report, err
@@ -237,7 +237,7 @@ func (s Service) Build(ctx context.Context, recipePath, distRoot, name string, k
 	if snapshot, err = s.finishLock(ctx, staging, recipePath, runtime, plan); err != nil {
 		return result, err
 	}
-	if s.PoolUpdate != nil {
+	if s.PoolUpdate != nil && plan.ExtensionPool == "refresh" {
 		s.PoolUpdate.Update(ctx, plan.Platform, snapshot, &result.Report)
 	}
 	if err = generateDirectLauncher(dist, &result); err != nil {

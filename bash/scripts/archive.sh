@@ -42,15 +42,20 @@ archive() {
 
 archive_download_vsix() {
     local lock_dir="${ARC_DIR}/lock"
-    local platform
-    platform="$(recipe_load "$(dist_recipe)" >/dev/null; recipe_platform)"
+    local platform pool_mode
+    recipe_load "$(dist_recipe)" >/dev/null
+    platform="$(recipe_platform)"
+    pool_mode="$(recipe_extension_pool)"
     [[ -n "$platform" && "$platform" != "null" ]] || {
         echo "[error] archive platform missing" >&2
         return 1
     }
 
     echo "[resolve vsix from Pool] ${ARC_DIR}/vsix"
-    vsix_pool_extensions "$lock_dir" | vsix_pool_download "$platform"
+    if [[ "$pool_mode" == refresh ]]
+    then
+        vsix_pool_extensions "$lock_dir" | vsix_pool_download "$platform"
+    fi
     vsix_pool_extensions "$lock_dir" | vsix_pool_copy "$platform" "${ARC_DIR}/vsix"
 }
 

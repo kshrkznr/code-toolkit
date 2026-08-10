@@ -23,6 +23,7 @@ type Config struct {
 
 type DistStrategy struct {
 	ExtensionMarketplace *bool          `yaml:"extension-marketplace"`
+	ExtensionPool        string         `yaml:"extension-pool"`
 	LockMode             string         `yaml:"lock-mode"`
 	DefaultProfile       DefaultProfile `yaml:"default-profile"`
 }
@@ -100,6 +101,13 @@ func (r Recipe) ExtensionMarketplace() bool {
 		return true
 	}
 	return *r.Config.DistStrategy.ExtensionMarketplace
+}
+
+func (r Recipe) ExtensionPoolMode() string {
+	if r.Config.DistStrategy.ExtensionPool == "" {
+		return "reuse"
+	}
+	return r.Config.DistStrategy.ExtensionPool
 }
 
 func (r Recipe) LockMode() string {

@@ -29,6 +29,7 @@ type Plan struct {
 	OS                   string
 	Platform             string
 	ExtensionMarketplace bool
+	ExtensionPool        string
 	LockMode             string
 	Default              ScopePlan
 	Profiles             []ScopePlan
@@ -62,6 +63,9 @@ func (r Repository) Resolve(recipePath string) (Plan, error) {
 	}
 	if mode := definition.LockMode(); mode != "refresh" && mode != "reuse" && mode != "ask" {
 		return Plan{}, fmt.Errorf("unsupported lock-mode %q", mode)
+	}
+	if mode := definition.ExtensionPoolMode(); mode != "reuse" && mode != "refresh" {
+		return Plan{}, fmt.Errorf("unsupported extension-pool %q", mode)
 	}
 	rules, err := mergerules.Load(filepath.Dir(r.Root))
 	if err != nil {
@@ -156,7 +160,7 @@ func (r Repository) Resolve(recipePath string) (Plan, error) {
 	}
 	plan := Plan{
 		RecipePath: recipePath, Name: definition.Name, OS: definition.OS, Platform: definition.Platform,
-		ExtensionMarketplace: definition.ExtensionMarketplace(), LockMode: definition.LockMode(),
+		ExtensionMarketplace: definition.ExtensionMarketplace(), ExtensionPool: definition.ExtensionPoolMode(), LockMode: definition.LockMode(),
 		Default: ScopePlan{
 			Name: "", Extensions: append([]string(nil), defaultExtensions...), Sources: append(defaultSources, runtimeExtensionSources...),
 			Inheritance: Inheritance{Unmanaged: map[string]bool{}},

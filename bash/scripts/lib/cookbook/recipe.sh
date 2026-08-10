@@ -73,6 +73,20 @@ recipe_extension_marketplace() {
     yq -r '.config."dist-strategy"."extension-marketplace" // true' "$RECIPE_FILE"
 }
 
+recipe_extension_pool() {
+    local mode
+    mode="$(yq -r '.config."dist-strategy"."extension-pool" // "reuse"' "$RECIPE_FILE")"
+    case "$mode" in
+        reuse|refresh)
+            printf '%s\n' "$mode"
+            ;;
+        *)
+            echo "invalid dist-strategy.extension-pool: $mode (expected: reuse, refresh)" >&2
+            return 1
+            ;;
+    esac
+}
+
 recipe_lock_mode() {
     yq -r '.config."dist-strategy"."lock-mode" // "refresh"' "$RECIPE_FILE"
 }
@@ -126,6 +140,8 @@ recipe_validate() {
     }
 
     recipe_profiles >/dev/null || return 1
+
+    recipe_extension_pool >/dev/null || return 1
 
     return 0
 }

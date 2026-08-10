@@ -60,6 +60,9 @@ func TestStrategyDefaults(t *testing.T) {
 	if !recipe.ExtensionMarketplace() {
 		t.Fatal("extension marketplace should default to true")
 	}
+	if recipe.ExtensionPoolMode() != "reuse" {
+		t.Fatalf("extension Pool mode = %q", recipe.ExtensionPoolMode())
+	}
 }
 
 func TestLoadRequiresName(t *testing.T) {

@@ -187,3 +187,34 @@ func TestValidateVSIXExactAcceptsPackageIdentityCaseDifference(t *testing.T) {
 		t.Fatalf("ValidateVSIXExact() error = %v", err)
 	}
 }
+
+func TestResolveExactUsesValidatedLocalArtifact(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "visual-studio-marketplace", "sample.ext-1.0.vsix")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	file, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	archive := zip.NewWriter(file)
+	entry, err := archive.Create("extension/package.json")
+	if err == nil {
+		_, err = entry.Write([]byte(`{"publisher":"sample","name":"ext","version":"1.0"}`))
+	}
+	if closeErr := archive.Close(); err == nil {
+		err = closeErr
+	}
+	if closeErr := file.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := (PoolUpdater{Root: root}).ResolveExact("code", runtimeio.Extension{ID: "sample.ext", Version: "1.0"})
+	if err != nil || got != path {
+		t.Fatalf("ResolveExact() = %q, %v", got, err)
+	}
+}

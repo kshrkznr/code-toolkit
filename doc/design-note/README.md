@@ -35,6 +35,8 @@ Start with the question closest to the current work:
 - Why does CTK leave secret identification and resolution outside its current
   responsibility?
   → [Why CTK Does Not Manage Secrets](design-note.secret-management.md)
+- Why is direct VSIX acquisition separate from normal Platform installation?
+  → [Why CTK Keeps VSIX Acquisition Explicit](design-note.vsix-acquisition.md)
 - Why is *Workbench Builder* retained only as a historical lens?
   → [Workbench Builder as a Historical Lens](design-note.workbench-builder.md)
 

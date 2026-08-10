@@ -292,18 +292,11 @@ func (u PoolUpdater) EnsureExact(ctx context.Context, platform string, extension
 	if extension.ID == "" || extension.Version == "" || strings.ContainsAny(extension.ID+extension.Version, `/\\`) {
 		return "", fmt.Errorf("versioned Extension observation required: %s@%s", extension.ID, extension.Version)
 	}
+	if path, err := u.ResolveExact(platform, extension); err == nil {
+		return path, nil
+	}
 	repositories := platformRepositories(platform)
 	artifact := poolArtifactName(extension)
-	for _, repository := range repositories {
-		matches, _ := poolArtifacts(filepath.Join(u.Root, repository), extension.ID)
-		for _, path := range matches {
-			if strings.EqualFold(filepath.Base(path), artifact) {
-				if err := ValidateVSIXExact(path, extension); err == nil {
-					return path, nil
-				}
-			}
-		}
-	}
 	downloader := u.Downloader
 	if downloader == nil {
 		downloader = HTTPDownloader{}
@@ -333,6 +326,33 @@ func (u PoolUpdater) EnsureExact(ctx context.Context, platform string, extension
 		}
 	}
 	return "", fmt.Errorf("artifact unavailable from configured repositories: %s@%s", extension.ID, extension.Version)
+}
+
+// ResolveExact returns an already cached, validated exact-version Pool
+// artifact without contacting any Repository.
+func (u PoolUpdater) ResolveExact(platform string, extension runtimeio.Extension) (string, error) {
+	if extension.ID == "" || extension.Version == "" || strings.ContainsAny(extension.ID+extension.Version, `/\\`) {
+		return "", fmt.Errorf("versioned Extension observation required: %s@%s", extension.ID, extension.Version)
+	}
+	artifact := poolArtifactName(extension)
+	var validationErr error
+	for _, repository := range platformRepositories(platform) {
+		matches, _ := poolArtifacts(filepath.Join(u.Root, repository), extension.ID)
+		for _, path := range matches {
+			if !strings.EqualFold(filepath.Base(path), artifact) {
+				continue
+			}
+			if err := ValidateVSIXExact(path, extension); err != nil {
+				validationErr = fmt.Errorf("validate Extension Pool artifact %s: %w", path, err)
+				continue
+			}
+			return path, nil
+		}
+	}
+	if validationErr != nil {
+		return "", validationErr
+	}
+	return "", fmt.Errorf("exact Extension Pool artifact unavailable: %s@%s", extension.ID, extension.Version)
 }
 
 func ValidateVSIX(path string) error {
