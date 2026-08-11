@@ -14,5 +14,4 @@ cookbook/*.old/
 .vsix/
 out/
 release/*
-!/release/current/
 /*.zip

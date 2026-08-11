@@ -286,9 +286,8 @@ Primary concepts:
 The current macOS and Windows binaries are published on the
 [GitHub Releases page](https://github.com/kshrkznr/code-toolkit/releases/latest).
 Start from a repository checkout so the executable can discover the accompanying
-Cookbook and documentation. Create `release/current` in the checkout, then
-download `checksums.txt` and the archive for your platform from the release
-Assets into that directory.
+Cookbook and documentation. Download `checksums.txt` and the archive for your
+platform from the latest release Assets into a directory of your choice.
 
 ## macOS
 
@@ -296,7 +295,7 @@ Choose the archive for the Mac's architecture, verify the published checksums,
 and place `ctk` on `PATH`:
 
 ```bash
-cd release/current
+cd /path/to/downloaded-assets
 shasum -a 256 ctk_v0.3.0_darwin_arm64.tar.gz
 tar -xzf ctk_v0.3.0_darwin_arm64.tar.gz
 mkdir -p "$HOME/.local/bin"
@@ -313,7 +312,7 @@ From PowerShell, verify that the displayed hash matches the Windows entry in
 `checksums.txt`, then extract the executable into a directory on `PATH`:
 
 ```powershell
-Set-Location release/current
+Set-Location C:\path\to\downloaded-assets
 Get-FileHash .\ctk_v0.3.0_windows_amd64.zip -Algorithm SHA256
 Expand-Archive .\ctk_v0.3.0_windows_amd64.zip -DestinationPath "$env:LOCALAPPDATA\CTK\bin"
 ```
