@@ -194,6 +194,8 @@ func platformRepositories(platform string) []string {
 		return []string{"open-vsx", "visual-studio-marketplace"}
 	case "cursor":
 		return []string{"cursor-marketplace", "visual-studio-marketplace"}
+	case "devin-desktop":
+		return []string{"windsurf-marketplace"}
 	default:
 		return []string{"visual-studio-marketplace"}
 	}

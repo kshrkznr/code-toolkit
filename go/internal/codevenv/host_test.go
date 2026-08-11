@@ -8,9 +8,11 @@ import (
 	"testing"
 )
 
-func TestSupportedPlatformsIncludesCursor(t *testing.T) {
-	if !slices.Contains(SupportedPlatforms(), "cursor") {
-		t.Fatal("SupportedPlatforms() does not include cursor")
+func TestSupportedPlatformsIncludesObservedAdapters(t *testing.T) {
+	for _, platform := range []string{"cursor", "devin-desktop"} {
+		if !slices.Contains(SupportedPlatforms(), platform) {
+			t.Fatalf("SupportedPlatforms() does not include %s", platform)
+		}
 	}
 }
 
@@ -31,5 +33,25 @@ func TestResolveCursorHostPaths(t *testing.T) {
 	}
 	if !strings.HasSuffix(filepath.ToSlash(paths.Extensions), "/.cursor/extensions") {
 		t.Fatalf("Extensions = %q, want .cursor/extensions", paths.Extensions)
+	}
+}
+
+func TestResolveDevinDesktopHostPaths(t *testing.T) {
+	if runtime.GOOS != "darwin" && runtime.GOOS != "windows" {
+		t.Skip("CodeVenv host integration is only available on macOS and Windows")
+	}
+
+	paths, err := ResolveHostPaths("devin-desktop")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasSuffix(filepath.ToSlash(paths.UserData), "/Devin") {
+		t.Fatalf("UserData = %q, want Devin data directory", paths.UserData)
+	}
+	if paths.User != filepath.Join(paths.UserData, "User") {
+		t.Fatalf("User = %q, want User under UserData", paths.User)
+	}
+	if !strings.HasSuffix(filepath.ToSlash(paths.Extensions), "/.devin/extensions") {
+		t.Fatalf("Extensions = %q, want .devin/extensions", paths.Extensions)
 	}
 }

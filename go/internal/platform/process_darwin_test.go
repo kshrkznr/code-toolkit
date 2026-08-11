@@ -15,6 +15,8 @@ func TestRelevantProcess(t *testing.T) {
 		{"helper", "code", "/Applications/Code Helper --user-data-dir /tmp/dist/old/.data", false},
 		{"default cursor", "cursor", "/Applications/Cursor.app/Contents/MacOS/Cursor", true},
 		{"cursor helper", "cursor", "/Applications/Cursor.app/Contents/Frameworks/Cursor Helper.app/Contents/MacOS/Cursor Helper --type=gpu-process", false},
+		{"default devin", "devin-desktop", "/Applications/Devin.app/Contents/MacOS/Devin", true},
+		{"devin helper", "devin-desktop", "/Applications/Devin.app/Contents/Frameworks/Devin Helper.app/Contents/MacOS/Devin Helper --type=gpu-process", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

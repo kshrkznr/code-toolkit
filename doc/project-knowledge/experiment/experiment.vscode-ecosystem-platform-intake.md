@@ -90,9 +90,10 @@ Cursor.
 The resulting Pool repository order is deliberately explicit:
 
 ```text
-code   → visual-studio-marketplace
-kiro   → open-vsx → visual-studio-marketplace
-cursor → cursor-marketplace → visual-studio-marketplace
+code          → visual-studio-marketplace
+kiro          → open-vsx → visual-studio-marketplace
+cursor        → cursor-marketplace → visual-studio-marketplace
+devin-desktop → windsurf-marketplace
 ```
 
 Cursor does not fall back directly to Open VSX. Doing so would bypass the
@@ -177,12 +178,63 @@ Kiro established several parts of this intake path:
 Cursor adds a complementary warning: shared flags do not guarantee that
 first-run or named Profile lifecycle behavior is equivalent.
 
+## Devin Desktop observation: macOS 3.7.16
+
+[Windsurf was renamed to Devin Desktop in June 2026](https://devin.ai/blog/windsurf-is-now-devin-desktop).
+The current application preserves backwards compatibility with Windsurf, but
+its executable and new storage identity changed. CTK follows the current
+Platform command rather than introducing a legacy command that is not present
+in a fresh installation.
+
+Observed on Apple Silicon from the current official Homebrew Cask:
+
+- the Platform command is `devin-desktop` and reports Devin Desktop 3.7.16
+  with editor 1.126.0;
+- the root process is `/Applications/Devin.app/Contents/MacOS/Devin`, while
+  helpers use `Devin Helper` identities and `--type=...` arguments;
+- current Host paths are `~/Library/Application Support/Devin/User` and
+  `~/.devin/extensions`;
+- installed product metadata names `Windsurf` and `.windsurf` as the old data
+  identities, and retains `com.exafunction.windsurf` as the bundle identifier;
+- `--user-data-dir`, `--extensions-dir`, `--list-extensions`,
+  `--show-versions`, `--install-extension`, `--uninstall-extension`, and
+  `--profile` are present in the desktop CLI;
+- a named Profile launched in temporary Runtime paths was persisted to
+  `User/globalStorage/storage.json`, and stopping the root allowed its helpers
+  to exit;
+- the product-owned Gallery is
+  `https://marketplace.windsurf.com/vscode/gallery`.
+
+An isolated install of `editorconfig.editorconfig` resolved through the
+Windsurf Gallery, installed version 0.18.2, appeared in the versioned
+Extension list, and uninstalled normally. The Gallery query API returned the
+exact `Microsoft.VisualStudio.Services.VSIXPackage` asset from its selected
+Open VSX source. The useful boundary is still the Windsurf Gallery response:
+direct Open VSX lookup would bypass the Platform's selection and compatibility
+controls.
+
+The macOS CTK lifecycle was then exercised with a disposable Home and
+Workspace. Recipe View, Default-only Build, Apply, Windsurf Marketplace Pool
+refresh, Archive, activation with `origin.devin-desktop`, isolated launch,
+`use`, Freeze Draft, and normal deactivation completed without unresolved or
+failed operations. Deactivation restored physical Host directories, removed
+`current.devin-desktop`, and left no transaction journal or backup. A separate
+Build created a named Profile, observed its persisted storage location, and
+finished with no remaining Devin process.
+
+The current product metadata represents Windows user data as `Devin`, the
+Extension data folder as `.devin`, and the desktop executable as `Devin.exe`.
+Those values support a provisional Windows adapter representation, but do not
+establish Windows lifecycle support. Activation, interruption recovery,
+Runtime-only stopping, Build/Apply, and deactivation must still be exercised
+on a real Windows host before that support is claimed.
+
 ## Current implementation boundary
 
-The Go implementation now recognizes Cursor's host paths, root process
-identity, Cursor Marketplace query, exact VSIX asset, and Pool repository order
-alongside VS Code and Kiro. The reusable VS Code Runtime adapter is still the
-intended capability boundary.
+The Go implementation now recognizes Cursor and Devin Desktop host paths, root
+process identities, Platform Gallery queries, exact VSIX assets, and Pool
+repository order alongside VS Code and Kiro. The reusable VS Code Runtime
+adapter is still the intended capability boundary.
 
 This does not claim that every VS Code fork belongs in the supported Platform
 list.

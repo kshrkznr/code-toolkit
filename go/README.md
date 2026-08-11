@@ -232,6 +232,34 @@ real-machine feedback.
 
 ## Observed Platform behavior
 
+Windsurf was renamed to Devin Desktop in June 2026. Devin Desktop 3.7.16 for
+Apple Silicon exposes `devin-desktop` as its Platform command, stores Host user
+data under `~/Library/Application Support/Devin/User`, and stores Extensions
+under `~/.devin/extensions`. Its application root is
+`/Applications/Devin.app/Contents/MacOS/Devin`; helpers retain the VS
+Code-family `Devin Helper` and `--type=...` representation.
+
+The application still carries explicit migration identity for Windsurf:
+`Windsurf` and `.windsurf` are named as the old data locations, the macOS
+bundle identifier remains `com.exafunction.windsurf`, and its Extension
+Gallery is served from `marketplace.windsurf.com`. CTK therefore uses the
+current `devin-desktop` identity for new Distributions while treating the
+Windsurf names as migration evidence, not as a second supported Platform
+command.
+
+An isolated macOS observation confirmed Settings and Extension path
+redirection, Extension list/install/uninstall, named Profile persistence, and
+the CTK lifecycle from Recipe View and Build through Archive, activation,
+launch, selection, Freeze Draft, and deactivation. Exact Pool acquisition uses
+`windsurf-marketplace` as the only repository for `devin-desktop`; CTK follows
+the Gallery's selected Open VSX asset without treating direct Open VSX or
+Visual Studio Marketplace as a fallback.
+
+The Windows executable and host paths are represented as `Devin.exe`,
+`%APPDATA%\Devin\User`, and `%USERPROFILE%\.devin\extensions` from the
+installed product metadata, but the Windows lifecycle remains unverified on a
+real host.
+
 Cursor 3.15.6 for macOS exposes a Cursor-owned Extension Gallery at
 `marketplace.cursorapi.com`. Although the gallery is based on Open VSX, it is
 the Platform repository boundary: it also carries Anysphere-specific builds

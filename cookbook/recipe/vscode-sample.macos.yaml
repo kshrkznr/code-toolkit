@@ -6,7 +6,7 @@ name: vscode-sample
 # Supported operating systems: macos, windows
 os: macos
 
-# Supported Platform commands: code, kiro
+# Supported Platform commands: code, kiro, cursor, devin-desktop
 # This sample targets Visual Studio Code through the code command.
 platform: code
 

@@ -20,16 +20,9 @@ func (windowsProcessStopper) StopRuntime(ctx context.Context, platform string, r
 }
 
 func stopWindowsProcesses(ctx context.Context, platform string, runtimeOnly bool, runtimePaths ...string) error {
-	process := ""
-	switch platform {
-	case "code":
-		process = "Code.exe"
-	case "kiro":
-		process = "Kiro.exe"
-	case "cursor":
-		process = "Cursor.exe"
-	default:
-		return fmt.Errorf("platform process management is not configured for: %s", platform)
+	process, err := windowsProcessName(platform)
+	if err != nil {
+		return err
 	}
 
 	var pathChecks []string
@@ -55,6 +48,21 @@ func stopWindowsProcesses(ctx context.Context, platform string, runtimeOnly bool
 		return fmt.Errorf("stop platform processes: %w: %s", err, strings.TrimSpace(string(output)))
 	}
 	return nil
+}
+
+func windowsProcessName(platform string) (string, error) {
+	switch platform {
+	case "code":
+		return "Code.exe", nil
+	case "kiro":
+		return "Kiro.exe", nil
+	case "cursor":
+		return "Cursor.exe", nil
+	case "devin-desktop":
+		return "Devin.exe", nil
+	default:
+		return "", fmt.Errorf("platform process management is not configured for: %s", platform)
+	}
 }
 
 func windowsStopScript(process, selection string) string {
