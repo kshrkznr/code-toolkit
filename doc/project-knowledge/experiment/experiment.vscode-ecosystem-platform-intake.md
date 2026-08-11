@@ -93,7 +93,7 @@ The resulting Pool repository order is deliberately explicit:
 code          → visual-studio-marketplace
 kiro          → open-vsx → visual-studio-marketplace
 cursor        → cursor-marketplace → visual-studio-marketplace
-devin-desktop → windsurf-marketplace
+devin-desktop → windsurf-marketplace → visual-studio-marketplace
 ```
 
 Cursor does not fall back directly to Open VSX. Doing so would bypass the
@@ -212,6 +212,14 @@ exact `Microsoft.VisualStudio.Services.VSIXPackage` asset from its selected
 Open VSX source. The useful boundary is still the Windsurf Gallery response:
 direct Open VSX lookup would bypass the Platform's selection and compatibility
 controls.
+
+Two Extensions absent from the Windsurf Gallery, `chrmarti.regex@0.6.0` and
+`nhoizey.gremlins@0.26.0`, were already available as exact artifacts in the
+Visual Studio Marketplace Pool. Devin accepted both local VSIX files, reported
+their exact IDs and versions, and created the resulting Extension directories.
+CTK therefore uses Visual Studio Marketplace as a secondary Pool source after
+the normal Platform install fails. It does not pass the Visual Studio
+Marketplace identity to Devin as another online Gallery.
 
 The macOS CTK lifecycle was then exercised with a disposable Home and
 Workspace. Recipe View, Default-only Build, Apply, Windsurf Marketplace Pool

@@ -251,9 +251,10 @@ An isolated macOS observation confirmed Settings and Extension path
 redirection, Extension list/install/uninstall, named Profile persistence, and
 the CTK lifecycle from Recipe View and Build through Archive, activation,
 launch, selection, Freeze Draft, and deactivation. Exact Pool acquisition uses
-`windsurf-marketplace` as the only repository for `devin-desktop`; CTK follows
-the Gallery's selected Open VSX asset without treating direct Open VSX or
-Visual Studio Marketplace as a fallback.
+`windsurf-marketplace` first; CTK follows the Gallery's selected Open VSX asset
+without treating direct Open VSX as another repository. An exact Visual Studio
+Marketplace artifact may be used as a secondary local Pool candidate when the
+normal Devin install reports that the Extension is unavailable.
 
 The Windows executable and host paths are represented as `Devin.exe`,
 `%APPDATA%\Devin\User`, and `%USERPROFILE%\.devin\extensions` from the

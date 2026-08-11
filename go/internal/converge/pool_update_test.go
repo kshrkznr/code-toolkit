@@ -66,6 +66,24 @@ func TestPoolUpdaterUsesCursorMarketplaceThenVisualStudioFallback(t *testing.T) 
 	}
 }
 
+func TestPoolUpdaterUsesWindsurfMarketplaceThenVisualStudioFallback(t *testing.T) {
+	var attempts []string
+	updater := PoolUpdater{Root: t.TempDir(), Downloader: fakeDownloader{
+		fail: map[string]bool{"windsurf-marketplace": true}, attempts: &attempts,
+	}}
+	report := Report{}
+	updater.Update(context.Background(), "devin-desktop", runtimelock.Snapshot{Default: runtimelock.ScopeSnapshot{Extensions: []runtimeio.Extension{{ID: "sample.id", Version: "1.0"}}}}, &report)
+	if !slices.Equal(attempts, []string{"windsurf-marketplace", "visual-studio-marketplace"}) {
+		t.Fatalf("attempts = %v", attempts)
+	}
+	if _, err := os.Stat(filepath.Join(updater.Root, "visual-studio-marketplace", "sample.id-1.0.vsix")); err != nil {
+		t.Fatal(err)
+	}
+	if report.HasFailures() {
+		t.Fatalf("report = %#v", report)
+	}
+}
+
 func TestHTTPDownloaderResolvesCursorMarketplaceVSIX(t *testing.T) {
 	const galleryURL = "https://marketplace.cursorapi.test/gallery"
 	client := &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
