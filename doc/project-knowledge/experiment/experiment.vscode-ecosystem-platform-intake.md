@@ -230,12 +230,60 @@ failed operations. Deactivation restored physical Host directories, removed
 Build created a named Profile, observed its persisted storage location, and
 finished with no remaining Devin process.
 
-The current product metadata represents Windows user data as `Devin`, the
-Extension data folder as `.devin`, and the desktop executable as `Devin.exe`.
-Those values support a provisional Windows adapter representation, but do not
-establish Windows lifecycle support. Activation, interruption recovery,
-Runtime-only stopping, Build/Apply, and deactivation must still be exercised
-on a real Windows host before that support is claimed.
+## Devin Desktop observation: Windows 3.7.16
+
+Observed on Windows x64 from the current per-user winget package:
+
+- the package ID is `CognitionAI.DevinDesktop`, and the installed Platform CLI
+  is `%LOCALAPPDATA%\Programs\Devin\bin\devin-desktop.cmd`;
+- the default managed paths are `%APPDATA%\Devin\User` and
+  `%USERPROFILE%\.devin\extensions`;
+- the desktop root is an argument-free `Devin.exe`; helpers use the same
+  executable with `--type=...`, while the bundled agent has a distinct
+  lower-case `resources\app\extensions\windsurf\devin\bin\devin.exe` path;
+- the CLI accepts `--user-data-dir`, `--extensions-dir`, Extension management,
+  and named Profile arguments;
+- product metadata retains the `Exafunction.Windsurf` application identity and
+  uses `devin-desktop` as the current application name.
+
+The Windows CTK lifecycle completed activation, Freeze Draft, Distribution
+View, Build with a named `core` Profile, Archive, Apply from Archive, `use`,
+isolated launch, and normal deactivation. Activation redirected the Host User
+and Extension paths with junctions through `current.devin-desktop`. Launch
+passed the selected Distribution's `.data` and `.ext` paths to the desktop
+root, and its helpers inherited the isolated User data path. Build completed
+all convergence operations without unresolved or failed work, and Apply from
+Archive did the same.
+
+Deactivation restored physical Host directories, removed
+`current.devin-desktop`, and left no Devin process, transaction journal, or
+backup. The original Extension ID and version were restored. The original
+Setting value was also restored, although JSON serialization normalized its
+whitespace and therefore changed its byte hash.
+
+In the observed TLS-inspecting network environment, the Devin CLI failed
+Marketplace installation with `unable to verify the first certificate` unless
+started with `NODE_OPTIONS=--use-system-ca`. With that process-local option,
+the same isolated Extension install and CTK lifecycle succeeded. This records
+the environment boundary rather than making the option part of the Platform
+adapter.
+
+Runtime-only stopping was exercised by leaving `origin.devin-desktop` running
+while a separate suffixed Distribution was built. The original desktop root
+kept the same PID and command line through all 16 successful Build operations;
+only processes associated with the Build Runtime were eligible to stop.
+
+Interrupted activation was exercised at both `host-backups-planned` and
+`host-backed-up`. The deeper interruption left the journal after both physical
+Host directories had moved to their transaction backups and before the current
+Selection was created. The next lifecycle invocation removed the journal and
+transaction backups and restored physical Host directories, the pre-test
+Setting byte hash, and `naterkane.gremlins@0.26.1`, with no remaining Devin
+process or partial Selection. Its attempt to continue into a new activation
+reported Runtime convergence incomplete once; a separate subsequent activation
+and normal deactivation completed successfully. Recovery integrity is therefore
+established, while the transient post-recovery convergence remains an observed
+retry boundary rather than being hidden as an uninterrupted success.
 
 ## Current implementation boundary
 

@@ -256,10 +256,30 @@ without treating direct Open VSX as another repository. An exact Visual Studio
 Marketplace artifact may be used as a secondary local Pool candidate when the
 normal Devin install reports that the Extension is unavailable.
 
-The Windows executable and host paths are represented as `Devin.exe`,
-`%APPDATA%\Devin\User`, and `%USERPROFILE%\.devin\extensions` from the
-installed product metadata, but the Windows lifecycle remains unverified on a
-real host.
+Devin Desktop 3.7.16 for Windows x64 uses `Devin.exe`,
+`%APPDATA%\Devin\User`, and `%USERPROFILE%\.devin\extensions`. The desktop
+root has no `--type` argument; same-name helpers use `--type=...`, and the
+bundled Devin agent also has a distinct lower-case `devin.exe` path. An
+observed Windows lifecycle completed activation, Freeze Draft, Build, Archive,
+Apply from Archive, `use`, isolated launch, and normal deactivation. Host paths
+were redirected with junctions, the named `core` Profile persisted, and
+deactivation restored physical Host directories without a remaining Devin
+process, Selection, transaction journal, or backup. The restored Setting was
+semantically unchanged but its JSON formatting was normalized.
+
+Runtime-only stopping during a separate Build left the running
+`origin.devin-desktop` root and its descendants intact. Forced activation
+interruption at both `host-backups-planned` and `host-backed-up` was recovered
+by the next lifecycle invocation, restoring the physical Host paths, original
+Setting hash, and Extension version without a remaining journal, backup, or
+partial Selection. After the deeper interruption, recovery completed but the
+same invocation's new Runtime convergence failed once; a subsequent activation
+and deactivation completed normally.
+
+In the observed network environment, Marketplace installation required
+`NODE_OPTIONS=--use-system-ca`; without it the Devin CLI reported
+`unable to verify the first certificate`. This is retained as an environment
+and CLI observation rather than a CTK Platform requirement.
 
 Cursor 3.15.6 for macOS exposes a Cursor-owned Extension Gallery at
 `marketplace.cursorapi.com`. Although the gallery is based on Open VSX, it is
