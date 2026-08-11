@@ -66,6 +66,24 @@ func TestPoolUpdaterUsesCursorMarketplaceThenVisualStudioFallback(t *testing.T) 
 	}
 }
 
+func TestPoolUpdaterUsesWindsurfMarketplaceThenVisualStudioFallback(t *testing.T) {
+	var attempts []string
+	updater := PoolUpdater{Root: t.TempDir(), Downloader: fakeDownloader{
+		fail: map[string]bool{"windsurf-marketplace": true}, attempts: &attempts,
+	}}
+	report := Report{}
+	updater.Update(context.Background(), "devin-desktop", runtimelock.Snapshot{Default: runtimelock.ScopeSnapshot{Extensions: []runtimeio.Extension{{ID: "sample.id", Version: "1.0"}}}}, &report)
+	if !slices.Equal(attempts, []string{"windsurf-marketplace", "visual-studio-marketplace"}) {
+		t.Fatalf("attempts = %v", attempts)
+	}
+	if _, err := os.Stat(filepath.Join(updater.Root, "visual-studio-marketplace", "sample.id-1.0.vsix")); err != nil {
+		t.Fatal(err)
+	}
+	if report.HasFailures() {
+		t.Fatalf("report = %#v", report)
+	}
+}
+
 func TestHTTPDownloaderResolvesCursorMarketplaceVSIX(t *testing.T) {
 	const galleryURL = "https://marketplace.cursorapi.test/gallery"
 	client := &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
@@ -75,11 +93,11 @@ func TestHTTPDownloaderResolvesCursorMarketplaceVSIX(t *testing.T) {
 			if request.Method != http.MethodPost {
 				t.Errorf("method = %s", request.Method)
 			}
-			var query cursorGalleryQuery
+			var query galleryQuery
 			if err := json.NewDecoder(request.Body).Decode(&query); err != nil {
 				return nil, err
 			}
-			if len(query.Filters) != 1 || len(query.Filters[0].Criteria) != 1 || query.Filters[0].Criteria[0].FilterType != cursorExtensionNameFilter || query.Filters[0].Criteria[0].Value != "anysphere.remote-containers" {
+			if len(query.Filters) != 1 || len(query.Filters[0].Criteria) != 1 || query.Filters[0].Criteria[0].FilterType != galleryExtensionNameFilter || query.Filters[0].Criteria[0].Value != "anysphere.remote-containers" {
 				t.Errorf("query = %#v", query)
 			}
 			body = fmt.Sprintf(`{"results":[{"extensions":[{"publisher":{"publisherName":"Anysphere"},"extensionName":"remote-containers","versions":[{"version":"1.0.39","files":[]},{"version":"1.0.38","files":[{"assetType":"Microsoft.VisualStudio.Services.VSIXPackage","source":%q}]}]}]}]}`, "https://marketplace.cursorapi.test/vsix")
@@ -102,6 +120,39 @@ func TestHTTPDownloaderResolvesCursorMarketplaceVSIX(t *testing.T) {
 	}
 }
 
+func TestHTTPDownloaderResolvesWindsurfMarketplaceVSIX(t *testing.T) {
+	const galleryURL = "https://marketplace.windsurf.test/vscode/gallery"
+	client := &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		var body string
+		switch request.URL.Path {
+		case "/vscode/gallery/extensionquery":
+			var query galleryQuery
+			if err := json.NewDecoder(request.Body).Decode(&query); err != nil {
+				return nil, err
+			}
+			if len(query.Filters) != 1 || len(query.Filters[0].Criteria) != 1 || query.Filters[0].Criteria[0].Value != "editorconfig.editorconfig" {
+				t.Errorf("query = %#v", query)
+			}
+			body = fmt.Sprintf(`{"results":[{"extensions":[{"publisher":{"publisherName":"EditorConfig"},"extensionName":"EditorConfig","versions":[{"version":"0.18.2","files":[{"assetType":"Microsoft.VisualStudio.Services.VSIXPackage","source":%q}]}]}]}]}`, "https://open-vsx.org/extension.vsix")
+		case "/extension.vsix":
+			body = "windsurf-vsix"
+		default:
+			return &http.Response{StatusCode: http.StatusNotFound, Status: "404 Not Found", Body: io.NopCloser(strings.NewReader("not found")), Header: make(http.Header), Request: request}, nil
+		}
+		return &http.Response{StatusCode: http.StatusOK, Status: "200 OK", Body: io.NopCloser(strings.NewReader(body)), Header: make(http.Header), Request: request}, nil
+	})}
+
+	destination := filepath.Join(t.TempDir(), "extension.vsix")
+	downloader := HTTPDownloader{Client: client, WindsurfGalleryURL: galleryURL}
+	if err := downloader.Download(context.Background(), "windsurf-marketplace", runtimeio.Extension{ID: "editorconfig.editorconfig", Version: "0.18.2"}, destination); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(destination)
+	if err != nil || string(data) != "windsurf-vsix" {
+		t.Fatalf("data=%q err=%v", data, err)
+	}
+}
+
 type roundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripFunc) RoundTrip(request *http.Request) (*http.Response, error) {
@@ -111,6 +162,15 @@ func (f roundTripFunc) RoundTrip(request *http.Request) (*http.Response, error) 
 func TestValidateCursorAssetURLRejectsAnotherHost(t *testing.T) {
 	if err := validateCursorAssetURL(cursorGalleryURL, "https://example.com/extension.vsix"); err == nil {
 		t.Fatal("expected foreign Cursor Marketplace asset URL to be rejected")
+	}
+}
+
+func TestValidateWindsurfAssetURLAllowsSelectedOpenVSXAsset(t *testing.T) {
+	if err := validateWindsurfAssetURL(windsurfGalleryURL, "https://open-vsx.org/api/sample/id/1.0/file/sample.id-1.0.vsix"); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateWindsurfAssetURL(windsurfGalleryURL, "https://example.com/extension.vsix"); err == nil {
+		t.Fatal("expected foreign Windsurf Marketplace asset URL to be rejected")
 	}
 }
 

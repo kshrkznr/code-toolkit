@@ -138,6 +138,24 @@ func TestPoolUsesCursorMarketplaceThenVisualStudioFallback(t *testing.T) {
 	}
 }
 
+func TestPoolUsesWindsurfMarketplaceThenVisualStudioFallbackForDevinDesktop(t *testing.T) {
+	root := t.TempDir()
+	windsurf := filepath.Join(root, "windsurf-marketplace", "sample.id-2.0.vsix")
+	visualStudio := filepath.Join(root, "visual-studio-marketplace", "sample.id-1.0.vsix")
+	for _, path := range []string{windsurf, visualStudio} {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, nil, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, err := (Pool{Root: root}).ResolveCandidates("devin-desktop", "sample.id")
+	if err != nil || len(got) != 2 || got[0].Path != windsurf || !got[0].Primary || got[1].Path != visualStudio || got[1].Primary {
+		t.Fatalf("got=%#v err=%v", got, err)
+	}
+}
+
 func TestPlatformRepositories(t *testing.T) {
 	tests := []struct {
 		platform string
@@ -146,6 +164,7 @@ func TestPlatformRepositories(t *testing.T) {
 		{"code", []string{"visual-studio-marketplace"}},
 		{"kiro", []string{"open-vsx", "visual-studio-marketplace"}},
 		{"cursor", []string{"cursor-marketplace", "visual-studio-marketplace"}},
+		{"devin-desktop", []string{"windsurf-marketplace", "visual-studio-marketplace"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.platform, func(t *testing.T) {

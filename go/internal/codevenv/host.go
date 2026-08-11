@@ -8,7 +8,7 @@ import (
 )
 
 func SupportedPlatforms() []string {
-	return []string{"code", "kiro", "cursor"}
+	return []string{"code", "kiro", "cursor", "devin-desktop"}
 }
 
 type HostPaths struct {
@@ -30,6 +30,8 @@ func ResolveHostPaths(platformName string) (HostPaths, error) {
 		dataName, extensionName = "Kiro", ".kiro"
 	case "cursor":
 		dataName, extensionName = "Cursor", ".cursor"
+	case "devin-desktop":
+		dataName, extensionName = "Devin", ".devin"
 	default:
 		return HostPaths{}, fmt.Errorf("host paths are not configured for platform: %s", platformName)
 	}

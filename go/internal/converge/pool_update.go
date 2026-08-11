@@ -24,14 +24,16 @@ type Downloader interface {
 }
 
 const (
-	cursorGalleryURL                = "https://marketplace.cursorapi.com/_apis/public/gallery"
-	cursorExtensionNameFilter       = 7
-	cursorGalleryIncludeExactAssets = 1 | 2 | 16 | 128 // versions, files, version properties, and asset URI
+	cursorGalleryURL           = "https://marketplace.cursorapi.com/_apis/public/gallery"
+	windsurfGalleryURL         = "https://marketplace.windsurf.com/vscode/gallery"
+	galleryExtensionNameFilter = 7
+	galleryIncludeExactAssets  = 1 | 2 | 16 | 128 // versions, files, version properties, and asset URI
 )
 
 type HTTPDownloader struct {
-	Client           *http.Client
-	CursorGalleryURL string
+	Client             *http.Client
+	CursorGalleryURL   string
+	WindsurfGalleryURL string
 }
 
 func (d HTTPDownloader) Download(ctx context.Context, repository string, extension runtimeio.Extension, destination string) error {
@@ -48,6 +50,12 @@ func (d HTTPDownloader) Download(ctx context.Context, repository string, extensi
 	case "cursor-marketplace":
 		var err error
 		url, err = d.cursorVSIXURL(ctx, extension)
+		if err != nil {
+			return err
+		}
+	case "windsurf-marketplace":
+		var err error
+		url, err = d.windsurfVSIXURL(ctx, extension)
 		if err != nil {
 			return err
 		}
@@ -87,26 +95,26 @@ func (d HTTPDownloader) downloadURL(ctx context.Context, source, destination str
 	return closeErr
 }
 
-type cursorGalleryQuery struct {
-	Filters    []cursorGalleryFilter `json:"filters"`
-	AssetTypes []string              `json:"assetTypes"`
-	Flags      int                   `json:"flags"`
+type galleryQuery struct {
+	Filters    []galleryFilter `json:"filters"`
+	AssetTypes []string        `json:"assetTypes"`
+	Flags      int             `json:"flags"`
 }
 
-type cursorGalleryFilter struct {
-	Criteria  []cursorGalleryCriterion `json:"criteria"`
-	Page      int                      `json:"pageNumber"`
-	PageSize  int                      `json:"pageSize"`
-	SortBy    int                      `json:"sortBy"`
-	SortOrder int                      `json:"sortOrder"`
+type galleryFilter struct {
+	Criteria  []galleryCriterion `json:"criteria"`
+	Page      int                `json:"pageNumber"`
+	PageSize  int                `json:"pageSize"`
+	SortBy    int                `json:"sortBy"`
+	SortOrder int                `json:"sortOrder"`
 }
 
-type cursorGalleryCriterion struct {
+type galleryCriterion struct {
 	FilterType int    `json:"filterType"`
 	Value      string `json:"value"`
 }
 
-type cursorGalleryResponse struct {
+type galleryResponse struct {
 	Results []struct {
 		Extensions []struct {
 			Publisher struct {
@@ -129,16 +137,32 @@ func (d HTTPDownloader) cursorVSIXURL(ctx context.Context, extension runtimeio.E
 	if gallery == "" {
 		gallery = cursorGalleryURL
 	}
-	payload, err := json.Marshal(cursorGalleryQuery{
-		Filters: []cursorGalleryFilter{{
-			Criteria: []cursorGalleryCriterion{{FilterType: cursorExtensionNameFilter, Value: extension.ID}},
+	return d.galleryVSIXURL(ctx, "Cursor Marketplace", gallery, extension, func(source string) error {
+		return validateCursorAssetURL(gallery, source)
+	})
+}
+
+func (d HTTPDownloader) windsurfVSIXURL(ctx context.Context, extension runtimeio.Extension) (string, error) {
+	gallery := d.WindsurfGalleryURL
+	if gallery == "" {
+		gallery = windsurfGalleryURL
+	}
+	return d.galleryVSIXURL(ctx, "Windsurf Marketplace", gallery, extension, func(source string) error {
+		return validateWindsurfAssetURL(gallery, source)
+	})
+}
+
+func (d HTTPDownloader) galleryVSIXURL(ctx context.Context, marketplace, gallery string, extension runtimeio.Extension, validateAsset func(string) error) (string, error) {
+	payload, err := json.Marshal(galleryQuery{
+		Filters: []galleryFilter{{
+			Criteria: []galleryCriterion{{FilterType: galleryExtensionNameFilter, Value: extension.ID}},
 			Page:     1, PageSize: 10,
 		}},
 		AssetTypes: []string{},
-		Flags:      cursorGalleryIncludeExactAssets,
+		Flags:      galleryIncludeExactAssets,
 	})
 	if err != nil {
-		return "", fmt.Errorf("encode Cursor Marketplace query: %w", err)
+		return "", fmt.Errorf("encode %s query: %w", marketplace, err)
 	}
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimRight(gallery, "/")+"/extensionquery", bytes.NewReader(payload))
 	if err != nil {
@@ -157,11 +181,11 @@ func (d HTTPDownloader) cursorVSIXURL(ctx context.Context, extension runtimeio.E
 	}
 	defer response.Body.Close()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return "", fmt.Errorf("Cursor Marketplace query returned %s", response.Status)
+		return "", fmt.Errorf("%s query returned %s", marketplace, response.Status)
 	}
-	var result cursorGalleryResponse
+	var result galleryResponse
 	if err := json.NewDecoder(response.Body).Decode(&result); err != nil {
-		return "", fmt.Errorf("decode Cursor Marketplace query: %w", err)
+		return "", fmt.Errorf("decode %s query: %w", marketplace, err)
 	}
 	for _, group := range result.Results {
 		for _, candidate := range group.Extensions {
@@ -177,7 +201,7 @@ func (d HTTPDownloader) cursorVSIXURL(ctx context.Context, extension runtimeio.E
 					if file.AssetType != "Microsoft.VisualStudio.Services.VSIXPackage" {
 						continue
 					}
-					if err := validateCursorAssetURL(gallery, file.Source); err != nil {
+					if err := validateAsset(file.Source); err != nil {
 						return "", err
 					}
 					return file.Source, nil
@@ -185,7 +209,7 @@ func (d HTTPDownloader) cursorVSIXURL(ctx context.Context, extension runtimeio.E
 			}
 		}
 	}
-	return "", fmt.Errorf("Cursor Marketplace artifact unavailable: %s@%s", extension.ID, extension.Version)
+	return "", fmt.Errorf("%s artifact unavailable: %s@%s", marketplace, extension.ID, extension.Version)
 }
 
 func validateCursorAssetURL(gallery, source string) error {
@@ -202,6 +226,22 @@ func validateCursorAssetURL(gallery, source string) error {
 		(galleryURL.Scheme == "https" && assetURL.Scheme != "https") ||
 		!strings.EqualFold(assetURL.Host, galleryURL.Host) {
 		return fmt.Errorf("reject Cursor Marketplace asset URL: %s", source)
+	}
+	return nil
+}
+
+func validateWindsurfAssetURL(gallery, source string) error {
+	galleryURL, err := url.Parse(gallery)
+	if err != nil {
+		return fmt.Errorf("parse Windsurf Marketplace URL: %w", err)
+	}
+	assetURL, err := url.Parse(source)
+	if err != nil {
+		return fmt.Errorf("parse Windsurf Marketplace asset URL: %w", err)
+	}
+	allowedHost := strings.EqualFold(assetURL.Host, galleryURL.Host) || strings.EqualFold(assetURL.Host, "open-vsx.org")
+	if galleryURL.Scheme != "https" || assetURL.Scheme != "https" || !allowedHost {
+		return fmt.Errorf("reject Windsurf Marketplace asset URL: %s", source)
 	}
 	return nil
 }

@@ -538,8 +538,9 @@ Code:
 - [macOS](cookbook/recipe/vscode-sample.macos.yaml)
 - [Windows](cookbook/recipe/vscode-sample.windows.yaml)
 
-Current Recipe selectors use `macos` or `windows` for `os`, and `code` or
-`kiro` for the Platform command. This sample selects `code`.
+Current Recipe selectors use `macos` or `windows` for `os`, and `code`,
+`kiro`, `cursor`, or `devin-desktop` for the Platform command. This sample
+selects `code`.
 
 It composes three focused Runtime Ingredients: `common`, `text`, and
 `markdown`. The sample intentionally omits Profiles and environment-specific
@@ -566,6 +567,7 @@ for these VS Code-family applications:
 | Visual Studio Code | `code` | Primary supported Platform |
 | Kiro | `kiro` | Implemented |
 | Cursor | `cursor` | Implemented |
+| Devin Desktop | `devin-desktop` | Implemented |
 
 Other compatible IDEs remain an intended area of exploration rather than a
 current compatibility or release commitment.

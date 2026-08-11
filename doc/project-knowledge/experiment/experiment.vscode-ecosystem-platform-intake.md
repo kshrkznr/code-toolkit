@@ -90,9 +90,10 @@ Cursor.
 The resulting Pool repository order is deliberately explicit:
 
 ```text
-code   → visual-studio-marketplace
-kiro   → open-vsx → visual-studio-marketplace
-cursor → cursor-marketplace → visual-studio-marketplace
+code          → visual-studio-marketplace
+kiro          → open-vsx → visual-studio-marketplace
+cursor        → cursor-marketplace → visual-studio-marketplace
+devin-desktop → windsurf-marketplace → visual-studio-marketplace
 ```
 
 Cursor does not fall back directly to Open VSX. Doing so would bypass the
@@ -177,12 +178,119 @@ Kiro established several parts of this intake path:
 Cursor adds a complementary warning: shared flags do not guarantee that
 first-run or named Profile lifecycle behavior is equivalent.
 
+## Devin Desktop observation: macOS 3.7.16
+
+[Windsurf was renamed to Devin Desktop in June 2026](https://devin.ai/blog/windsurf-is-now-devin-desktop).
+The current application preserves backwards compatibility with Windsurf, but
+its executable and new storage identity changed. CTK follows the current
+Platform command rather than introducing a legacy command that is not present
+in a fresh installation.
+
+Observed on Apple Silicon from the current official Homebrew Cask:
+
+- the Platform command is `devin-desktop` and reports Devin Desktop 3.7.16
+  with editor 1.126.0;
+- the root process is `/Applications/Devin.app/Contents/MacOS/Devin`, while
+  helpers use `Devin Helper` identities and `--type=...` arguments;
+- current Host paths are `~/Library/Application Support/Devin/User` and
+  `~/.devin/extensions`;
+- installed product metadata names `Windsurf` and `.windsurf` as the old data
+  identities, and retains `com.exafunction.windsurf` as the bundle identifier;
+- `--user-data-dir`, `--extensions-dir`, `--list-extensions`,
+  `--show-versions`, `--install-extension`, `--uninstall-extension`, and
+  `--profile` are present in the desktop CLI;
+- a named Profile launched in temporary Runtime paths was persisted to
+  `User/globalStorage/storage.json`, and stopping the root allowed its helpers
+  to exit;
+- the product-owned Gallery is
+  `https://marketplace.windsurf.com/vscode/gallery`.
+
+An isolated install of `editorconfig.editorconfig` resolved through the
+Windsurf Gallery, installed version 0.18.2, appeared in the versioned
+Extension list, and uninstalled normally. The Gallery query API returned the
+exact `Microsoft.VisualStudio.Services.VSIXPackage` asset from its selected
+Open VSX source. The useful boundary is still the Windsurf Gallery response:
+direct Open VSX lookup would bypass the Platform's selection and compatibility
+controls.
+
+Two Extensions absent from the Windsurf Gallery, `chrmarti.regex@0.6.0` and
+`nhoizey.gremlins@0.26.0`, were already available as exact artifacts in the
+Visual Studio Marketplace Pool. Devin accepted both local VSIX files, reported
+their exact IDs and versions, and created the resulting Extension directories.
+CTK therefore uses Visual Studio Marketplace as a secondary Pool source after
+the normal Platform install fails. It does not pass the Visual Studio
+Marketplace identity to Devin as another online Gallery.
+
+The macOS CTK lifecycle was then exercised with a disposable Home and
+Workspace. Recipe View, Default-only Build, Apply, Windsurf Marketplace Pool
+refresh, Archive, activation with `origin.devin-desktop`, isolated launch,
+`use`, Freeze Draft, and normal deactivation completed without unresolved or
+failed operations. Deactivation restored physical Host directories, removed
+`current.devin-desktop`, and left no transaction journal or backup. A separate
+Build created a named Profile, observed its persisted storage location, and
+finished with no remaining Devin process.
+
+## Devin Desktop observation: Windows 3.7.16
+
+Observed on Windows x64 from the current per-user winget package:
+
+- the package ID is `CognitionAI.DevinDesktop`, and the installed Platform CLI
+  is `%LOCALAPPDATA%\Programs\Devin\bin\devin-desktop.cmd`;
+- the default managed paths are `%APPDATA%\Devin\User` and
+  `%USERPROFILE%\.devin\extensions`;
+- the desktop root is an argument-free `Devin.exe`; helpers use the same
+  executable with `--type=...`, while the bundled agent has a distinct
+  lower-case `resources\app\extensions\windsurf\devin\bin\devin.exe` path;
+- the CLI accepts `--user-data-dir`, `--extensions-dir`, Extension management,
+  and named Profile arguments;
+- product metadata retains the `Exafunction.Windsurf` application identity and
+  uses `devin-desktop` as the current application name.
+
+The Windows CTK lifecycle completed activation, Freeze Draft, Distribution
+View, Build with a named `core` Profile, Archive, Apply from Archive, `use`,
+isolated launch, and normal deactivation. Activation redirected the Host User
+and Extension paths with junctions through `current.devin-desktop`. Launch
+passed the selected Distribution's `.data` and `.ext` paths to the desktop
+root, and its helpers inherited the isolated User data path. Build completed
+all convergence operations without unresolved or failed work, and Apply from
+Archive did the same.
+
+Deactivation restored physical Host directories, removed
+`current.devin-desktop`, and left no Devin process, transaction journal, or
+backup. The original Extension ID and version were restored. The original
+Setting value was also restored, although JSON serialization normalized its
+whitespace and therefore changed its byte hash.
+
+In the observed TLS-inspecting network environment, the Devin CLI failed
+Marketplace installation with `unable to verify the first certificate` unless
+started with `NODE_OPTIONS=--use-system-ca`. With that process-local option,
+the same isolated Extension install and CTK lifecycle succeeded. This records
+the environment boundary rather than making the option part of the Platform
+adapter.
+
+Runtime-only stopping was exercised by leaving `origin.devin-desktop` running
+while a separate suffixed Distribution was built. The original desktop root
+kept the same PID and command line through all 16 successful Build operations;
+only processes associated with the Build Runtime were eligible to stop.
+
+Interrupted activation was exercised at both `host-backups-planned` and
+`host-backed-up`. The deeper interruption left the journal after both physical
+Host directories had moved to their transaction backups and before the current
+Selection was created. The next lifecycle invocation removed the journal and
+transaction backups and restored physical Host directories, the pre-test
+Setting byte hash, and `naterkane.gremlins@0.26.1`, with no remaining Devin
+process or partial Selection. Its attempt to continue into a new activation
+reported Runtime convergence incomplete once; a separate subsequent activation
+and normal deactivation completed successfully. Recovery integrity is therefore
+established, while the transient post-recovery convergence remains an observed
+retry boundary rather than being hidden as an uninterrupted success.
+
 ## Current implementation boundary
 
-The Go implementation now recognizes Cursor's host paths, root process
-identity, Cursor Marketplace query, exact VSIX asset, and Pool repository order
-alongside VS Code and Kiro. The reusable VS Code Runtime adapter is still the
-intended capability boundary.
+The Go implementation now recognizes Cursor and Devin Desktop host paths, root
+process identities, Platform Gallery queries, exact VSIX assets, and Pool
+repository order alongside VS Code and Kiro. The reusable VS Code Runtime
+adapter is still the intended capability boundary.
 
 This does not claim that every VS Code fork belongs in the supported Platform
 list.

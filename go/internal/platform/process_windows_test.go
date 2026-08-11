@@ -24,3 +24,10 @@ func TestWindowsStopScriptSelectsOnlyDesktopRoots(t *testing.T) {
 		}
 	}
 }
+
+func TestWindowsProcessNameIncludesDevinDesktop(t *testing.T) {
+	got, err := windowsProcessName("devin-desktop")
+	if err != nil || got != "Devin.exe" {
+		t.Fatalf("windowsProcessName() = %q, %v", got, err)
+	}
+}
