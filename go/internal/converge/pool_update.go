@@ -277,17 +277,12 @@ func (u PoolUpdater) updateOne(ctx context.Context, platform string, extension r
 		report.Add(Operation{Action: "update Extension Pool", Subject: subject, Status: Unresolved, Err: fmt.Errorf("versioned Extension observation required")})
 		return
 	}
+	if _, err := u.ResolveExact(platform, extension); err == nil {
+		report.Add(Operation{Action: "retain local Extension Pool artifact", Subject: subject, Status: Completed})
+		return
+	}
 	repositories := platformRepositories(platform)
 	artifact := poolArtifactName(extension)
-	for _, repository := range repositories {
-		matches, _ := poolArtifacts(filepath.Join(u.Root, repository), extension.ID)
-		for _, match := range matches {
-			if strings.EqualFold(filepath.Base(match), artifact) {
-				report.Add(Operation{Action: "retain Extension Pool artifact", Subject: subject, Status: Completed})
-				return
-			}
-		}
-	}
 	downloader := u.Downloader
 	if downloader == nil {
 		downloader = HTTPDownloader{}

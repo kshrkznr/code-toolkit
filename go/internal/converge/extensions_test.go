@@ -162,6 +162,7 @@ func TestPlatformRepositories(t *testing.T) {
 		want     []string
 	}{
 		{"code", []string{"visual-studio-marketplace"}},
+		{"codium", []string{"open-vsx", "visual-studio-marketplace"}},
 		{"kiro", []string{"open-vsx", "visual-studio-marketplace"}},
 		{"cursor", []string{"cursor-marketplace", "visual-studio-marketplace"}},
 		{"devin-desktop", []string{"windsurf-marketplace", "visual-studio-marketplace"}},
@@ -172,6 +173,12 @@ func TestPlatformRepositories(t *testing.T) {
 				t.Fatalf("platformRepositories() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestVSCodiumRepositoryOrderMatchesKiro(t *testing.T) {
+	if codium, kiro := platformRepositories("codium"), platformRepositories("kiro"); !slices.Equal(codium, kiro) {
+		t.Fatalf("codium repositories = %v, kiro repositories = %v", codium, kiro)
 	}
 }
 

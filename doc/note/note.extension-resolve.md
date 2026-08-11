@@ -91,6 +91,12 @@ Visual Studio Marketplace is not a configurable fallback Repository.
 
 It is the fixed second candidate because VS Code is treated as the reference implementation of the VS Code ecosystem.
 
+VSCodium uses the same Extension resolution as Kiro: `open-vsx` first and
+`visual-studio-marketplace` second for both local Pool lookup and CTK-owned
+acquisition. When a validated exact artifact is already present in either
+local candidate, `refresh` retains it as a completed Pool operation without
+contacting a Repository.
+
 ---
 
 ## Platform installation policy
@@ -296,6 +302,12 @@ Do not introduce an OS or Platform Extension Variant solely from a failed
 Marketplace lookup until transport and Registry policy have been ruled out.
 CTK does not reinterpret Platform CLI failures or rewrite Marketplace IDs.
 
+The Windows VSCodium observation produced the same certificate failure while
+installing `naterkane.gremlins` from Open VSX. Process-local
+`NODE_OPTIONS=--use-system-ca` allowed the Build and the subsequent activation,
+selection, launch, and deactivation lifecycle to complete without weakening
+TLS verification.
+
 ### Seeding the secondary Pool through Code
 
 A VS Code-family Platform may be able to install a VSIX even when its main
@@ -348,7 +360,10 @@ Archive
   → copy exact artifact into Archive
 ```
 
-The Pool source is selected by Platform. `code` uses `visual-studio-marketplace`; `kiro` uses `open-vsx` first and `visual-studio-marketplace` second. It is a cache for Archive creation; Archive reconstruction remains self-contained and never falls back to the Pool.
+The Pool source is selected by Platform. `code` uses
+`visual-studio-marketplace`; Kiro and VSCodium use `open-vsx` first and
+`visual-studio-marketplace` second. It is a cache for Archive creation; Archive
+reconstruction remains self-contained and never falls back to the Pool.
 
 An unavailable artifact makes Archive creation fail. A failed download is
 removed from its temporary location. CTK never creates an Archive that is

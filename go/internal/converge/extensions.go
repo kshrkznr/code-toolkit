@@ -190,6 +190,8 @@ func poolArtifacts(directory, extensionID string) ([]string, error) {
 
 func platformRepositories(platform string) []string {
 	switch platform {
+	case "codium":
+		return []string{"open-vsx", "visual-studio-marketplace"}
 	case "kiro":
 		return []string{"open-vsx", "visual-studio-marketplace"}
 	case "cursor":

@@ -539,7 +539,7 @@ Code:
 - [Windows](cookbook/recipe/vscode-sample.windows.yaml)
 
 Current Recipe selectors use `macos` or `windows` for `os`, and `code`,
-`kiro`, `cursor`, or `devin-desktop` for the Platform command. This sample
+`codium`, `kiro`, `cursor`, or `devin-desktop` for the Platform command. This sample
 selects `code`.
 
 It composes three focused Runtime Ingredients: `common`, `text`, and
@@ -565,6 +565,7 @@ for these VS Code-family applications:
 | Application | Platform command | Current status |
 | --- | --- | --- |
 | Visual Studio Code | `code` | Primary supported Platform |
+| VSCodium | `codium` | Implemented |
 | Kiro | `kiro` | Implemented |
 | Cursor | `cursor` | Implemented |
 | Devin Desktop | `devin-desktop` | Implemented |

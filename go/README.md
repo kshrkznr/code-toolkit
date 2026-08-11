@@ -232,6 +232,18 @@ real-machine feedback.
 
 ## Observed Platform behavior
 
+VSCodium support uses the `codium` command, the `VSCodium` Host user-data
+directory, and `~/.vscode-oss/extensions`. Its Extension Pool resolution
+matches Kiro: Open VSX first, then Visual Studio Marketplace. The adapter and
+host-specific process management have automated coverage. End-to-end
+observations on Windows x64 and macOS Apple Silicon completed Build,
+activation, `use`, isolated launch, and normal deactivation. Windows preserved
+`naterkane.gremlins@0.26.1` across that lifecycle. macOS separately confirmed
+isolated Open VSX installation and uninstallation, named Profile persistence,
+symlink-based Host redirection, Runtime stopping, and physical Host
+restoration. The observed Windows network required process-local
+`NODE_OPTIONS=--use-system-ca` for Open VSX access.
+
 Windsurf was renamed to Devin Desktop in June 2026. Devin Desktop 3.7.16 for
 Apple Silicon exposes `devin-desktop` as its Platform command, stores Host user
 data under `~/Library/Application Support/Devin/User`, and stores Extensions

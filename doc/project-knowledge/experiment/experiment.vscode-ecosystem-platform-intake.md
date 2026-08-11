@@ -87,14 +87,18 @@ returns versioned assets. Exact VSIX acquisition selects the requested version's
 Marketplace-style fixed `vspackage` path returned `404` and is not used for
 Cursor.
 
-The resulting Pool repository order is deliberately explicit:
+The resulting local Pool lookup order is deliberately explicit:
 
 ```text
 code          → visual-studio-marketplace
+codium        → open-vsx → visual-studio-marketplace
 kiro          → open-vsx → visual-studio-marketplace
 cursor        → cursor-marketplace → visual-studio-marketplace
 devin-desktop → windsurf-marketplace → visual-studio-marketplace
 ```
+
+VSCodium and Kiro use this same order for both local Pool lookup and CTK-owned
+acquisition: Open VSX first, then Visual Studio Marketplace.
 
 Cursor does not fall back directly to Open VSX. Doing so would bypass the
 Platform's own compatibility and distribution controls while adding another
@@ -177,6 +181,58 @@ Kiro established several parts of this intake path:
 
 Cursor adds a complementary warning: shared flags do not guarantee that
 first-run or named Profile lifecycle behavior is equivalent.
+
+## VSCodium observation: Windows 1.126.04524
+
+Observed on Windows x64 after installing the current per-user package through
+winget:
+
+- the package ID is `VSCodium.VSCodium`, and the Platform command is `codium`;
+- the desktop root is `VSCodium.exe`;
+- the managed Host paths are `%APPDATA%\VSCodium\User` and
+  `%USERPROFILE%\.vscode-oss\extensions`;
+- the CLI reports version 1.126.04524 and accepts redirected User data and
+  Extension paths plus Extension list, install, and uninstall operations;
+- VSCodium's normal Gallery installed `naterkane.gremlins@0.26.1` from Open
+  VSX into an isolated Distribution.
+
+The Windows lifecycle completed Recipe Build, activation as `origin.codium`,
+selection of the built Distribution through `use`, isolated launch, and normal
+deactivation. Activation redirected both Host paths through junctions to
+`current.codium`. Deactivation restored physical Host directories, preserved
+the original Gremlins version, and left no selected VSCodium Runtime process.
+
+In the observed TLS-inspecting network, Open VSX installation failed with
+`unable to verify the first certificate` until CTK was launched with
+`NODE_OPTIONS=--use-system-ca`. This remains a caller environment requirement,
+not a VSCodium adapter default.
+
+VSCodium uses Open VSX as its normal Gallery. CTK uses the same Extension
+resolution policy as Kiro for Pool artifacts: `open-vsx` first, followed by
+`visual-studio-marketplace` when the exact artifact is unavailable there.
+
+## VSCodium observation: macOS 1.126.04524
+
+Observed on Apple Silicon after installing the current Homebrew Cask:
+
+- the Platform command is `codium`, and the application executable is
+  `/Applications/VSCodium.app/Contents/MacOS/VSCodium`;
+- Helpers use `VSCodium Helper` identities and `--type=...` arguments;
+- the managed Host paths are `~/Library/Application Support/VSCodium/User`
+  and `~/.vscode-oss/extensions`;
+- the CLI accepts redirected User data and Extension paths, Extension list,
+  install, and uninstall operations, and named Profiles;
+- the bundled product metadata points its Gallery at Open VSX;
+- `naterkane.gremlins@0.26.1` installed from Open VSX and uninstalled again in
+  an isolated Runtime, and the `CTK-Observation` Profile persisted in the
+  redirected User data.
+
+A disposable macOS Recipe completed Build with no unresolved or failed
+operations, activation as `origin.codium`, selection of the built Distribution
+through `use`, and isolated launch. Normal deactivation stopped the running
+VSCodium root and its Helpers, removed `current.codium`, and restored the Host
+User and Extension paths as physical directories without a remaining Runtime
+process or transaction artifact.
 
 ## Devin Desktop observation: macOS 3.7.16
 
@@ -287,10 +343,10 @@ retry boundary rather than being hidden as an uninterrupted success.
 
 ## Current implementation boundary
 
-The Go implementation now recognizes Cursor and Devin Desktop host paths, root
-process identities, Platform Gallery queries, exact VSIX assets, and Pool
-repository order alongside VS Code and Kiro. The reusable VS Code Runtime
-adapter is still the intended capability boundary.
+The Go implementation now recognizes VSCodium, Cursor, and Devin Desktop host
+paths, root process identities, Platform Gallery policy, exact VSIX assets,
+and Pool repository order alongside VS Code and Kiro. The reusable VS Code
+Runtime adapter is still the intended capability boundary.
 
 This does not claim that every VS Code fork belongs in the supported Platform
 list.
