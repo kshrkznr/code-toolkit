@@ -567,7 +567,7 @@ for these VS Code-family applications:
 | Visual Studio Code | `code` | Primary supported Platform |
 | Kiro | `kiro` | Implemented |
 | Cursor | `cursor` | Implemented |
-| Devin Desktop (formerly Windsurf) | `devin-desktop` | Implemented and observed on macOS and Windows |
+| Devin Desktop | `devin-desktop` | Implemented |
 
 Other compatible IDEs remain an intended area of exploration rather than a
 current compatibility or release commitment.
