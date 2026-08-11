@@ -54,6 +54,8 @@ func windowsProcessName(platform string) (string, error) {
 	switch platform {
 	case "code":
 		return "Code.exe", nil
+	case "codium":
+		return "VSCodium.exe", nil
 	case "kiro":
 		return "Kiro.exe", nil
 	case "cursor":

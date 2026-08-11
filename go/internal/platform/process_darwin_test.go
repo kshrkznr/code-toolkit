@@ -13,6 +13,8 @@ func TestRelevantProcess(t *testing.T) {
 		{"selected runtime", "code", "/Applications/Code --user-data-dir /tmp/dist/old/.data", true},
 		{"other runtime", "code", "/Applications/Code --user-data-dir /tmp/dist/other/.data", false},
 		{"helper", "code", "/Applications/Code Helper --user-data-dir /tmp/dist/old/.data", false},
+		{"default codium", "codium", "/Applications/VSCodium.app/Contents/MacOS/Electron", true},
+		{"codium helper", "codium", "/Applications/VSCodium.app/Contents/Frameworks/VSCodium Helper.app/Contents/MacOS/VSCodium Helper --type=gpu-process", false},
 		{"default cursor", "cursor", "/Applications/Cursor.app/Contents/MacOS/Cursor", true},
 		{"cursor helper", "cursor", "/Applications/Cursor.app/Contents/Frameworks/Cursor Helper.app/Contents/MacOS/Cursor Helper --type=gpu-process", false},
 		{"default devin", "devin-desktop", "/Applications/Devin.app/Contents/MacOS/Devin", true},

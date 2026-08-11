@@ -277,7 +277,7 @@ func (u PoolUpdater) updateOne(ctx context.Context, platform string, extension r
 		report.Add(Operation{Action: "update Extension Pool", Subject: subject, Status: Unresolved, Err: fmt.Errorf("versioned Extension observation required")})
 		return
 	}
-	repositories := platformRepositories(platform)
+	repositories := platformDownloadRepositories(platform)
 	artifact := poolArtifactName(extension)
 	for _, repository := range repositories {
 		matches, _ := poolArtifacts(filepath.Join(u.Root, repository), extension.ID)
@@ -335,7 +335,7 @@ func (u PoolUpdater) EnsureExact(ctx context.Context, platform string, extension
 	if path, err := u.ResolveExact(platform, extension); err == nil {
 		return path, nil
 	}
-	repositories := platformRepositories(platform)
+	repositories := platformDownloadRepositories(platform)
 	artifact := poolArtifactName(extension)
 	downloader := u.Downloader
 	if downloader == nil {

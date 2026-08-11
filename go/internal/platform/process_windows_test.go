@@ -31,3 +31,10 @@ func TestWindowsProcessNameIncludesDevinDesktop(t *testing.T) {
 		t.Fatalf("windowsProcessName() = %q, %v", got, err)
 	}
 }
+
+func TestWindowsProcessNameIncludesVSCodium(t *testing.T) {
+	got, err := windowsProcessName("codium")
+	if err != nil || got != "VSCodium.exe" {
+		t.Fatalf("windowsProcessName() = %q, %v", got, err)
+	}
+}

@@ -8,7 +8,7 @@ import (
 )
 
 func SupportedPlatforms() []string {
-	return []string{"code", "kiro", "cursor", "devin-desktop"}
+	return []string{"code", "codium", "kiro", "cursor", "devin-desktop"}
 }
 
 type HostPaths struct {
@@ -26,6 +26,8 @@ func ResolveHostPaths(platformName string) (HostPaths, error) {
 	switch platformName {
 	case "code":
 		dataName, extensionName = "Code", ".vscode"
+	case "codium":
+		dataName, extensionName = "VSCodium", ".vscode-oss"
 	case "kiro":
 		dataName, extensionName = "Kiro", ".kiro"
 	case "cursor":

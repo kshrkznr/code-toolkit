@@ -23,6 +23,19 @@ type fakeDownloader struct {
 	attempts *[]string
 }
 
+func TestPoolUpdaterDownloadsVSCodiumArtifactOnlyFromOpenVSX(t *testing.T) {
+	var attempts []string
+	updater := PoolUpdater{Root: t.TempDir(), Downloader: fakeDownloader{attempts: &attempts}}
+	report := Report{}
+	updater.Update(context.Background(), "codium", runtimelock.Snapshot{Default: runtimelock.ScopeSnapshot{Extensions: []runtimeio.Extension{{ID: "sample.id", Version: "1.0"}}}}, &report)
+	if !slices.Equal(attempts, []string{"open-vsx"}) {
+		t.Fatalf("attempts = %v", attempts)
+	}
+	if report.HasFailures() {
+		t.Fatalf("report = %#v", report)
+	}
+}
+
 func (f fakeDownloader) Download(_ context.Context, repository string, _ runtimeio.Extension, destination string) error {
 	if f.attempts != nil {
 		*f.attempts = append(*f.attempts, repository)

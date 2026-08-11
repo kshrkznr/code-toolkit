@@ -190,6 +190,8 @@ func poolArtifacts(directory, extensionID string) ([]string, error) {
 
 func platformRepositories(platform string) []string {
 	switch platform {
+	case "codium":
+		return []string{"open-vsx", "visual-studio-marketplace"}
 	case "kiro":
 		return []string{"open-vsx", "visual-studio-marketplace"}
 	case "cursor":
@@ -199,4 +201,14 @@ func platformRepositories(platform string) []string {
 	default:
 		return []string{"visual-studio-marketplace"}
 	}
+}
+
+// platformDownloadRepositories may be narrower than the local Pool search.
+// VSCodium can try an already-present secondary VSIX, but CTK must not acquire
+// a new Visual Studio Marketplace artifact on its behalf.
+func platformDownloadRepositories(platform string) []string {
+	if platform == "codium" {
+		return []string{"open-vsx"}
+	}
+	return platformRepositories(platform)
 }
