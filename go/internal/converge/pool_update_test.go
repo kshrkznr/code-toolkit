@@ -23,15 +23,35 @@ type fakeDownloader struct {
 	attempts *[]string
 }
 
-func TestPoolUpdaterDownloadsVSCodiumArtifactOnlyFromOpenVSX(t *testing.T) {
+func TestPoolUpdaterUsesVSCodiumOpenVSXThenVisualStudioFallback(t *testing.T) {
 	var attempts []string
-	updater := PoolUpdater{Root: t.TempDir(), Downloader: fakeDownloader{attempts: &attempts}}
+	updater := PoolUpdater{Root: t.TempDir(), Downloader: fakeDownloader{
+		fail: map[string]bool{"open-vsx": true}, attempts: &attempts,
+	}}
 	report := Report{}
 	updater.Update(context.Background(), "codium", runtimelock.Snapshot{Default: runtimelock.ScopeSnapshot{Extensions: []runtimeio.Extension{{ID: "sample.id", Version: "1.0"}}}}, &report)
-	if !slices.Equal(attempts, []string{"open-vsx"}) {
+	if !slices.Equal(attempts, []string{"open-vsx", "visual-studio-marketplace"}) {
 		t.Fatalf("attempts = %v", attempts)
 	}
 	if report.HasFailures() {
+		t.Fatalf("report = %#v", report)
+	}
+}
+
+func TestPoolUpdaterRetainsVSCodiumSecondaryLocalArtifact(t *testing.T) {
+	root := t.TempDir()
+	extension := runtimeio.Extension{ID: "sample.ext", Version: "1.0"}
+	path := filepath.Join(root, "visual-studio-marketplace", "sample.ext-1.0.vsix")
+	writeExactVSIX(t, path, extension)
+
+	var attempts []string
+	updater := PoolUpdater{Root: root, Downloader: fakeDownloader{attempts: &attempts}}
+	report := Report{}
+	updater.Update(context.Background(), "codium", runtimelock.Snapshot{Default: runtimelock.ScopeSnapshot{Extensions: []runtimeio.Extension{extension}}}, &report)
+	if len(attempts) != 0 {
+		t.Fatalf("attempts = %v, want no Repository download", attempts)
+	}
+	if len(report.Operations) != 1 || report.Operations[0].Status != Completed || report.Operations[0].Action != "retain local Extension Pool artifact" {
 		t.Fatalf("report = %#v", report)
 	}
 }
@@ -264,6 +284,16 @@ func TestValidateVSIXExactAcceptsPackageIdentityCaseDifference(t *testing.T) {
 func TestResolveExactUsesValidatedLocalArtifact(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(root, "visual-studio-marketplace", "sample.ext-1.0.vsix")
+	writeExactVSIX(t, path, runtimeio.Extension{ID: "sample.ext", Version: "1.0"})
+
+	got, err := (PoolUpdater{Root: root}).ResolveExact("code", runtimeio.Extension{ID: "sample.ext", Version: "1.0"})
+	if err != nil || got != path {
+		t.Fatalf("ResolveExact() = %q, %v", got, err)
+	}
+}
+
+func writeExactVSIX(t *testing.T, path string, extension runtimeio.Extension) {
+	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -274,7 +304,8 @@ func TestResolveExactUsesValidatedLocalArtifact(t *testing.T) {
 	archive := zip.NewWriter(file)
 	entry, err := archive.Create("extension/package.json")
 	if err == nil {
-		_, err = entry.Write([]byte(`{"publisher":"sample","name":"ext","version":"1.0"}`))
+		publisher, name, _ := strings.Cut(extension.ID, ".")
+		_, err = fmt.Fprintf(entry, `{"publisher":%q,"name":%q,"version":%q}`, publisher, name, extension.Version)
 	}
 	if closeErr := archive.Close(); err == nil {
 		err = closeErr
@@ -284,10 +315,5 @@ func TestResolveExactUsesValidatedLocalArtifact(t *testing.T) {
 	}
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	got, err := (PoolUpdater{Root: root}).ResolveExact("code", runtimeio.Extension{ID: "sample.ext", Version: "1.0"})
-	if err != nil || got != path {
-		t.Fatalf("ResolveExact() = %q, %v", got, err)
 	}
 }

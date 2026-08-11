@@ -91,11 +91,11 @@ Visual Studio Marketplace is not a configurable fallback Repository.
 
 It is the fixed second candidate because VS Code is treated as the reference implementation of the VS Code ecosystem.
 
-Local Pool lookup can be broader than CTK-owned acquisition. VSCodium looks
-for `open-vsx` first and an already-present `visual-studio-marketplace` VSIX
-second, but CTK downloads new VSCodium Pool artifacts from `open-vsx` only.
-The secondary candidate is local reuse, not permission to acquire an artifact
-from Visual Studio Marketplace on VSCodium's behalf.
+VSCodium uses the same Extension resolution as Kiro: `open-vsx` first and
+`visual-studio-marketplace` second for both local Pool lookup and CTK-owned
+acquisition. When a validated exact artifact is already present in either
+local candidate, `refresh` retains it as a completed Pool operation without
+contacting a Repository.
 
 ---
 
@@ -145,8 +145,7 @@ VSIX. Lock observes the Runtime without updating the Pool. Archive creation
 fails when an exact required artifact is missing.
 
 `refresh` permits CTK to acquire missing exact-version VSIX artifacts through
-the Platform's acquisition order and store them in the local Pool. That order
-may be narrower than local Pool lookup. Build, Apply,
+the Platform Repository order and store them in the local Pool. Build, Apply,
 Lock, and recovery perform this refresh after observing the resulting Runtime.
 Archive creation may download an exact artifact that is absent locally.
 
@@ -362,11 +361,9 @@ Archive
 ```
 
 The Pool source is selected by Platform. `code` uses
-`visual-studio-marketplace`; `kiro` uses `open-vsx` first and
-`visual-studio-marketplace` second. VSCodium uses the same local lookup order,
-but acquisition is limited to `open-vsx`. It is a cache for Archive creation;
-Archive reconstruction remains self-contained and never falls back to the
-Pool.
+`visual-studio-marketplace`; Kiro and VSCodium use `open-vsx` first and
+`visual-studio-marketplace` second. It is a cache for Archive creation; Archive
+reconstruction remains self-contained and never falls back to the Pool.
 
 An unavailable artifact makes Archive creation fail. A failed download is
 removed from its temporary location. CTK never creates an Archive that is

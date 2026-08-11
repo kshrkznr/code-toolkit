@@ -565,7 +565,7 @@ for these VS Code-family applications:
 | Application | Platform command | Current status |
 | --- | --- | --- |
 | Visual Studio Code | `code` | Primary supported Platform |
-| VSCodium | `codium` | Windows validated; macOS validation pending |
+| VSCodium | `codium` | Implemented |
 | Kiro | `kiro` | Implemented |
 | Cursor | `cursor` | Implemented |
 | Devin Desktop | `devin-desktop` | Implemented |

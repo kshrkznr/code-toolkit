@@ -202,13 +202,3 @@ func platformRepositories(platform string) []string {
 		return []string{"visual-studio-marketplace"}
 	}
 }
-
-// platformDownloadRepositories may be narrower than the local Pool search.
-// VSCodium can try an already-present secondary VSIX, but CTK must not acquire
-// a new Visual Studio Marketplace artifact on its behalf.
-func platformDownloadRepositories(platform string) []string {
-	if platform == "codium" {
-		return []string{"open-vsx"}
-	}
-	return platformRepositories(platform)
-}

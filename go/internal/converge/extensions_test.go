@@ -176,9 +176,9 @@ func TestPlatformRepositories(t *testing.T) {
 	}
 }
 
-func TestVSCodiumDownloadsOnlyFromOpenVSX(t *testing.T) {
-	if got := platformDownloadRepositories("codium"); !slices.Equal(got, []string{"open-vsx"}) {
-		t.Fatalf("platformDownloadRepositories() = %v, want [open-vsx]", got)
+func TestVSCodiumRepositoryOrderMatchesKiro(t *testing.T) {
+	if codium, kiro := platformRepositories("codium"), platformRepositories("kiro"); !slices.Equal(codium, kiro) {
+		t.Fatalf("codium repositories = %v, kiro repositories = %v", codium, kiro)
 	}
 }
 

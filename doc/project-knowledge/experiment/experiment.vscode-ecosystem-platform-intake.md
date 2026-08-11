@@ -97,9 +97,8 @@ cursor        → cursor-marketplace → visual-studio-marketplace
 devin-desktop → windsurf-marketplace → visual-studio-marketplace
 ```
 
-Pool lookup and CTK-owned acquisition are distinct for VSCodium. CTK may try
-an exact Visual Studio Marketplace VSIX already present in the secondary local
-Pool, but downloads new VSCodium artifacts from Open VSX only.
+VSCodium and Kiro use this same order for both local Pool lookup and CTK-owned
+acquisition: Open VSX first, then Visual Studio Marketplace.
 
 Cursor does not fall back directly to Open VSX. Doing so would bypass the
 Platform's own compatibility and distribution controls while adding another
@@ -208,11 +207,32 @@ In the observed TLS-inspecting network, Open VSX installation failed with
 `NODE_OPTIONS=--use-system-ca`. This remains a caller environment requirement,
 not a VSCodium adapter default.
 
-VSCodium uses Open VSX as its normal Gallery. CTK therefore downloads new
-Pool artifacts only from `open-vsx`. An exact Visual Studio Marketplace VSIX
-already present in the local Pool remains a secondary installation candidate;
-CTK does not acquire that secondary artifact on VSCodium's behalf. macOS host
-validation remains outstanding.
+VSCodium uses Open VSX as its normal Gallery. CTK uses the same Extension
+resolution policy as Kiro for Pool artifacts: `open-vsx` first, followed by
+`visual-studio-marketplace` when the exact artifact is unavailable there.
+
+## VSCodium observation: macOS 1.126.04524
+
+Observed on Apple Silicon after installing the current Homebrew Cask:
+
+- the Platform command is `codium`, and the application executable is
+  `/Applications/VSCodium.app/Contents/MacOS/VSCodium`;
+- Helpers use `VSCodium Helper` identities and `--type=...` arguments;
+- the managed Host paths are `~/Library/Application Support/VSCodium/User`
+  and `~/.vscode-oss/extensions`;
+- the CLI accepts redirected User data and Extension paths, Extension list,
+  install, and uninstall operations, and named Profiles;
+- the bundled product metadata points its Gallery at Open VSX;
+- `naterkane.gremlins@0.26.1` installed from Open VSX and uninstalled again in
+  an isolated Runtime, and the `CTK-Observation` Profile persisted in the
+  redirected User data.
+
+A disposable macOS Recipe completed Build with no unresolved or failed
+operations, activation as `origin.codium`, selection of the built Distribution
+through `use`, and isolated launch. Normal deactivation stopped the running
+VSCodium root and its Helpers, removed `current.codium`, and restored the Host
+User and Extension paths as physical directories without a remaining Runtime
+process or transaction artifact.
 
 ## Devin Desktop observation: macOS 3.7.16
 
