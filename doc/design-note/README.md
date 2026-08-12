@@ -37,6 +37,12 @@ Start with the question closest to the current work:
   → [Why CTK Does Not Manage Secrets](design-note.secret-management.md)
 - Why is direct VSIX acquisition separate from normal Platform installation?
   → [Why CTK Keeps VSIX Acquisition Explicit](design-note.vsix-acquisition.md)
+- Why does a Platform definition stay inside the VS Code ecosystem instead of
+  selecting JetBrains, Eclipse, or another Runtime Adapter?
+  → [Why CTK Keeps Platform Inside the VS Code Ecosystem](design-note.vscode-ecosystem-scope.md)
+- Why are external Platform definitions Workspace integration configuration
+  rather than Recipe Source, Kitchen Notes, or user-global settings?
+  → [Why Platform Definitions Belong to Workspace Integration](design-note.platform-definition-scope.md)
 - Why is *Workbench Builder* retained only as a historical lens?
   → [Workbench Builder as a Historical Lens](design-note.workbench-builder.md)
 

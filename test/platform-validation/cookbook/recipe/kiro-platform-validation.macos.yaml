@@ -1,0 +1,22 @@
+name: kiro-validation
+os: macos
+platform: kiro
+
+runtime:
+  - validation
+
+profile:
+  - validation
+
+config:
+  dist-strategy:
+    extension-marketplace: true
+    extension-pool: refresh
+    lock-mode: refresh
+    default-profile:
+      settings: runtime
+      extensions: clean
+      mcp: unmanaged
+  profile-strategy:
+    validation:
+      settings: profile

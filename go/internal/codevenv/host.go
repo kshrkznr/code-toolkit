@@ -3,50 +3,23 @@ package codevenv
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"runtime"
+
+	ctkplatform "github.com/kshrkznr/code-toolkit/go/internal/platform"
 )
 
 func SupportedPlatforms() []string {
-	return []string{"code", "codium", "kiro", "cursor", "devin-desktop"}
+	return ctkplatform.Identities()
 }
 
-type HostPaths struct {
-	UserData   string
-	User       string
-	Extensions string
-}
+type HostPaths = ctkplatform.HostPaths
 
 func ResolveHostPaths(platformName string) (HostPaths, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return HostPaths{}, fmt.Errorf("resolve home directory: %w", err)
 	}
-	var dataName, extensionName string
-	switch platformName {
-	case "code":
-		dataName, extensionName = "Code", ".vscode"
-	case "codium":
-		dataName, extensionName = "VSCodium", ".vscode-oss"
-	case "kiro":
-		dataName, extensionName = "Kiro", ".kiro"
-	case "cursor":
-		dataName, extensionName = "Cursor", ".cursor"
-	case "devin-desktop":
-		dataName, extensionName = "Devin", ".devin"
-	default:
-		return HostPaths{}, fmt.Errorf("host paths are not configured for platform: %s", platformName)
-	}
-	var data string
-	switch runtime.GOOS {
-	case "darwin":
-		data = filepath.Join(home, "Library", "Application Support", dataName)
-	case "windows":
-		data = filepath.Join(home, "AppData", "Roaming", dataName)
-	default:
-		return HostPaths{}, fmt.Errorf("CodeVenv host integration is unsupported on %s", runtime.GOOS)
-	}
-	return HostPaths{UserData: data, User: filepath.Join(data, "User"), Extensions: filepath.Join(home, extensionName, "extensions")}, nil
+	return ctkplatform.ResolveHostPaths(platformName, runtime.GOOS, home)
 }
 
 func hostOSName() string {

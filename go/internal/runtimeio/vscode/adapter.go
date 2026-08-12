@@ -50,6 +50,11 @@ type profileRecord struct {
 	UseDefaultFlags map[string]bool `json:"useDefaultFlags,omitempty"`
 }
 
+const (
+	profilePersistenceTimeout = 10 * time.Second
+	profilePollInterval       = 100 * time.Millisecond
+)
+
 func (a Adapter) Scopes(context.Context) ([]runtimeio.Scope, error) {
 	profiles, _, err := a.profiles()
 	if err != nil {
@@ -72,18 +77,10 @@ func (a Adapter) EnsureProfile(ctx context.Context, name string) error {
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
-	_, err := a.runner().Run(ctx, a.Command, a.baseArgs(runtimeio.ProfileScope(name)))
-	if err != nil {
+	if _, err := a.runner().Run(ctx, a.Command, a.baseArgs(runtimeio.ProfileScope(name))); err != nil {
 		return fmt.Errorf("create profile %q: %w", name, err)
 	}
-	created := false
-	for attempt := 0; attempt < 20; attempt++ {
-		if _, err := a.profile(name); err == nil {
-			created = true
-			break
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
+	created := a.waitForProfile(ctx, name, profilePersistenceTimeout)
 	if err := a.stopForDatabaseWrite(ctx); err != nil {
 		return err
 	}
@@ -93,13 +90,29 @@ func (a Adapter) EnsureProfile(ctx context.Context, name string) error {
 	if created {
 		return nil
 	}
-	for attempt := 0; attempt < 20; attempt++ {
-		if _, err := a.profile(name); err == nil {
-			return nil
-		}
-		time.Sleep(100 * time.Millisecond)
+	if a.waitForProfile(ctx, name, profilePersistenceTimeout) {
+		return nil
 	}
 	return fmt.Errorf("profile %q was not created", name)
+}
+
+func (a Adapter) waitForProfile(ctx context.Context, name string, timeout time.Duration) bool {
+	deadline := time.NewTimer(timeout)
+	defer deadline.Stop()
+	ticker := time.NewTicker(profilePollInterval)
+	defer ticker.Stop()
+	for {
+		if _, err := a.profile(name); err == nil {
+			return true
+		}
+		select {
+		case <-ctx.Done():
+			return false
+		case <-deadline.C:
+			return false
+		case <-ticker.C:
+		}
+	}
 }
 
 func (a Adapter) ReadSettings(_ context.Context, scope runtimeio.Scope) (settings.Document, error) {

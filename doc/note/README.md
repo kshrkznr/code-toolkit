@@ -39,6 +39,8 @@ Start with the question closest to the current work:
   → [Merge Rules as a Kitchen Note](note.merge-rules.md)
 - How are extension artifacts resolved and diagnosed?
   → [Extension Resolution](note.extension-resolve.md)
+- What do Platform-specific failures reveal about CTK integration boundaries?
+  → [Platform Differences as Boundary Evidence](note.platform-boundary-evidence.md)
 - What has been observed about Variant responsibility and usage?
   → [Variant](note.variant.md)
 

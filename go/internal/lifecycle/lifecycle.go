@@ -47,7 +47,7 @@ func (s Service) BuildArchive(ctx context.Context, bundle ctkarchive.Bundle, dis
 	if err = os.MkdirAll(distRoot, 0755); err != nil {
 		return result, err
 	}
-	staging, err := os.MkdirTemp(distRoot, ".build-archive-"+name+"-")
+	staging, err := os.MkdirTemp(distRoot, ".build-archive-")
 	if err != nil {
 		return result, err
 	}
@@ -205,7 +205,7 @@ func (s Service) Build(ctx context.Context, recipePath, distRoot, name string, k
 	if err := os.MkdirAll(distRoot, 0o755); err != nil {
 		return Result{}, fmt.Errorf("create Distribution root: %w", err)
 	}
-	staging, err := os.MkdirTemp(distRoot, ".build-"+name+"-")
+	staging, err := os.MkdirTemp(distRoot, ".build-")
 	if err != nil {
 		return Result{}, fmt.Errorf("create Build staging: %w", err)
 	}

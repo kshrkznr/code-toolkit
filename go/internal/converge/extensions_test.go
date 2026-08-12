@@ -169,7 +169,15 @@ func TestPlatformRepositories(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.platform, func(t *testing.T) {
-			if got := platformRepositories(tt.platform); !slices.Equal(got, tt.want) {
+			definitions, err := platformRepositories(tt.platform)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got := make([]string, 0, len(definitions))
+			for _, definition := range definitions {
+				got = append(got, definition.RepositoryID)
+			}
+			if !slices.Equal(got, tt.want) {
 				t.Fatalf("platformRepositories() = %v, want %v", got, tt.want)
 			}
 		})
@@ -177,7 +185,9 @@ func TestPlatformRepositories(t *testing.T) {
 }
 
 func TestVSCodiumRepositoryOrderMatchesKiro(t *testing.T) {
-	if codium, kiro := platformRepositories("codium"), platformRepositories("kiro"); !slices.Equal(codium, kiro) {
+	codium, codiumErr := platformRepositories("codium")
+	kiro, kiroErr := platformRepositories("kiro")
+	if codiumErr != nil || kiroErr != nil || !slices.Equal(codium, kiro) {
 		t.Fatalf("codium repositories = %v, kiro repositories = %v", codium, kiro)
 	}
 }

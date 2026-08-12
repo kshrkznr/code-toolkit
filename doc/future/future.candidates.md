@@ -114,20 +114,25 @@ This is sufficient for current development and manual distribution. A package
 manager would separate the binary from CTK state, requiring the relationship
 between the CLI and Workspace to be observed again.
 
-### Questions for package-manager distribution
+### Current package and Workspace boundary
 
-- Should the CTK root become an explicit `Workspace` Concept?
-- Should `CTK_HOME` mean the default Workspace, a fixed root, or a compatibility
-  environment variable?
-- Is an explicit option such as `--home` or `--workspace` needed?
-- How should users select among multiple Workspaces?
-- How far should discovery walk from the current directory?
-- How independently may the binary, Cookbook, Dist, Archive, and Pool be
-  located?
-- May a Cookbook live in an independent repository?
-- May multiple Workspaces share an Extension Pool or Archive?
-- Is a distinction between Workspace-local and user-global configuration
-  needed?
+- Package managers install the binary and compiled Built-in Platform
+  definitions, not user Workspace state.
+- One invocation resolves one Workspace through the current `CTK_HOME` and
+  discovery behavior; CTK does not need a user-global active-Workspace
+  selector.
+- Workspace integration configuration belongs under `CTK_HOME/.config`, not in
+  a package-manager prefix or OS user-global configuration.
+- An optional Workspace config may relocate static Cookbook Source and the Dist
+  root. Workbench Draft and Inspect output remains under
+  `CTK_HOME/cookbook`.
+- Archive and Extension Pool locations remain Workspace-owned until a concrete
+  sharing requirement appears.
+- A dedicated `ctk init` command is not required merely to create default
+  directories or print a template.
+
+### Remaining package-manager questions
+
 - Must Direct Launchers remain stable after Homebrew or Scoop updates the
   binary?
 - Should generated Direct Launchers continue to depend only on their Dist
@@ -135,27 +140,12 @@ between the CLI and Workspace to be observed again.
 - Which signing, macOS notarization, checksum, upgrade, and rollback concerns
   belong to CTK distribution responsibility?
 
-### Platform expansion as an observation point
+### Platform scope
 
-Adding another Platform would also test this boundary. The current Platform
-Adapter still contains assumptions inherited from the VS Code family:
-
-- `.data` and `.ext`
-- Profiles and the Platform database
-- JSONC Settings
-- Extension IDs and VSIX Artifacts
-- `--user-data-dir` and `--extensions-dir`
-- launching and host integration through a Platform command
-
-CTK should not generalize these assumptions by imagining another Platform.
-When the first non-VS Code-family Platform is added, observe:
-
-- which capabilities actually belong to Core
-- which details are only VS Code-family Adapter representations
-- which Platform capabilities belong in Distribution metadata
-- where the CLI must understand a Platform difference
-- which state should remain separate or shared between Platforms in one
-  Workspace
+Platform expansion remains inside the VS Code ecosystem. CTK does not keep a
+selectable Runtime Adapter open for an imagined non-VS Code-family IDE. The
+rationale is preserved in
+[Why CTK Keeps Platform Inside the VS Code Ecosystem](../design-note/design-note.vscode-ecosystem-scope.md).
 
 ### Current direction
 
@@ -163,15 +153,19 @@ Keep the current simple Workspace for now:
 
 ```text
 CTK Workspace
+├── .config/
 ├── cookbook/
+│   ├── draft/
+│   └── inspect/
 ├── dist/
 ├── archive/
 └── .vsix/
 ```
 
-Do not make every location configurable in advance. Use observations from an
-actual package-manager distribution, multiple-Workspace use, or another
-Platform to promote only the necessary boundaries into a Contract or
+Static `recipe/` and `ingredient/` Source may be resolved from an independently
+versioned Cookbook root. Do not make every other location configurable in
+advance. Use observations from actual package-manager distribution or concrete
+storage pressure to promote only necessary boundaries into a Contract or
 Configuration.
 
 This is a Future theme for testing current location assumptions, not a current
