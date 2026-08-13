@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	ctkplatform "github.com/kshrkznr/code-toolkit/go/internal/platform"
 	"github.com/kshrkznr/code-toolkit/go/internal/runtimeio"
 )
 
@@ -146,16 +147,19 @@ func sortedKeys(values map[string]struct{}) []string {
 type Pool struct{ Root string }
 
 func (p Pool) ResolveCandidates(platform, extensionID string) ([]ArtifactCandidate, error) {
-	repositories := platformRepositories(platform)
+	repositories, err := platformRepositories(platform)
+	if err != nil {
+		return nil, err
+	}
 	var candidates []ArtifactCandidate
-	for index, repository := range repositories {
-		matches, err := poolArtifacts(filepath.Join(p.Root, repository), extensionID)
+	for index, candidate := range repositories {
+		matches, err := poolArtifacts(filepath.Join(p.Root, candidate.RepositoryID), extensionID)
 		if err != nil {
 			return nil, fmt.Errorf("search Extension Pool: %w", err)
 		}
 		sort.Strings(matches)
 		if len(matches) > 0 {
-			candidates = append(candidates, ArtifactCandidate{Path: matches[len(matches)-1], Repository: repository, Primary: index == 0})
+			candidates = append(candidates, ArtifactCandidate{Path: matches[len(matches)-1], Repository: candidate.RepositoryID, Primary: index == 0})
 		}
 	}
 	return candidates, nil
@@ -188,17 +192,10 @@ func poolArtifacts(directory, extensionID string) ([]string, error) {
 	return matches, nil
 }
 
-func platformRepositories(platform string) []string {
-	switch platform {
-	case "codium":
-		return []string{"open-vsx", "visual-studio-marketplace"}
-	case "kiro":
-		return []string{"open-vsx", "visual-studio-marketplace"}
-	case "cursor":
-		return []string{"cursor-marketplace", "visual-studio-marketplace"}
-	case "devin-desktop":
-		return []string{"windsurf-marketplace", "visual-studio-marketplace"}
-	default:
-		return []string{"visual-studio-marketplace"}
+func platformRepositories(identity string) ([]ctkplatform.PoolRepository, error) {
+	definition, err := ctkplatform.Lookup(identity)
+	if err != nil {
+		return nil, err
 	}
+	return definition.PoolRepositories, nil
 }

@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kshrkznr/code-toolkit/go/internal/repository"
 	"github.com/kshrkznr/code-toolkit/go/internal/runtimeio"
 	"github.com/kshrkznr/code-toolkit/go/internal/runtimelock"
 )
@@ -36,31 +37,35 @@ type HTTPDownloader struct {
 	WindsurfGalleryURL string
 }
 
-func (d HTTPDownloader) Download(ctx context.Context, repository string, extension runtimeio.Extension, destination string) error {
+func (d HTTPDownloader) Download(ctx context.Context, repositoryID string, extension runtimeio.Extension, destination string) error {
 	parts := strings.SplitN(extension.ID, ".", 2)
 	if len(parts) != 2 {
 		return fmt.Errorf("invalid Extension ID %q", extension.ID)
 	}
+	definition, err := repository.Lookup(repositoryID)
+	if err != nil {
+		return err
+	}
 	var url string
-	switch repository {
-	case "visual-studio-marketplace":
+	switch definition.Connector {
+	case repository.ConnectorVisualStudioMarketplace:
 		url = fmt.Sprintf("https://marketplace.visualstudio.com/_apis/public/gallery/publishers/%s/vsextensions/%s/%s/vspackage", parts[0], parts[1], extension.Version)
-	case "open-vsx":
+	case repository.ConnectorOpenVSX:
 		url = fmt.Sprintf("https://open-vsx.org/api/%s/%s/%s/file/%s-%s.vsix", parts[0], parts[1], extension.Version, extension.ID, extension.Version)
-	case "cursor-marketplace":
+	case repository.ConnectorCursorMarketplace:
 		var err error
 		url, err = d.cursorVSIXURL(ctx, extension)
 		if err != nil {
 			return err
 		}
-	case "windsurf-marketplace":
+	case repository.ConnectorWindsurfMarketplace:
 		var err error
 		url, err = d.windsurfVSIXURL(ctx, extension)
 		if err != nil {
 			return err
 		}
 	default:
-		return fmt.Errorf("unsupported Extension repository %q", repository)
+		return fmt.Errorf("unsupported Extension repository connector %q", definition.Connector)
 	}
 	return d.downloadURL(ctx, url, destination)
 }
@@ -281,14 +286,21 @@ func (u PoolUpdater) updateOne(ctx context.Context, platform string, extension r
 		report.Add(Operation{Action: "retain local Extension Pool artifact", Subject: subject, Status: Completed})
 		return
 	}
-	repositories := platformRepositories(platform)
+	repositories, err := platformRepositories(platform)
+	if err != nil {
+		report.Add(Operation{Action: "update Extension Pool", Subject: subject, Status: Unresolved, Err: err})
+		return
+	}
 	artifact := poolArtifactName(extension)
 	downloader := u.Downloader
 	if downloader == nil {
 		downloader = HTTPDownloader{}
 	}
-	for _, repository := range repositories {
-		directory := filepath.Join(u.Root, repository)
+	for _, candidate := range repositories {
+		if !candidate.DownloadEnabled {
+			continue
+		}
+		directory := filepath.Join(u.Root, candidate.RepositoryID)
 		if err := os.MkdirAll(directory, 0o755); err != nil {
 			continue
 		}
@@ -297,7 +309,7 @@ func (u PoolUpdater) updateOne(ctx context.Context, platform string, extension r
 			continue
 		}
 		path := filepath.Join(staging, artifact)
-		err = downloader.Download(ctx, repository, extension, path)
+		err = downloader.Download(ctx, candidate.RepositoryID, extension, path)
 		if err == nil {
 			err = ValidateVSIX(path)
 		}
@@ -330,14 +342,20 @@ func (u PoolUpdater) EnsureExact(ctx context.Context, platform string, extension
 	if path, err := u.ResolveExact(platform, extension); err == nil {
 		return path, nil
 	}
-	repositories := platformRepositories(platform)
+	repositories, err := platformRepositories(platform)
+	if err != nil {
+		return "", err
+	}
 	artifact := poolArtifactName(extension)
 	downloader := u.Downloader
 	if downloader == nil {
 		downloader = HTTPDownloader{}
 	}
-	for _, repository := range repositories {
-		directory := filepath.Join(u.Root, repository)
+	for _, candidate := range repositories {
+		if !candidate.DownloadEnabled {
+			continue
+		}
+		directory := filepath.Join(u.Root, candidate.RepositoryID)
 		if err := os.MkdirAll(directory, 0755); err != nil {
 			continue
 		}
@@ -346,7 +364,7 @@ func (u PoolUpdater) EnsureExact(ctx context.Context, platform string, extension
 			continue
 		}
 		path := filepath.Join(staging, artifact)
-		err = downloader.Download(ctx, repository, extension, path)
+		err = downloader.Download(ctx, candidate.RepositoryID, extension, path)
 		if err == nil {
 			err = ValidateVSIXExact(path, extension)
 		}
@@ -371,8 +389,12 @@ func (u PoolUpdater) ResolveExact(platform string, extension runtimeio.Extension
 	}
 	artifact := poolArtifactName(extension)
 	var validationErr error
-	for _, repository := range platformRepositories(platform) {
-		matches, _ := poolArtifacts(filepath.Join(u.Root, repository), extension.ID)
+	repositories, err := platformRepositories(platform)
+	if err != nil {
+		return "", err
+	}
+	for _, candidate := range repositories {
+		matches, _ := poolArtifacts(filepath.Join(u.Root, candidate.RepositoryID), extension.ID)
 		for _, path := range matches {
 			if !strings.EqualFold(filepath.Base(path), artifact) {
 				continue

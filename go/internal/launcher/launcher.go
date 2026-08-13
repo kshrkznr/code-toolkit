@@ -10,13 +10,15 @@ import (
 	"runtime"
 
 	"github.com/kshrkznr/code-toolkit/go/internal/distribution"
+	ctkplatform "github.com/kshrkznr/code-toolkit/go/internal/platform"
 )
 
 type Launcher struct {
-	Stdin  io.Reader
-	Stdout io.Writer
-	Stderr io.Writer
-	GOOS   string
+	Stdin    io.Reader
+	Stdout   io.Writer
+	Stderr   io.Writer
+	GOOS     string
+	lookPath func(string) (string, error)
 }
 
 func New() *Launcher {
@@ -55,9 +57,17 @@ func (l *Launcher) command(dist distribution.Distribution, args []string) (strin
 		return override, args, true, nil
 	}
 
-	platform, err := exec.LookPath(dist.Recipe.Platform)
+	definition, err := ctkplatform.Lookup(dist.Recipe.Platform)
 	if err != nil {
-		return "", nil, false, fmt.Errorf("platform command not found: %s", dist.Recipe.Platform)
+		return "", nil, false, err
+	}
+	lookup := l.lookPath
+	if lookup == nil {
+		lookup = exec.LookPath
+	}
+	platform, err := lookup(definition.Command)
+	if err != nil {
+		return "", nil, false, fmt.Errorf("platform command not found: %s", definition.Command)
 	}
 	platformArgs := []string{
 		"--user-data-dir", filepath.Join(dist.Path, ".data"),

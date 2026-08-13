@@ -29,6 +29,9 @@ Start with the question closest to the current work:
 - When would a generic Capability Ingredient Layer become clearer than Runtime,
   Profile, or explicit Recipe composition?
   → [Capability Layer](future.capability-layer.md)
+- How could a Workspace add a complete Platform definition through the current
+  validated Registry?
+  → [Workspace Platform Definitions](future.platform-registry.md)
 
 These routes are entry points rather than an implementation queue. Search by
 the candidate concept when a future document is not yet listed here.

@@ -24,7 +24,12 @@ func (darwinProcessStopper) StopRuntime(ctx context.Context, platform string, ru
 }
 
 func stopDarwinProcesses(ctx context.Context, platform string, runtimeOnly bool, runtimePaths ...string) error {
-	if platform != "code" && platform != "codium" && platform != "kiro" && platform != "cursor" && platform != "devin-desktop" {
+	definition, err := Lookup(platform)
+	if err != nil {
+		return fmt.Errorf("platform process management is not configured for: %s", platform)
+	}
+	processDefinition, ok := definition.OS["darwin"]
+	if !ok {
 		return fmt.Errorf("platform process management is not configured for: %s", platform)
 	}
 	output, err := exec.CommandContext(ctx, "ps", "-axo", "pid=,args=").Output()
@@ -34,7 +39,7 @@ func stopDarwinProcesses(ctx context.Context, platform string, runtimeOnly bool,
 
 	for _, line := range strings.Split(string(output), "\n") {
 		pid, args, ok := parseProcess(line)
-		if !ok || !relevantProcess(platform, args, runtimePaths) || runtimeOnly && !matchesRuntimePath(args, runtimePaths) {
+		if !ok || !relevantProcessDefinition(processDefinition.Process, args, runtimePaths) || runtimeOnly && !matchesRuntimePath(args, runtimePaths) {
 			continue
 		}
 		process, err := os.FindProcess(pid)
@@ -73,6 +78,18 @@ func parseProcess(line string) (int, string, bool) {
 }
 
 func relevantProcess(platform, args string, runtimePaths []string) bool {
+	definition, err := Lookup(platform)
+	if err != nil {
+		return false
+	}
+	osDefinition, ok := definition.OS["darwin"]
+	if !ok {
+		return false
+	}
+	return relevantProcessDefinition(osDefinition.Process, args, runtimePaths)
+}
+
+func relevantProcessDefinition(process ProcessDefinition, args string, runtimePaths []string) bool {
 	if strings.Contains(args, " Helper") || strings.Contains(args, " --type=") {
 		return false
 	}
@@ -84,22 +101,12 @@ func relevantProcess(platform, args string, runtimePaths []string) bool {
 	if strings.Contains(args, "--user-data-dir") {
 		return false
 	}
-	switch platform {
-	case "code":
-		return strings.Contains(args, "Visual Studio Code.app/Contents/MacOS/Code") ||
-			strings.Contains(args, "Visual Studio Code.app/Contents/MacOS/Electron")
-	case "codium":
-		return strings.Contains(args, "VSCodium.app/Contents/MacOS/Electron") ||
-			strings.Contains(args, "VSCodium.app/Contents/MacOS/VSCodium")
-	case "kiro":
-		return strings.Contains(args, "Kiro.app/Contents/MacOS/Electron")
-	case "cursor":
-		return strings.Contains(args, "Cursor.app/Contents/MacOS/Cursor")
-	case "devin-desktop":
-		return strings.Contains(args, "Devin.app/Contents/MacOS/Devin")
-	default:
-		return false
+	for _, identity := range process.Identities {
+		if strings.Contains(args, identity) {
+			return true
+		}
 	}
+	return false
 }
 
 func waitStopped(ctx context.Context, process *os.Process, timeout time.Duration) error {

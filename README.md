@@ -569,8 +569,8 @@ for these VS Code-family applications:
 | Cursor | `cursor` | Implemented |
 | Devin Desktop | `devin-desktop` | Implemented |
 
-Other compatible IDEs remain an intended area of exploration rather than a
-current compatibility or release commitment.
+The OS/version observation matrix and Go implementation coverage are maintained
+in the [Go Platform Support Inventory](go/doc/platform-support.md).
 
 The [Code Environment Concept API](doc/integration/integration.code-venv.md) and
 [Code Environment Integration Contract](doc/contract/contract.code-environment.md)

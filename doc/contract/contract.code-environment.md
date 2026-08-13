@@ -3,11 +3,13 @@
 
 # Code Environment Integration Contract
 
-This document records the capability and safety boundary between CTK and an IDE
-Platform.
+This document records the capability and safety boundary between CTK and a
+VS Code ecosystem Platform.
 
-A Platform command is one possible CLI integration point for a VS Code-family
-application. `code` and `kiro` are examples, not a fixed supported-app list.
+A Platform is a VS Code-family application integration such as `code` or
+`kiro`; those examples are not a fixed supported-app list. JetBrains, Eclipse,
+and other IDE ecosystems are outside the current CTK product boundary rather
+than alternative Platform adapter kinds.
 
 ## Platform Integration
 
@@ -22,7 +24,7 @@ application. `code` and `kiro` are examples, not a fixed supported-app list.
 - Platform extension identifiers cross the integration boundary without CTK
   changing their letter case.
 
-### Current VS Code-family representation
+### Platform representation
 
 The current directory adapter launches a Platform command with:
 
@@ -36,8 +38,17 @@ The current directory adapter launches a Platform command with:
 It also uses Platform CLI operations to list, install, and uninstall extensions
 and to open named Profiles.
 
-These flags and paths are one adapter representation, not general Platform
-requirements.
+These flags and paths are implementation details within the VS Code ecosystem,
+not user-selectable Runtime Adapter kinds.
+
+Platform definitions may declare observed application differences such as the
+command, Host paths, process identity, and Extension Pool behavior. They do not
+select another IDE ecosystem or replace Runtime I/O semantics.
+
+A Distribution Launch Override may replace launch execution where supported.
+It may therefore start Eclipse, a JetBrains IDE, or another application while
+CTK acts only as its launcher. CTK does not infer Build, Apply, Lock, Archive,
+Profile, Extension, or CodeVenv capabilities for that application's Runtime.
 
 ---
 
@@ -256,8 +267,8 @@ commands, link layouts, temporary files, or Distribution internals.
 
 ## Open Questions
 
-- How a Platform advertises capabilities that differ from VS Code-family CLI
-  behavior.
+- How a VS Code ecosystem Platform advertises optional capabilities that differ
+  from the currently observed CLI behavior.
 - How CodeVenv state is represented without a retained implementation bridge.
 - How packaged Distributions expose Lock observation.
 
@@ -268,6 +279,10 @@ transaction and process-lock strategy, force recovery, and retained Bash
 interoperability are defined by the
 [Go Code Environment Contract](../../go/doc/contract/contract.code-environment.md).
 
-Platform-specific observations and the reusable intake sequence are preserved
-as Project Knowledge in the
-[VS Code Ecosystem Platform Intake experiment](../project-knowledge/experiment/experiment.vscode-ecosystem-platform-intake.md).
+The reusable observation sequence is preserved in the
+[VS Code Ecosystem Platform Intake Note](../project-knowledge/note/note.vscode-ecosystem-platform-intake.md).
+The implemented declaration and service boundary is described in the
+[Built-in Platform Registry Note](../note/note.platform-registry.md).
+Current Go implementation coverage and Platform-specific observations are
+inventoried in the
+[Go Platform Support Inventory](../../go/doc/platform-support.md).

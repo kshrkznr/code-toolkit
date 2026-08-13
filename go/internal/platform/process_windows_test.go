@@ -8,7 +8,7 @@ import (
 )
 
 func TestWindowsStopScriptSelectsOnlyDesktopRoots(t *testing.T) {
-	script := windowsStopScript("Cursor.exe", "$_.CommandLine.Contains('C:\\runtime\\.data')")
+	script := windowsStopScript("Cursor.exe", "$_.CommandLine.Contains('C:\\runtime\\.data')", FilterSameNameRoot)
 
 	for _, expected := range []string{
 		"$all = @(Get-CimInstance Win32_Process",

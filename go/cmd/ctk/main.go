@@ -1183,9 +1183,13 @@ func parseApplyArgs(args []string) (applyOptions, error) {
 func lifecycleService(root, cookbookDir string, selection selector.Selector) lifecycle.Service {
 	stopper := platform.NewProcessStopper()
 	factory := func(dist distribution.Distribution) (runtimeio.Runtime, error) {
-		command, err := exec.LookPath(dist.Recipe.Platform)
+		definition, err := platform.Lookup(dist.Recipe.Platform)
 		if err != nil {
-			return nil, fmt.Errorf("platform command not found: %s", dist.Recipe.Platform)
+			return nil, err
+		}
+		command, err := exec.LookPath(definition.Command)
+		if err != nil {
+			return nil, fmt.Errorf("platform command not found: %s", definition.Command)
 		}
 		dataDir := filepath.Join(dist.Path, ".data")
 		return vscode.Adapter{
@@ -1210,9 +1214,13 @@ func lifecycleService(root, cookbookDir string, selection selector.Selector) lif
 func archiveService(root, cookbookDir string, selection selector.Selector) ctkarchive.Service {
 	stopper := platform.NewProcessStopper()
 	factory := func(dist distribution.Distribution) (runtimeio.Runtime, error) {
-		command, err := exec.LookPath(dist.Recipe.Platform)
+		definition, err := platform.Lookup(dist.Recipe.Platform)
 		if err != nil {
-			return nil, fmt.Errorf("platform command not found: %s", dist.Recipe.Platform)
+			return nil, err
+		}
+		command, err := exec.LookPath(definition.Command)
+		if err != nil {
+			return nil, fmt.Errorf("platform command not found: %s", definition.Command)
 		}
 		dataDir := filepath.Join(dist.Path, ".data")
 		return vscode.Adapter{Command: command, UserDataDir: dataDir, ExtensionsDir: filepath.Join(dist.Path, ".ext"), StopForDatabaseWrite: func(ctx context.Context) error { return stopper.StopRuntime(ctx, dist.Recipe.Platform, dataDir) }}, nil
@@ -1229,9 +1237,13 @@ func archiveService(root, cookbookDir string, selection selector.Selector) ctkar
 func workbenchService(root, cookbookDir string, selection selector.Selector) workbench.Service {
 	stopper := platform.NewProcessStopper()
 	factory := func(dist distribution.Distribution) (runtimeio.Runtime, error) {
-		command, err := exec.LookPath(dist.Recipe.Platform)
+		definition, err := platform.Lookup(dist.Recipe.Platform)
 		if err != nil {
-			return nil, fmt.Errorf("platform command not found: %s", dist.Recipe.Platform)
+			return nil, err
+		}
+		command, err := exec.LookPath(definition.Command)
+		if err != nil {
+			return nil, fmt.Errorf("platform command not found: %s", definition.Command)
 		}
 		dataDir := filepath.Join(dist.Path, ".data")
 		return vscode.Adapter{
@@ -1254,9 +1266,13 @@ func workbenchService(root, cookbookDir string, selection selector.Selector) wor
 func codevenvService(root string, selection selector.Selector) codevenv.Service {
 	stopper := platform.NewProcessStopper()
 	factory := func(platformName, userDataDir, extensionsDir string) (runtimeio.Runtime, error) {
-		command, err := exec.LookPath(platformName)
+		definition, err := platform.Lookup(platformName)
 		if err != nil {
-			return nil, fmt.Errorf("platform command not found: %s", platformName)
+			return nil, err
+		}
+		command, err := exec.LookPath(definition.Command)
+		if err != nil {
+			return nil, fmt.Errorf("platform command not found: %s", definition.Command)
 		}
 		return vscode.Adapter{
 			Command: command, UserDataDir: userDataDir, ExtensionsDir: extensionsDir,
@@ -1337,7 +1353,11 @@ func parseDeactivateArgs(args []string) (string, bool, bool, error) {
 func selectAvailablePlatform(selection selector.Selector) (string, error) {
 	var candidates []string
 	for _, platformName := range codevenv.SupportedPlatforms() {
-		if _, err := exec.LookPath(platformName); err == nil {
+		definition, err := platform.Lookup(platformName)
+		if err == nil {
+			_, err = exec.LookPath(definition.Command)
+		}
+		if err == nil {
 			candidates = append(candidates, platformName)
 		}
 	}

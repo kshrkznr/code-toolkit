@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	ctkarchive "github.com/kshrkznr/code-toolkit/go/internal/archive"
@@ -98,6 +99,24 @@ func TestBuildPublishesCompletedStaging(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(result.Distribution.Path, required)); err != nil {
 			t.Fatal(err)
 		}
+	}
+}
+
+func TestBuildStagingPathDoesNotIncludeDistributionName(t *testing.T) {
+	root := t.TempDir()
+	recipePath, ingredients := fixture(t, root, "runtime: [broken]\n")
+	mustWrite(t, filepath.Join(ingredients, "runtime.broken.extensions"), "broken.id\n")
+	const name = "distribution-with-a-deliberately-long-name"
+	service := Service{Cookbook: cookbook.Repository{Root: ingredients}, Runtime: func(distribution.Distribution) (runtimeio.Runtime, error) {
+		return &fakeRuntime{installErr: errors.New("rejected")}, nil
+	}}
+	result, err := service.Build(context.Background(), recipePath, filepath.Join(root, "dist"), name, true, false)
+	if err == nil {
+		t.Fatal("expected failure")
+	}
+	base := filepath.Base(result.StagingPath)
+	if !strings.HasPrefix(base, ".build-") || strings.Contains(base, name) {
+		t.Fatalf("staging directory = %q", base)
 	}
 }
 

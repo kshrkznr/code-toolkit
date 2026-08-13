@@ -77,7 +77,7 @@ go/
     ├── launcher/         Override and native launch resolution
     ├── lifecycle/        Recipe/Archive Build, Apply, and Lock orchestration
     ├── mergerules/       Go Kitchen Note merge-rule loading
-    ├── platform/         Host-specific process integration
+    ├── platform/         Built-in Platform Registry and process integration
     ├── recipe/           Recipe representation and loading
     ├── recovery/         Internal trusted-Lock Runtime reconstruction
     ├── runtimeio/        Platform Runtime capability boundary
@@ -232,124 +232,23 @@ real-machine feedback.
 
 ## Observed Platform behavior
 
-VSCodium support uses the `codium` command, the `VSCodium` Host user-data
-directory, and `~/.vscode-oss/extensions`. Its Extension Pool resolution
-matches Kiro: Open VSX first, then Visual Studio Marketplace. The adapter and
-host-specific process management have automated coverage. End-to-end
-observations on Windows x64 and macOS Apple Silicon completed Build,
-activation, `use`, isolated launch, and normal deactivation. Windows preserved
-`naterkane.gremlins@0.26.1` across that lifecycle. macOS separately confirmed
-isolated Open VSX installation and uninstallation, named Profile persistence,
-symlink-based Host redirection, Runtime stopping, and physical Host
-restoration. The observed Windows network required process-local
-`NODE_OPTIONS=--use-system-ca` for Open VSX access.
+The implementation-specific Platform definitions, real-machine observation
+matrix, automated coverage, and known evidence gaps are maintained in the
+[Go Platform Support Inventory](doc/platform-support.md).
 
-Windsurf was renamed to Devin Desktop in June 2026. Devin Desktop 3.7.16 for
-Apple Silicon exposes `devin-desktop` as its Platform command, stores Host user
-data under `~/Library/Application Support/Devin/User`, and stores Extensions
-under `~/.devin/extensions`. Its application root is
-`/Applications/Devin.app/Contents/MacOS/Devin`; helpers retain the VS
-Code-family `Devin Helper` and `--type=...` representation.
-
-The application still carries explicit migration identity for Windsurf:
-`Windsurf` and `.windsurf` are named as the old data locations, the macOS
-bundle identifier remains `com.exafunction.windsurf`, and its Extension
-Gallery is served from `marketplace.windsurf.com`. CTK therefore uses the
-current `devin-desktop` identity for new Distributions while treating the
-Windsurf names as migration evidence, not as a second supported Platform
-command.
-
-An isolated macOS observation confirmed Settings and Extension path
-redirection, Extension list/install/uninstall, named Profile persistence, and
-the CTK lifecycle from Recipe View and Build through Archive, activation,
-launch, selection, Freeze Draft, and deactivation. Exact Pool acquisition uses
-`windsurf-marketplace` first; CTK follows the Gallery's selected Open VSX asset
-without treating direct Open VSX as another repository. An exact Visual Studio
-Marketplace artifact may be used as a secondary local Pool candidate when the
-normal Devin install reports that the Extension is unavailable.
-
-Devin Desktop 3.7.16 for Windows x64 uses `Devin.exe`,
-`%APPDATA%\Devin\User`, and `%USERPROFILE%\.devin\extensions`. The desktop
-root has no `--type` argument; same-name helpers use `--type=...`, and the
-bundled Devin agent also has a distinct lower-case `devin.exe` path. An
-observed Windows lifecycle completed activation, Freeze Draft, Build, Archive,
-Apply from Archive, `use`, isolated launch, and normal deactivation. Host paths
-were redirected with junctions, the named `core` Profile persisted, and
-deactivation restored physical Host directories without a remaining Devin
-process, Selection, transaction journal, or backup. The restored Setting was
-semantically unchanged but its JSON formatting was normalized.
-
-Runtime-only stopping during a separate Build left the running
-`origin.devin-desktop` root and its descendants intact. Forced activation
-interruption at both `host-backups-planned` and `host-backed-up` was recovered
-by the next lifecycle invocation, restoring the physical Host paths, original
-Setting hash, and Extension version without a remaining journal, backup, or
-partial Selection. After the deeper interruption, recovery completed but the
-same invocation's new Runtime convergence failed once; a subsequent activation
-and deactivation completed normally.
-
-In the observed network environment, Marketplace installation required
-`NODE_OPTIONS=--use-system-ca`; without it the Devin CLI reported
-`unable to verify the first certificate`. This is retained as an environment
-and CLI observation rather than a CTK Platform requirement.
-
-Cursor 3.15.6 for macOS exposes a Cursor-owned Extension Gallery at
-`marketplace.cursorapi.com`. Although the gallery is based on Open VSX, it is
-the Platform repository boundary: it also carries Anysphere-specific builds
-and may apply its own synchronization and selection behavior. CTK therefore
-uses `cursor-marketplace` as Cursor's primary VSIX Pool repository and
-`visual-studio-marketplace` as its fallback. It does not bypass the Cursor
-Gallery through a direct Open VSX fallback.
-
-Cursor Gallery acquisition resolves a full Extension ID through the Gallery
-query API, selects the exact observed version, and downloads its
-`Microsoft.VisualStudio.Services.VSIXPackage` asset. CTK validates the resulting
-VSIX identity and version before treating it as an exact Pool artifact.
-
-Cursor 3.15.6 for Windows x64 uses `%APPDATA%\Cursor\User` and
-`%USERPROFILE%\.cursor\extensions` as its managed Host paths. Cursor can run
-language servers and other workers through `Cursor.exe` without a `--type`
-argument, so process stopping identifies the desktop root by same-name process
-ancestry rather than treating every such process as a root. Stopping that root
-allowed its descendants to exit, while Runtime-only stopping during Build left
-the separately running default Host intact.
-
-The observed Windows lifecycle completed activation, Freeze Draft, Inspect,
-Archive, a four-Profile Build, Apply from Archive, `use`, `launch`, normal use,
-and deactivation with origin recovery. Host User and Extension redirection used
-junctions. Forced interruption after both backup planning and completed Host
-backup was recovered by the next lifecycle invocation without a remaining
-journal, partial Selection, transaction backup, or observable Host content
-drift.
-
-On Kiro for Windows, an Open VSX installation of
-`emilast.logfilehighlighter` initially failed and CTK continued to its
-secondary Visual Studio Marketplace Pool candidate. Kiro CLI reported
-`unable to verify the first certificate`; this was a TLS certificate
-validation failure rather than an Extension ID or registry identity problem.
-
-In the observed environment, applying the VS Code-family setting
-`"http.proxyStrictSSL": false` allowed Kiro CLI to install the extension from
-Open VSX, but disabled strict TLS validation and did not affect the observed
-Cursor Extension CLI. The preferred observed resolution is to launch CTK with
-`NODE_OPTIONS=--use-system-ca`, allowing both Platform CLIs to use the Windows
-trust store while retaining certificate and Extension signature verification.
-CTK and its Platform subprocesses inherit this external environment setting;
-the Go binary does not inject it. This observation does not currently require
-an OS or Platform Extension Resource Variant.
-
-Marketplace-facing spelling remains Cookbook input. Independently, the Go
-implementation normalizes only its internal VSIX Pool filename key to lower
-case.
+The inventory keeps product versions and OS-specific evidence separate from the
+concise support status in the repository README and from behavioral Contracts.
+The operational declaration and service boundary is described in the
+[Built-in Platform Registry Note](../doc/note/note.platform-registry.md).
 
 ## Future
 
 - Optional log and Operation Report presentation modes: normal, verbose,
   quiet, and JSON.
 - Release signing, notarization, and concrete Homebrew Tap/Scoop Bucket setup.
-- The relationship among the CLI, `CTK_HOME`, and multiple Workspaces for
-  binary distribution, including placement boundaries for Cookbook, Dist,
-  Archive, and Pool. The open questions remain in
-  `doc/future/future.candidates.md`.
+- Package-manager distribution questions preserved in
+  [`future.candidates.md`](../doc/future/future.candidates.md).
+- Workspace-defined Platform loading preserved in
+  [`future.platform-registry.md`](../doc/future/future.platform-registry.md).
 - Configurable no-argument behavior if a concrete non-interactive use case
   requires it.

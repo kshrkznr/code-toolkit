@@ -91,6 +91,19 @@ func TestEnsureProfileWaitsForPersistenceBeforeStop(t *testing.T) {
 	}
 }
 
+func TestWaitForProfileHonorsContext(t *testing.T) {
+	adapter := Adapter{UserDataDir: t.TempDir()}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	started := time.Now()
+	if adapter.waitForProfile(ctx, "missing", time.Minute) {
+		t.Fatal("missing Profile unexpectedly found")
+	}
+	if time.Since(started) > time.Second {
+		t.Fatal("waitForProfile did not stop with context")
+	}
+}
+
 func TestSettingsScopesAndInheritance(t *testing.T) {
 	root := t.TempDir()
 	storage := filepath.Join(root, "data", "User", "globalStorage", "storage.json")

@@ -47,10 +47,10 @@ func TestGenerateWindowsDirectLauncher(t *testing.T) {
 	}
 }
 
-func TestGenerateWindowsRejectsUnsafePlatformCommand(t *testing.T) {
+func TestGenerateRejectsUnknownPlatform(t *testing.T) {
 	dist := distribution.Distribution{Name: "sample", Path: t.TempDir(), Recipe: recipe.Recipe{OS: "windows", Platform: "code & echo unsafe"}}
 	if _, err := Generate(dist); err == nil {
-		t.Fatal("expected unsafe command error")
+		t.Fatal("expected unknown Platform error")
 	}
 }
 
@@ -134,7 +134,7 @@ func TestUnixDirectLauncherStartsPlatformWithoutCTK(t *testing.T) {
 }
 
 func TestUnixDirectLauncherUsesLaunchOverride(t *testing.T) {
-	dist := distribution.Distribution{Name: "sample", Path: t.TempDir(), Recipe: recipe.Recipe{OS: "macos", Platform: "missing-platform"}}
+	dist := distribution.Distribution{Name: "sample", Path: t.TempDir(), Recipe: recipe.Recipe{OS: "macos", Platform: "code"}}
 	result, err := Generate(dist)
 	if err != nil {
 		t.Fatal(err)

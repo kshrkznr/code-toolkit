@@ -1,10 +1,10 @@
 package launcher
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
-	"runtime"
 	"testing"
 
 	"github.com/kshrkznr/code-toolkit/go/internal/distribution"
@@ -29,21 +29,25 @@ func TestCommandUsesOverride(t *testing.T) {
 
 func TestCommandUsesNativePlatform(t *testing.T) {
 	dir := t.TempDir()
-	platform := "sh"
-	if runtime.GOOS == "windows" {
-		platform = "cmd.exe"
-	}
-	l := &Launcher{GOOS: runtime.GOOS}
-	dist := distribution.Distribution{Path: dir, Recipe: recipe.Recipe{Platform: platform}}
+	l := &Launcher{GOOS: "darwin", lookPath: func(command string) (string, error) { return "/bin/" + command, nil }}
+	dist := distribution.Distribution{Path: dir, Recipe: recipe.Recipe{Platform: "code"}}
 	command, args, isOverride, err := l.command(dist, []string{"extra"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if filepath.Base(command) != platform || isOverride {
+	if filepath.Base(command) != "code" || isOverride {
 		t.Fatalf("command = %q override=%v", command, isOverride)
 	}
 	want := []string{"--user-data-dir", filepath.Join(dir, ".data"), "--extensions-dir", filepath.Join(dir, ".ext"), "extra"}
 	if !reflect.DeepEqual(args, want) {
 		t.Fatalf("args = %v, want %v", args, want)
+	}
+}
+
+func TestCommandRejectsUnknownNativePlatform(t *testing.T) {
+	l := &Launcher{GOOS: "darwin", lookPath: func(string) (string, error) { return "", errors.New("must not be called") }}
+	_, _, _, err := l.command(distribution.Distribution{Path: t.TempDir(), Recipe: recipe.Recipe{Platform: "unknown"}}, nil)
+	if err == nil {
+		t.Fatal("expected unknown Platform error")
 	}
 }

@@ -43,8 +43,9 @@ Start with the question closest to the current work:
   [Analogy as a Design Review Tool](note.analogy-design-review.md)
 - How has raw material been reviewed without losing uncertainty?
   → [Raw Inventory by Theme and Responsibility](note.raw-inventory.md)
-- What did platform-specific failures reveal about integration boundaries?
-  → [Platform Differences as Boundary Evidence](note.platform-boundary-evidence.md)
+- How should a new VS Code-family Platform be observed before support is
+  claimed?
+  → [VS Code Ecosystem Platform Intake](note.vscode-ecosystem-platform-intake.md)
 
 These are entry routes, not a required reading order or an exhaustive catalog.
 
