@@ -1,4 +1,4 @@
-# test.platform-validation.README.md
+# .test.platform-validation.README.md
 ============================================================
 
 # Platform Validation Cookbook
@@ -37,8 +37,8 @@ existing `draft/` or `inspect/` Workbench.
 # substantially smaller internal IPC path limit than the filesystem does.
 validation_home="$(mktemp -d /tmp/ctk-validation.XXXXXX)"
 mkdir -p "$validation_home/cookbook"
-cp -R test/platform-validation/cookbook/ingredient "$validation_home/cookbook/"
-cp -R test/platform-validation/cookbook/recipe "$validation_home/cookbook/"
+cp -R .test/platform-validation/cookbook/ingredient "$validation_home/cookbook/"
+cp -R .test/platform-validation/cookbook/recipe "$validation_home/cookbook/"
 
 CTK_HOME="$validation_home" bin/ctk view recipe \
   "$validation_home/cookbook/recipe/vscode-platform-validation.macos.yaml"

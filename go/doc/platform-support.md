@@ -89,7 +89,7 @@ identify those observed Runtime scopes; they do not refer to the similarly
 named Go Resolver fixtures under `internal/cookbook/testdata`.
 
 Future targeted passes can use the reduced, public
-[Platform Validation Cookbook](../../test/platform-validation/README.md). It
+[Platform Validation Cookbook](../../.test/platform-validation/README.md). It
 contains one Runtime Ingredient, one named Profile, and one Extension available
 from every built-in Platform's primary Repository rather than reproducing the
 author's daily environment. Executed results are recorded below; the source's
