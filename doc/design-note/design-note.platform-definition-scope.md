@@ -90,9 +90,11 @@ The Workspace remains user-owned and survives binary upgrades independently.
 
 ## Boundary
 
-The Built-in Registry now provides the implementation boundary. The
-[Platform Registry Future](../future/future.platform-registry.md) preserves the
-candidate Workspace schema, loading sequence, and deferred provider boundaries.
+The [Built-in Platform Registry](../note/note.platform-registry.md) records the
+implemented declaration and service boundary. The
+[Workspace Platform Definitions Future](../future/future.platform-registry.md)
+preserves the candidate external schema, loading sequence, and deferred
+provider boundaries.
 The [Kitchen Notes Concept](../core/core.cookbook.kitchen-notes.md) defines the
 narrow Cookbook interpretation boundary. The
 [Code Environment Integration Contract](../contract/contract.code-environment.md)

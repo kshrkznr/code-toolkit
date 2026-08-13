@@ -43,6 +43,12 @@ moved to the
 That inventory owns current implementation status and can change as Platforms
 are re-observed.
 
+The implemented declaration and service boundary has moved to the
+[Built-in Platform Registry Note](../../note/note.platform-registry.md). The
+remaining external
+[Workspace Platform definition candidate](../../future/future.platform-registry.md)
+stays in Future rather than being presented as an available extension point.
+
 The supporting observations include:
 
 - CRLF normalization at the command-output boundary

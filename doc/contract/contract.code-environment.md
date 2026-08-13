@@ -281,6 +281,8 @@ interoperability are defined by the
 
 The reusable observation sequence is preserved in the
 [VS Code Ecosystem Platform Intake Note](../project-knowledge/note/note.vscode-ecosystem-platform-intake.md).
+The implemented declaration and service boundary is described in the
+[Built-in Platform Registry Note](../note/note.platform-registry.md).
 Current Go implementation coverage and Platform-specific observations are
 inventoried in the
 [Go Platform Support Inventory](../../go/doc/platform-support.md).

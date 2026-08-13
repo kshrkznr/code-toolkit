@@ -80,8 +80,11 @@ selector.
 
 The [Code Environment Integration Contract](../contract/contract.code-environment.md)
 defines the accepted Platform scope and lifecycle capabilities. The
-[Platform Registry Future](../future/future.platform-registry.md) considers how
-VS Code ecosystem application differences may become declarative. The
+[Built-in Platform Registry](../note/note.platform-registry.md) records how the
+current Go implementation centralizes VS Code ecosystem application
+differences, while the
+[Workspace Platform Definitions Future](../future/future.platform-registry.md)
+preserves the unimplemented external definition point. The
 [Platform Definition Scope Design Note](design-note.platform-definition-scope.md)
 explains why external definitions belong to Workspace integration rather than
 Cookbook interpretation. The

@@ -22,7 +22,7 @@ a compatibility promise for unlisted applications.
 
 ## Snapshot
 
-- Inventory date: 2026-08-12
+- Inventory date: 2026-08-13
 - Implementation: Go primary implementation on `main`
 - Host integration OSes: macOS and Windows
 - Runtime Adapter: shared `internal/runtimeio/vscode` Adapter
@@ -348,6 +348,7 @@ When a Platform is first added or a boundary is re-observed:
 
 ## Related documents
 
+- [Built-in Platform Registry](../../doc/note/note.platform-registry.md)
 - [Platform Runtime I/O Contract](../../doc/contract/contract.platform-runtime-io.md)
 - [Code Environment Integration Contract](../../doc/contract/contract.code-environment.md)
 - [Go Code Environment Contract](contract/contract.code-environment.md)

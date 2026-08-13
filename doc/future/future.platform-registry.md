@@ -1,120 +1,36 @@
 # Knowledge.future.platform-registry.md
 ============================================================
 
-# Future: Platform Registry and Workspace Definitions
+# Future: Workspace Platform Definitions
 
-CTK has five observed VS Code ecosystem Platforms. Their declarative
-differences now resolve through one Built-in Registry; Workspace definition
-loading remains a Future.
+CTK now resolves its five incorporated VS Code ecosystem Platforms through one
+validated Built-in Registry. A later slice may let a selected Workspace add
+complete Platform definitions without rebuilding CTK.
 
-This Future preserves the agreed boundary for centralizing those differences
-before implementation. It is structured so that, after implementation, the
-operational parts can move to a Note without carrying candidate language into
-user guidance.
+This Future preserves that unimplemented extension point. The operational
+behavior of the current Registry has moved to the
+[Built-in Platform Registry Note](../note/note.platform-registry.md).
 
-## Intended promotion
+## Current foundation
 
-After the Registry and external loading are implemented and validated:
+The Go implementation already centralizes:
 
-- move definition locations, fields, validation, examples, and diagnostics to
-  a Platform Definition Note;
-- keep implementation coverage and real-machine evidence in the
-  [Go Platform Support Inventory](../../go/doc/platform-support.md);
-- keep the rationale for Workspace ownership in
-  [Why Platform Definitions Belong to Workspace Integration](../design-note/design-note.platform-definition-scope.md);
-- leave deferred provider mechanisms in Future rather than presenting them as
-  available extension points.
+- identity and command
+- macOS and Windows Host paths
+- process identities and registered additional filter IDs
+- ordered Pool Repository candidates and download capability
 
-## Current evidence
+Named filters, Repository connectors, the shared VS Code Runtime Adapter, and
+CodeVenv lifecycle behavior remain implemented services. Completeness tests and
+macOS and Windows validation cover all five Built-in definitions.
 
-The Go implementation provides one VS Code ecosystem Runtime model. Before the
-Registry refactoring, Platform differences were distributed across:
-
-- built-in identity and command lists;
-- macOS and Windows Host paths;
-- macOS executable and Windows process identities;
-- Windows same-name root filtering;
-- Repository-scoped Pool lookup order;
-- Repository-specific exact VSIX acquisition.
-
-The Built-in Registry now centralizes those declarations while the service
-implementations continue to own behavior. Other observations remain shared CTK
-behavior rather than Platform choices:
-
-- Profile creation waits for persistent identity before convergence continues;
-- Host default and Dist processes are distinguished through isolated User data;
-- process enumeration, ownership, stopping, and waiting remain CTK operations;
-- lifecycle transactions, recovery, and artifact validation are invariant.
-
-## Registry boundary
-
-Built-in and Workspace definitions resolve to one validated internal shape.
-
-```text
-compiled Built-in definitions ─┐
-                               ├─► Platform Registry ─► CTK services
-Workspace definitions ─────────┘          │
-                                          ├─► Filter Registry
-                                          └─► Repository Registry
-```
-
-```text
-PlatformDefinition
-    Identity
-    Command
-    SupportedOS
-    HostPathsByOS
-    ProcessDefinitionByOS
-        Identity
-        AdditionalFilterIDs
-    PoolRepositories
-        RepositoryID
-        DownloadSupported
-```
-
-Platform definitions contain declarations and registered IDs. They do not
-contain arbitrary execution logic.
-
-## Implemented foundation
-
-The first refactoring centralizes the five Built-in definitions without loading
-external files and without intentionally changing behavior.
-
-It establishes that:
-
-1. `code`, `codium`, `kiro`, `cursor`, and `devin-desktop` resolve through one
-   Registry;
-2. every claimed OS resolves complete Host paths, process identity and filters,
-   and Pool Repository candidates;
-3. launcher, Direct Launcher, Runtime construction, CodeVenv, and convergence
-   consume the same resolved definition;
-4. unknown Platform, filter, and Repository IDs fail before Host mutation;
-5. Repository connectors and lifecycle behavior do not move into the Platform
-   Registry.
-
-Completeness and parity tests fix the five definitions, their OS-specific Host
-and process data, their ordered Pool candidates, registered filter and
-Repository references, and unknown-ID rejection. Launcher, Direct Launcher,
-Runtime construction, CodeVenv, process management, and convergence resolve the
-same Registry definition.
-
-The current Windows implementation applies same-name root filtering to every
-Built-in Platform. The first slice should therefore declare `same-name-root`
-for all five Windows definitions. Restricting it to Cursor requires separate
-process observation and is a later behavior change.
-
-The remaining Future begins with Workspace definition loading and schema-level
-diagnostics. It does not require another Built-in data migration.
-
-## Workspace definition shape
-
-A later slice may load definitions from:
+The remaining candidate is loading an equivalent validated definition from:
 
 ```text
 CTK_HOME/.config/platform/*.yaml
 ```
 
-For example:
+## Candidate definition
 
 ```yaml
 name: cursor-compatible
@@ -152,8 +68,8 @@ pool-policy:
     download: false
 ```
 
-This example is a candidate representation until the implementation validates
-the exact schema.
+This representation remains a candidate until file loading, diagnostics, and
+real Workspace use validate the exact schema.
 
 ## Host path forms
 
@@ -167,11 +83,14 @@ Known bases initially include `home`, `application-support`, and
 environment-variable interpolation are rejected. A path with `base` must be
 relative; a path without `base` must be absolute.
 
-The managed `user` path remains relative to the User data root.
+The managed `user` path remains relative to the User data root. Path validation
+uses the target OS declared in the definition rather than the OS on which a file
+happens to be inspected.
 
 ## Process selection
 
-CTK composes Platform process selection from:
+An external definition may declare process identity and select registered
+additional filters:
 
 ```text
 Platform process identity
@@ -183,19 +102,20 @@ registered additional filter IDs
 CTK Runtime ownership, stop, and wait
 ```
 
-Default filters remain OS and VS Code ecosystem behavior. Platform definitions
-may reference registered additional filters such as `same-name-root`.
+The first loading slice should accept Built-in Filter Registry IDs only. It
+should not discover or execute regular expressions, scripts, interpreters, or
+external providers.
 
-The first implementation accepts Built-in Filter Registry IDs only. It does not
-discover or execute scripts, interpreters, regular expressions, or external
-providers. If that need is later observed, provider location, manifest,
-runtime, trust, timeout, versioned I/O, diagnostics, and failure behavior must
-be designed together as an independent Future.
+If an external filter provider is later observed as necessary, its location,
+manifest, runtime, trust, timeout, versioned I/O, diagnostics, and failure
+behavior need one independent design. A shell script and an interpreter-backed
+provider must identify their execution requirements explicitly rather than
+being inferred from a filename.
 
 ## Pool and Repository separation
 
-Pool policy is an ordered array inside the Platform definition. It is not a
-separately named `PoolPolicyDefinition`.
+Pool policy remains an ordered array inside the Platform definition. It is not
+a separately named policy object.
 
 ```text
 Platform pool-policy[]
@@ -205,30 +125,22 @@ Repository Registry
     exact acquisition and validation connector
 ```
 
-Resolution proceeds in two stages:
+Resolution first inspects every Repository-scoped local Pool candidate in
+order. Only after a complete miss, and only when the Recipe requests
+`extension-pool: refresh`, may CTK try candidates with `download: true`.
 
-1. inspect every Repository-scoped local Pool candidate in declared order;
-2. only after a complete cache miss, and only when the Recipe requests
-   `extension-pool: refresh`, try candidates with `download: true` in the same
-   order.
-
-The Platform flag is capability; `refresh` is the request for the current
-operation. `reuse | refresh` therefore remains Recipe strategy rather than
-Platform behavior.
-
-At definition registration:
+At registration:
 
 - every Repository ID must resolve through the Repository Registry;
 - duplicate IDs in one Platform are rejected;
 - `download: true` requires an exact VSIX acquisition connector;
-- `download: false` may use the ID only as a local Pool identity;
-- connector endpoints, protocol, response parsing, and asset validation remain
-  Repository implementation.
+- `download: false` may use the ID only as a local Pool identity.
 
-The initial Repository Registry contains Built-in connectors only. External
-connector providers, if later needed, require their own provider design.
+The first loading slice should accept Built-in Repository IDs and connectors
+only. External Repository connector providers have the same design burden as
+external process filters and remain independently deferred.
 
-## Identity and command collision
+## Identity and collision boundary
 
 Platform identity and command are distinct. Command duplication is permitted,
 but CTK does not infer a Platform from a command.
@@ -237,16 +149,16 @@ An external definition cannot replace a Built-in identity. A different command
 or integration uses a new complete identity such as `cursor-code`; there is no
 partial command binding or Recipe command override.
 
-When two identities resolve the same Host paths, CTK does not infer that they
-represent the same application. Existing CodeVenv health checks still reject
-an Activate when the resolved Host path is already a managed link or Junction
-without the matching Selection evidence. Compatibility beyond observable
-filesystem and managed evidence belongs to the definition author.
+If two identities resolve the same Host paths, current CodeVenv filesystem and
+Selection checks still reject conflicting managed links or Junctions. CTK does
+not attempt to infer whether two independently authored definitions represent
+the same application beyond observable managed evidence. Compatibility of the
+custom definition remains its author's responsibility.
 
 ## Workspace ownership
 
-External Platform definitions are Workspace-local integration configuration,
-not Recipe Source, Kitchen Notes, or OS user-global configuration.
+External definitions are Workspace integration configuration, not Recipe
+Source, Kitchen Notes, or OS user-global configuration.
 
 ```text
 CTK_HOME/
@@ -261,8 +173,8 @@ CTK_HOME/
 └── .vsix/
 ```
 
-An optional Workspace config may relocate only the static Cookbook Source and
-Dist root initially:
+An optional Workspace configuration may later relocate only static Cookbook
+Source and the Dist root:
 
 ```yaml
 paths:
@@ -271,84 +183,63 @@ paths:
 ```
 
 `cookbook-source` contains `recipe/` and `ingredient/`. Workbench `draft/` and
-`inspect/` remain under `CTK_HOME/cookbook` so generated and review state does
-not enter the versioned Source repository accidentally.
+`inspect/` remain below `CTK_HOME/cookbook` so generated review state does not
+enter a versioned Source repository accidentally.
 
 Archive and Pool remain under `CTK_HOME` until a concrete sharing requirement
-is observed. There is no `ctk init` requirement: absent configuration resolves
-the current default directories. CTK does not persist `CTK_HOME`, track an old
-Dist root, or migrate managed state after a location change.
+is observed. No `ctk init` is required: absent configuration resolves current
+default directories. CTK does not persist `CTK_HOME`, track an old Dist root,
+or migrate managed state after a location change.
 
-Package managers distribute the binary and compiled Built-in definitions.
-They do not own or update Workspace configuration, Cookbook, Dist, Archive, or
-Pool state.
+Package managers distribute the binary and compiled Built-in definitions. They
+do not own or update Workspace configuration, Cookbook, Dist, Archive, or Pool
+state.
 
 ## Support boundary
 
 `Supported` is reserved for Built-in Platforms incorporated and validated by
-CTK. A Workspace definition is available through a user extension point but is
-not automatically or self-declared as CTK Supported.
+CTK. A Workspace definition is a user extension point, not a self-declared CTK
+support claim.
 
-The definition author is responsible for application compatibility, command,
-Host paths, process declarations, Repository policy, and validation on the
-intended OS and product versions. CTK remains responsible for schema
-validation and for preserving its common lifecycle, recovery, and artifact
-safety invariants.
+The definition author owns compatibility with the selected application,
+command, Host paths, process declarations, Repository policy, and intended OS.
+CTK remains responsible for schema validation and its common lifecycle,
+recovery, and artifact safety invariants.
 
-Promoting an external definition to Built-in requires normal Intake,
+Promoting a Workspace definition to Built-in requires normal Intake,
 implementation review, automated tests, and real-machine validation on every
 claimed OS.
 
-## Acceptance after refactoring
+## Initial implementation boundary
 
-Registry implementation is followed by:
+The first useful slice would include:
 
-```text
-automated parity and completeness tests
-        ↓
-targeted real-machine Intake on claimed OSes
-        ↓
-Go Platform Support Inventory update
-```
+1. load complete definitions from `CTK_HOME/.config/platform/*.yaml`;
+2. validate identity, per-OS paths, process declarations, filter references,
+   ordered Repository candidates, and download capability before Host mutation;
+3. merge valid external identities with Built-ins without permitting Built-in
+   replacement;
+4. report file- and field-specific diagnostics;
+5. prove that existing Built-in completeness and lifecycle behavior is
+   unchanged;
+6. validate at least one disposable Workspace definition on each claimed OS.
 
-The automated pass covers complete Built-in resolution, existing process and
-Pool behavior, early rejection, lifecycle and recovery tests, Archive and
-Runtime I/O tests, and Windows cross-build.
-
-The real-machine pass re-observes command and application identity, redirected
-Runtime paths, default and Dist process selection, Profiles, Extension and Pool
-behavior, Build, Apply, Archive, CodeVenv lifecycle, Host restoration, and the
-retained interruption scenarios. Unexecuted cells remain `Partial` or
-`Not recorded`; implementation similarity does not fill evidence gaps.
-
-The reduced
-[Platform Validation Cookbook](../../test/platform-validation/README.md) is
-available as public scenario input. It remains separate from Resolver unit-test
-fixtures and from a user's daily Cookbook.
-
-The macOS and Windows real-machine passes are complete for all five Built-in
-Platforms: Build, Apply, Archive, Profile persistence, primary Repository Pool
-acquisition, Activate, Deactivate, and Host restoration were observed. Visual
-Studio Code Archive reconstruction was also repeated on Windows. The exact
-evidence and explicitly unexecuted scenarios belong to the
-[Go Platform Support Inventory](../../go/doc/platform-support.md). External
-definition loading remains a separate Future and is not part of the Registry
-refactoring branch acceptance.
+After implementation, definition locations, fields, diagnostics, and examples
+should move to a Platform Definition Note. Provider mechanisms that remain
+unimplemented should stay in Future.
 
 ## Deferred independently
 
-The following are not prerequisites for the Registry refactoring or initial
-external definition loading:
-
-- external process filter providers;
-- external Repository connector providers;
-- automatic Dist relocation or migration;
-- multiple active Workspace selection;
-- Archive or Pool location overrides;
-- non-VS Code ecosystem Runtime adapters.
+- external process filter providers
+- external Repository connector providers
+- automatic Dist relocation or migration
+- multiple active Workspace selection
+- Archive or Pool location overrides
+- non-VS Code ecosystem Runtime adapters
 
 ## Related knowledge
 
+- [Built-in Platform Registry](../note/note.platform-registry.md)
 - [Why Platform Definitions Belong to Workspace Integration](../design-note/design-note.platform-definition-scope.md)
 - [Why CTK Keeps Platform Inside the VS Code Ecosystem](../design-note/design-note.vscode-ecosystem-scope.md)
 - [VS Code Ecosystem Platform Intake](../project-knowledge/note/note.vscode-ecosystem-platform-intake.md)

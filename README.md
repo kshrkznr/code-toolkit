@@ -572,8 +572,10 @@ for these VS Code-family applications:
 The OS/version observation matrix and Go implementation coverage are maintained
 in the [Go Platform Support Inventory](go/doc/platform-support.md).
 
-Other compatible IDEs remain an intended area of exploration rather than a
-current compatibility or release commitment.
+Other VS Code-family applications are not a current compatibility or release
+commitment. A Workspace-defined Platform extension point remains a
+[Future](doc/future/future.platform-registry.md); a user definition would not
+become CTK Supported automatically.
 
 The [Code Environment Concept API](doc/integration/integration.code-venv.md) and
 [Code Environment Integration Contract](doc/contract/contract.code-environment.md)

@@ -77,7 +77,7 @@ go/
     ├── launcher/         Override and native launch resolution
     ├── lifecycle/        Recipe/Archive Build, Apply, and Lock orchestration
     ├── mergerules/       Go Kitchen Note merge-rule loading
-    ├── platform/         Host-specific process integration
+    ├── platform/         Built-in Platform Registry and process integration
     ├── recipe/           Recipe representation and loading
     ├── recovery/         Internal trusted-Lock Runtime reconstruction
     ├── runtimeio/        Platform Runtime capability boundary
@@ -238,15 +238,17 @@ matrix, automated coverage, and known evidence gaps are maintained in the
 
 The inventory keeps product versions and OS-specific evidence separate from the
 concise support status in the repository README and from behavioral Contracts.
+The operational declaration and service boundary is described in the
+[Built-in Platform Registry Note](../doc/note/note.platform-registry.md).
 
 ## Future
 
 - Optional log and Operation Report presentation modes: normal, verbose,
   quiet, and JSON.
 - Release signing, notarization, and concrete Homebrew Tap/Scoop Bucket setup.
-- The relationship among the CLI, `CTK_HOME`, and multiple Workspaces for
-  binary distribution, including placement boundaries for Cookbook, Dist,
-  Archive, and Pool. The open questions remain in
-  `doc/future/future.candidates.md`.
+- Package-manager distribution questions preserved in
+  [`future.candidates.md`](../doc/future/future.candidates.md).
+- Workspace-defined Platform loading preserved in
+  [`future.platform-registry.md`](../doc/future/future.platform-registry.md).
 - Configurable no-argument behavior if a concrete non-interactive use case
   requires it.
