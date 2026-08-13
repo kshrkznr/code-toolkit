@@ -53,18 +53,14 @@ The supporting observations include:
 - caller-owned system certificate configuration in TLS-inspecting environments
 - interrupted CodeVenv transaction recovery and explicit retry boundaries
 
-## Remaining question
+## Outcome
 
-The current implementation still records built-in Platform differences across
-Host paths, process identities, and Repository policy. The observations now make
-a registry-shaped refactoring plausible, including an external definition file
-for data-shaped differences.
+The Registry refactoring resolved the experiment's declaration boundary for
+Built-in Platforms. Host paths, process identities and registered filters, and
+Repository policy now resolve from centralized data. Process-selection
+algorithms, Profile handshakes, and Gallery download validation remain named Go
+behavior rather than arbitrary logic loaded from configuration.
 
-The open question is where declaration ends and executable behavior begins.
-Process-selection algorithms, Profile handshakes, and Gallery download
-validation should not become arbitrary logic loaded from a configuration file.
-A candidate boundary is an external definition that supplies identities and
-selects named strategies implemented and validated by Go.
-
-This remains a refactoring and extension-point candidate rather than an accepted
-Platform API.
+External Workspace definition loading remains a Future. It reuses this boundary
+but does not turn a user definition into a CTK-supported Platform or expose an
+arbitrary executable extension API.

@@ -55,18 +55,19 @@ func TestBuiltInRegistryIsComplete(t *testing.T) {
 		}
 
 		for _, test := range []struct {
-			goos     string
-			dataBase string
+			goos       string
+			dataBase   string
+			extensions string
 		}{
-			{"darwin", filepath.Join("home", "Library", "Application Support")},
-			{"windows", filepath.Join("home", "AppData", "Roaming")},
+			{"darwin", "home/Library/Application Support", "home/" + expected.extensions + "/extensions"},
+			{"windows", filepath.Join("home", "AppData", "Roaming"), filepath.Join("home", expected.extensions, "extensions")},
 		} {
 			paths, err := ResolveHostPaths(identity, test.goos, "home")
 			if err != nil {
 				t.Errorf("ResolveHostPaths(%q, %q): %v", identity, test.goos, err)
 				continue
 			}
-			if paths.UserData != filepath.Join(test.dataBase, expected.data) || paths.User != filepath.Join(test.dataBase, expected.data, "User") || paths.Extensions != filepath.Join("home", expected.extensions, "extensions") {
+			if paths.UserData != joinPath(test.goos, test.dataBase, expected.data) || paths.User != joinPath(test.goos, test.dataBase, expected.data, "User") || paths.Extensions != test.extensions {
 				t.Errorf("ResolveHostPaths(%q, %q) = %#v", identity, test.goos, paths)
 			}
 		}

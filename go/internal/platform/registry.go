@@ -2,6 +2,7 @@ package platform
 
 import (
 	"fmt"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -86,7 +87,7 @@ func definition(identity, command, dataName, extensionName string, darwinProcess
 				Host: HostDefinition{
 					UserData:   PathDefinition{Base: PathBaseApplicationSupport, Path: dataName},
 					User:       "User",
-					Extensions: PathDefinition{Base: PathBaseHome, Path: filepath.Join(extensionName, "extensions")},
+					Extensions: PathDefinition{Base: PathBaseHome, Path: path.Join(extensionName, "extensions")},
 				},
 				Process: ProcessDefinition{Identities: darwinProcess},
 			},
@@ -94,7 +95,7 @@ func definition(identity, command, dataName, extensionName string, darwinProcess
 				Host: HostDefinition{
 					UserData:   PathDefinition{Base: PathBaseRoamingApplicationData, Path: dataName},
 					User:       "User",
-					Extensions: PathDefinition{Base: PathBaseHome, Path: filepath.Join(extensionName, "extensions")},
+					Extensions: PathDefinition{Base: PathBaseHome, Path: path.Join(extensionName, "extensions")},
 				},
 				Process: ProcessDefinition{Identities: []string{windowsProcess}, AdditionalFilters: []string{FilterSameNameRoot}},
 			},
@@ -206,7 +207,7 @@ func ResolveHostPaths(identity, goos, home string) (HostPaths, error) {
 	if err != nil {
 		return HostPaths{}, err
 	}
-	return HostPaths{UserData: userData, User: filepath.Join(userData, osDefinition.Host.User), Extensions: extensions}, nil
+	return HostPaths{UserData: userData, User: joinPath(goos, userData, osDefinition.Host.User), Extensions: extensions}, nil
 }
 
 func resolvePath(definition PathDefinition, goos, home string) (string, error) {
@@ -216,26 +217,40 @@ func resolvePath(definition PathDefinition, goos, home string) (string, error) {
 		if !isAbsolutePath(goos, definition.Path) {
 			return "", fmt.Errorf("Host path without a base must be absolute: %s", definition.Path)
 		}
-		return filepath.Clean(definition.Path), nil
+		return cleanPath(goos, definition.Path), nil
 	case PathBaseHome:
 		base = home
 	case PathBaseApplicationSupport:
 		if goos != "darwin" {
 			return "", fmt.Errorf("path base %q is unsupported on %s", definition.Base, goos)
 		}
-		base = filepath.Join(home, "Library", "Application Support")
+		base = joinPath(goos, home, "Library", "Application Support")
 	case PathBaseRoamingApplicationData:
 		if goos != "windows" {
 			return "", fmt.Errorf("path base %q is unsupported on %s", definition.Base, goos)
 		}
-		base = filepath.Join(home, "AppData", "Roaming")
+		base = joinPath(goos, home, "AppData", "Roaming")
 	default:
 		return "", fmt.Errorf("unknown Host path base %q", definition.Base)
 	}
 	if isAbsolutePath(goos, definition.Path) {
 		return "", fmt.Errorf("Host path with base %q must be relative: %s", definition.Base, definition.Path)
 	}
-	return filepath.Join(base, definition.Path), nil
+	return joinPath(goos, base, definition.Path), nil
+}
+
+func cleanPath(goos, value string) string {
+	if goos == "windows" {
+		return filepath.Clean(value)
+	}
+	return path.Clean(value)
+}
+
+func joinPath(goos string, elements ...string) string {
+	if goos == "windows" {
+		return filepath.Join(elements...)
+	}
+	return path.Join(elements...)
 }
 
 func isAbsolutePath(goos, value string) bool {

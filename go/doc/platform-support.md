@@ -98,15 +98,15 @@ presence alone is not real-machine evidence.
 | Platform / observed version | OS | CLI and isolated paths | Named Profile | Build / Apply / Archive | CodeVenv lifecycle | Interrupted recovery |
 | --- | --- | --- | --- | --- | --- | --- |
 | Visual Studio Code 1.132.1–1.133.0 | macOS Apple Silicon | Observed through Host import and isolated Dist paths | Six named Profiles observed | Build, Apply, Archive, and Archive reconstruction observed | Activate, Use, Launch, Deactivate, and Host restoration observed | Not recorded |
-| Visual Studio Code / baseline | Windows | Baseline implementation | Baseline implementation | Cross-build and historical use | Historical use | Automated lifecycle tests; no versioned real-machine row retained here |
+| Visual Studio Code 1.132.0 | Windows x64 | Observed with the reduced validation Recipe | One named Profile observed | Build, Apply, Archive, and Archive reconstruction observed | Activate, Deactivate, and Host restoration observed | Automated lifecycle tests; not repeated in this pass |
 | Kiro 1.0.242 | macOS Apple Silicon | Isolated Dist paths observed | One named Profile observed | Build, Apply, and Archive observed | Activate, Deactivate, and Host restoration observed | Not recorded |
-| Kiro / earlier observations | Windows | CLI, CRLF, process, Repository behavior observed | Partial | Partial | Partial | Not recorded at equal granularity |
+| Kiro 1.0.212 | Windows x64 | Observed with the reduced validation Recipe | One named Profile observed | Build, Apply, and Archive observed | Activate, Deactivate, and Host restoration observed | Not recorded at equal granularity |
 | VSCodium 1.126.04524 | macOS Apple Silicon | Observed | Observed | Build, Apply, and Archive observed | Activate, use, launch, deactivate observed | Not recorded |
-| VSCodium 1.126.04524 | Windows x64 | Observed | Not recorded | Build observed; Apply and Archive not recorded | Activate, use, launch, deactivate observed | Not recorded |
+| VSCodium 1.126.04524 | Windows x64 | Observed | One named Profile observed | Build, Apply, and Archive observed | Activate, Deactivate, and Host restoration observed; use and launch observed previously | Not recorded |
 | Cursor 3.15.6 | macOS Apple Silicon | Observed | Four-Profile private Build and reduced one-Profile Build observed | Build, Apply, and Archive observed | Activate, Freeze Draft, normal use observed | Not recorded |
-| Cursor 3.15.6 | Windows x64 | Observed | Four Profiles observed | Build, Apply from Archive, Inspect, Archive observed | Activate, Freeze Draft, use, launch, deactivate observed | Two activation interruption phases observed |
+| Cursor 3.15.6 | Windows x64 | Observed | Four Profiles observed previously; one named Profile observed in the reduced pass | Build, Apply, and Archive observed; earlier Apply from Archive and Inspect retained | Activate, Deactivate, and Host restoration observed; Freeze Draft, use, and launch observed previously | Two activation interruption phases observed previously |
 | Devin Desktop 3.7.16 | macOS Apple Silicon | Observed | Observed separately | Build, Apply, Archive observed | Activate, Freeze Draft, use, launch, deactivate observed | Not recorded |
-| Devin Desktop 3.7.16 | Windows x64 | Observed | One named Profile (`core`) observed with the author's Cookbook | Build, Apply from Archive, Archive observed | Activate, Freeze Draft, use, launch, deactivate observed | Two activation interruption phases observed; one post-recovery retry retained |
+| Devin Desktop CLI 1.126.0 / earlier product 3.7.16 | Windows x64 | Observed | One named Profile observed in both the reduced and earlier private-Cookbook passes | Build, Apply, and Archive observed; earlier Apply from Archive retained | Activate, Deactivate, and Host restoration observed; Freeze Draft, use, and launch observed previously | Two activation interruption phases observed previously; one post-recovery retry retained |
 
 The matrix deliberately exposes uneven evidence. Filling a cell requires a new
 observation artifact; implementation similarity alone does not change it.
@@ -119,6 +119,27 @@ Extension paths through managed symlinks. Each Deactivate removed that
 Selection and restored physical Host directories. Visual Studio Code was then
 activated again and returned to its pre-test `vscode-default` Selection; the
 other four Platforms remained unselected.
+
+The Windows Registry-refactoring pass used the branch-built binary and
+the reduced public validation Cookbook for all five built-in Platforms. Each
+Build and Apply completed 9 operations with no unresolved or failed operations,
+and each Archive completed. Visual Studio Code was also reconstructed from its
+Archive with 8 completed operations and no unresolved or failed operations.
+The exact retained Extension was `emilast.logfilehighlighter@3.5.2` from Visual
+Studio Marketplace for Visual Studio Code and `2.8.0` from Open VSX, Cursor
+Marketplace, and Windsurf Marketplace for the other Platforms as declared.
+
+All five Platforms then completed Activate and Deactivate. Each activation
+imported the physical Host into `origin.<platform>` and selected it through a
+managed `current.<platform>` Junction. Each deactivation removed the Selection
+and restored physical Host User and Extension directories; the validation
+Workspace ended with no active Platform.
+
+The first Visual Studio Code Build reproduced the observed TLS-inspecting
+environment failure. Retrying with process-local
+`NODE_OPTIONS=--use-system-ca` completed normally, and the same setting was
+used for the remaining pass. Process ownership with an independently running
+Host and interruption recovery were not repeated.
 
 ## Platform-specific evidence
 
@@ -307,55 +328,11 @@ tests continue to exercise process selection, Pool order, acquisition, and
 lifecycle behavior.
 
 Automated completeness does not fill the real-machine observation matrix. The
-targeted macOS validation above provides the recorded Build, Apply, Archive,
-Profile, and Repository evidence; unexecuted CodeVenv and recovery cells, and
-the corresponding Windows re-observation, remain `Partial` or `Not recorded`.
-
-## Windows continuation after Registry refactoring
-
-The Registry implementation, automated tests, Windows amd64 cross-build, and
-macOS real-machine acceptance are complete. Windows remains the claimed-OS
-continuation for this refactoring. It should be performed from the branch that
-contains the Registry changes; the ignored local inventory memo is not required
-to interpret or execute the pass.
-
-Use the OS-specific Recipes in the
-[Platform Validation Cookbook](../../test/platform-validation/README.md) for
-all five built-in identities. Keep the Workspace path shallow. For each
-Platform, retain evidence for:
-
-1. installed command, product version, and x64 architecture;
-2. isolated User Data and Extension paths;
-3. named Profile persistence and Profile-local Settings;
-4. Build and Apply operation counts with no unresolved or failed operations;
-5. Archive creation and, for at least the baseline Visual Studio Code pass,
-   reconstruction from that Archive;
-6. exact `emilast.logfilehighlighter` Lock and the primary Repository-scoped
-   Pool artifact;
-7. Activate, managed `current.<platform>` Junctions, Deactivate, and physical
-   Host restoration;
-8. Runtime-only process stopping without terminating an independently running
-   Host/default Runtime;
-9. retained interruption-recovery scenarios where practical.
-
-Expected primary Pool scopes are Visual Studio Marketplace for `code`, Open VSX
-for `codium` and `kiro`, Cursor Marketplace for `cursor`, and Windsurf
-Marketplace for `devin-desktop`. A different observed Extension version is
-evidence, not automatically a failure; the Lock and exact Pool artifact must
-agree.
-
-Windows process selection must continue to exclude `--type=` helpers and apply
-the declared `same-name-root` filter. `current.<platform>` and Host redirections
-are Junctions rather than Unix symbolic links. In the previously observed
-TLS-inspecting environment, process-local `NODE_OPTIONS=--use-system-ca`
-restored Repository access while preserving strict certificate and Extension
-signature verification. Record a recurrence as environment evidence rather
-than changing Platform Repository order.
-
-Update the Windows rows in the real-machine observation matrix only from the
-new pass. Keep unexecuted operations explicit. After the pass, rerun the Go
-suite, `go vet`, Windows cross-build, `git diff --check`, and confirm the tested
-binary is the branch build rather than an older installed binary.
+targeted macOS and Windows validation above provides the recorded Build, Apply,
+Archive, Profile, Repository, CodeVenv, and Host-restoration evidence. Process
+ownership with an independently running Host and interruption-recovery cells
+that were not repeated remain explicitly attributed to earlier evidence or
+marked `Not recorded`.
 
 ## Updating this inventory
 

@@ -326,13 +326,14 @@ The reduced
 available as public scenario input. It remains separate from Resolver unit-test
 fixtures and from a user's daily Cookbook.
 
-The macOS real-machine pass is complete for all five Built-in Platforms:
-Build, Apply, Archive, Profile persistence, primary Repository Pool acquisition,
-Activate, Deactivate, and Host restoration were observed. Windows validation is
-the remaining claimed-OS continuation. Its executable handoff belongs to the
-[Go Platform Support Inventory](../../go/doc/platform-support.md), not to a
-local working memo. External definition loading remains after that parity pass;
-it is not part of the Registry refactoring branch acceptance.
+The macOS and Windows real-machine passes are complete for all five Built-in
+Platforms: Build, Apply, Archive, Profile persistence, primary Repository Pool
+acquisition, Activate, Deactivate, and Host restoration were observed. Visual
+Studio Code Archive reconstruction was also repeated on Windows. The exact
+evidence and explicitly unexecuted scenarios belong to the
+[Go Platform Support Inventory](../../go/doc/platform-support.md). External
+definition loading remains a separate Future and is not part of the Registry
+refactoring branch acceptance.
 
 ## Deferred independently
 
