@@ -1,0 +1,123 @@
+# Go.contract.documentation-bundle.md
+============================================================
+
+# Go Documentation Bundle Contract
+
+This Contract realizes the
+[Packaged Documentation Bundle Future](../../../doc/future/future.documentation-bundle.md)
+for the primary standalone Go executable.
+
+## Source Definition
+
+`doc/documentation-bundle.yaml` is the checked-in Bundle Definition. Its paths
+are repository-root-relative even though the Definition is owned under `doc/`.
+
+The initial strict representation is:
+
+```yaml
+format-version: 1
+repository: https://github.com/kshrkznr/code-toolkit
+documents:
+  files: []
+  trees: []
+  exclude: []
+nodes: {}
+bootstrap-template: doc/documentation-bootstrap.md.tmpl
+```
+
+`files` selects exact regular Markdown files. `trees` recursively selects
+regular Markdown files below exact directories. `exclude` removes exact files
+from those selections and is not a glob mechanism. Node aliases map a concise
+command value to one selected Node README.
+
+Go rejects unknown fields, unsupported format versions, absolute paths, path
+traversal, missing paths, symlinks, special files, duplicate selections,
+case-insensitive path collisions, exclusions outside the selected set, Node
+aliases colliding with documentation subcommands, and Node targets outside the
+selected set.
+
+## Bootstrap template
+
+The checked-in Bootstrap template supports only:
+
+```text
+{{ include-range "<path>" from="<heading>" before="<heading>" }}
+{{ include-document "<path>" }}
+```
+
+Paths must select bundled Markdown documents. A range heading is an exact
+Markdown ATX heading including its level. It must occur exactly once, and the
+`from` heading must precede the `before` heading. The starting heading is
+included and the boundary heading is excluded.
+
+Literal template text is preserved. Unknown or malformed placeholders fail
+generation.
+
+## Generated Bundle
+
+The generator produces one deterministic ZIP with this logical layout:
+
+```text
+.ctk-docs/
+├── bootstrap.md
+└── manifest.json
+README.md
+doc/...
+go/...
+```
+
+Selected source documents retain their repository-relative paths and bytes.
+The Bootstrap is a generated view rather than another maintained Knowledge
+source.
+
+ZIP entries are path-sorted regular files with fixed modes and timestamps.
+The generated Manifest records:
+
+- Manifest format version;
+- CTK version, source revision, and optional Release tag;
+- repository URL and Bundle Definition digest;
+- aggregate content digest;
+- generated Bootstrap digest;
+- each selected document's path, canonical identity when present, title,
+  headings, aliases, and content digest.
+
+The aggregate digest is derived from the sorted logical path and SHA-256 digest
+of the Bootstrap and every selected source document. It excludes the generated
+Manifest itself and wall-clock time.
+
+## Link validation and generated views
+
+Go validates ordinary relative Markdown links from each selected document.
+Missing source targets fail generation. A valid target excluded by the Bundle
+Definition is repository-only.
+
+Selected source documents remain unchanged in the archive. In generated or
+terminal views, Go resolves each relative target from its source document:
+
+- included targets become repository-root-relative paths with fragments
+  preserved;
+- repository-only targets route to the exact tag or commit repository root;
+- external URLs and same-document fragments remain unchanged.
+
+## Document lookup
+
+The Manifest index permits lookup by exact canonical identity,
+repository-relative path, or Node alias. Canonical identity is read from the
+first Markdown heading when it declares a CTK Knowledge or Go document
+identity; it is not required for an implementation README addressable by path.
+
+Resolve searches identity, path, alias, title, headings, and selected document
+text. Exact identity and path matches precede metadata and content matches;
+ties are repository-path ordered. Resolve returns candidates rather than full
+documents.
+
+Show requires one exact identity or repository-relative path, with an optional
+heading fragment. Missing and ambiguous references fail rather than selecting
+one document silently.
+
+## Boundary
+
+The first implementation slice does not define executable transport, local
+source configuration, filesystem export, network fetching, semantic question
+answering, interactive selection, or pager behavior. The generator and read
+model must remain independently testable before a Release transport is chosen.

@@ -38,6 +38,32 @@ without interactive selection.
 This interactive-first default is a Go product preference rather than a shared
 Core capability.
 
+## Workspace-independent self-description
+
+The standalone Go executable dispatches commands that describe content carried
+by that executable before Workspace discovery and validation.
+
+The current self-description boundary contains:
+
+- `ctk help`, `ctk -h`, and `ctk --help`;
+- `ctk version` and `ctk --version`;
+- `ctk docs` and its documentation lookup subcommands.
+
+These commands do not read Cookbook Source, Dist, Archive, Extension Pool,
+Workbench, or Host integration paths. Their argument validation and usage
+errors also occur without requiring a Workspace.
+
+All lifecycle, Runtime, Cookbook, Workbench, and Workspace inspection commands
+retain the existing Workspace discovery and validation boundary. Classifying a
+new command as read-only is not sufficient to move it into self-description;
+the command must describe only content carried by the executable.
+
+The reusable distribution observation is recorded by [Binary
+Self-Description Outside a
+Workspace](../../../doc/note/note.binary-self-description.md). Documentation
+lookup and packaged representation are defined by the [Go Documentation Bundle
+Contract](contract.documentation-bundle.md).
+
 ## Explicit collision behavior
 
 Go exposes conflict choices through command-specific `--on-conflict` values.

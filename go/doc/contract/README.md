@@ -24,6 +24,8 @@ concrete choice.
   → [Archive](contract.archive.md)
 - How does the native CLI select values and handle cancellation?
   → [CLI](contract.cli.md)
+- How does Go select, generate, verify, and navigate packaged documentation?
+  → [Documentation Bundle](contract.documentation-bundle.md)
 - How does Go activate, switch, and recover CodeVenv state?
   → [Code Environment](contract.code-environment.md)
 - How does Go publish Locks and recover Runtime state?
