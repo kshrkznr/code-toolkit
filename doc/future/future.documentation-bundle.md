@@ -55,6 +55,54 @@ ctk docs export <directory>
 These forms illustrate the candidate responsibility. Names, arguments, output
 format, and group boundaries remain open.
 
+## Default navigation view
+
+The default `ctk docs` output should be a generated Bootstrap document rather
+than the complete root README or Documentation Resolver presented one after
+the other.
+
+The current source composition is:
+
+```text
+README.md
+    # Concept Domains
+        through the Concept Domain and Concept API catalog
+        stopping before # Installation
+
+doc/README.md
+    complete Documentation Resolver
+```
+
+This keeps the Concept Domain and Concept API vocabulary together with the
+question-based Resolver while leaving public onboarding content such as Why,
+Explore with AI, Installation, and Getting Started in the repository and full
+bundle rather than the default view.
+
+The composition should be owned by a dedicated checked-in Bootstrap template,
+not by copying those sections into another maintained Knowledge document. A
+candidate template could use small build placeholders such as:
+
+```text
+{{ include-range "README.md" from="# Concept Domains" before="# Installation" }}
+{{ include-document "doc/README.md" }}
+```
+
+The exact placeholder syntax remains an implementation representation, but a
+selector should identify the source path, heading level and text, and range
+boundary explicitly. Generation must fail when a selected heading is missing,
+duplicated at the selected level, or appears after its boundary. A heading
+rename therefore becomes a visible Bootstrap update rather than silently
+dropping or widening context.
+
+The generated Bootstrap is a derived view and should be listed and hashed as
+such in the Packaged Documentation Manifest. Its source sections remain owned
+by `README.md` and `doc/README.md`; the template owns only their composition,
+small transition text, and provenance presentation.
+
+The template and its validator should be introduced together. Release uses the
+validated generated view, but ordinary verification should also detect stale
+selectors before Release preparation.
+
 ## Candidate content boundary
 
 The current direction is to carry nearly all Knowledge needed to understand,
@@ -279,7 +327,6 @@ development checkout.
 
 ## Open questions
 
-- Which documents form the default navigation view within the selected set?
 - Which retained historical Notes or Design Notes need repository-only
   exceptions?
 - How should canonical identities and relative links appear in concatenated
