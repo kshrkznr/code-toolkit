@@ -220,6 +220,21 @@ regenerated Definition and content digests differ. Cross-compiled binaries do
 not each need a separate documentation selection pass; they should consume the
 same already verified generated bundle input.
 
+## Go CLI boundary
+
+Workspace-independent dispatch is not a shared Packaged Documentation Bundle
+responsibility. It arises from the current Go distribution unit: one standalone
+binary must be able to explain itself even when no CTK Workspace or repository
+checkout is present.
+
+The reusable observation is recorded by [Binary Self-Description Outside a
+Workspace](../note/note.binary-self-description.md). If the Go CLI implements
+this direction, exact dispatch order and behavior for `help`, `version`, and
+`docs` belong in the
+[Go CLI Contract](../../go/doc/contract/contract.cli.md) and Go source. Other
+implementations are not required to adopt the same boundary when their
+distribution context differs.
+
 ## Boundary
 
 This candidate does not define:
@@ -245,8 +260,6 @@ development checkout.
   Markdown output?
 - Should a link from bundled Knowledge to repository-only material become an
   exact-version GitHub link, an unavailable route, or a small packaged stub?
-- Should `help`, `version`, and `docs` share one Workspace-independent command
-  boundary in the Go CLI?
 
 ## Revisit when
 

@@ -46,6 +46,9 @@ Start with the question closest to the current work:
   → [Built-in Platform Registry](note.platform-registry.md)
 - What has been observed about Variant responsibility and usage?
   → [Variant](note.variant.md)
+- Why might a standalone CTK binary expose its own help, version, or packaged
+  documentation before Workspace discovery?
+  → [Binary Self-Description Outside a Workspace](note.binary-self-description.md)
 
 These are useful entry points rather than an exhaustive document catalog.
 Search by the current concept when none of these questions fit.
