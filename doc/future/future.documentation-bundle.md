@@ -42,11 +42,11 @@ ctk docs
     Concept API navigation
     exact-version source link
 
-ctk docs core
-ctk docs workbench
-ctk docs integration
-ctk docs contract
-    scoped Knowledge views
+ctk docs resolve <terms...>
+    find candidate documents without printing their full contents
+
+ctk docs show <canonical-identity-or-path>[#heading]
+    print one detailed document
 
 ctk docs export <directory>
     packaged documents in their relative repository structure
@@ -102,6 +102,63 @@ small transition text, and provenance presentation.
 The template and its validator should be introduced together. Release uses the
 validated generated view, but ordinary verification should also detect stale
 selectors before Release preparation.
+
+## Document index, Resolve, and Show
+
+The generated Manifest should index each bundled document by the metadata it
+already exposes rather than introducing a second tagging scheme. Useful index
+fields include:
+
+- canonical identity, when the document declares one;
+- repository-relative path;
+- document title and headings;
+- document role or selected bundle group;
+- source content hash.
+
+Canonical identity is one stable lookup alias and a useful grep candidate. It
+does not need special visual weight in generated output, and documents such as
+an implementation README may remain addressable by repository path when they
+do not declare a Knowledge identity.
+
+`ctk docs resolve <terms...>` could perform deterministic search over this
+index and selected document text. It should return a small ordered candidate
+list containing identity, path, and title rather than concatenating every
+matching document. Exact identity or path matches precede metadata and content
+matches; ties remain path-ordered and visible. Resolve is document discovery,
+not semantic question answering.
+
+`ctk docs show <reference>` could resolve an exact canonical identity or
+repository-relative path and print that one document. An optional heading
+fragment selects one section, allowing an indexed See also link to keep its
+original precision. Missing and ambiguous references should report candidates
+rather than selecting one silently.
+
+This replaces category-wide output such as `ctk docs core`. A broad term such
+as `core` may discover several documents, but the reader or AI assistant chooses
+one result to Show instead of receiving the whole domain at once.
+
+## Links in generated output
+
+Source documents keep their ordinary relative Markdown links. Exported source
+documents also keep those links because their repository-relative directory
+structure is preserved.
+
+Concatenated or terminal output no longer has one source directory from which a
+relative target can be interpreted. For those views, generation should:
+
+- keep the original Markdown link label;
+- resolve the target from the source document before composition;
+- render an included target as a repository-root-relative path plus any
+  heading fragment;
+- make that rendered path acceptable directly to `ctk docs show`;
+- route an intentionally excluded target through the common exact-version
+  GitHub repository reference;
+- fail when the original target does not exist.
+
+Generated source-boundary annotations can keep the originating repository path
+visible around each composed section. Canonical identity lines remain when the
+selected source contains them; the Bootstrap does not invent a new Knowledge
+identity for extracted README sections.
 
 ## Candidate content boundary
 
@@ -329,8 +386,6 @@ development checkout.
 
 - Which retained historical Notes or Design Notes need repository-only
   exceptions?
-- How should canonical identities and relative links appear in concatenated
-  Markdown output?
 
 ## Revisit when
 
