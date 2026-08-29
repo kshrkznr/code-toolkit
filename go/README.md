@@ -117,6 +117,11 @@ Create versioned macOS and Windows artifacts with checksums:
 go/release.sh v0.4.0
 ```
 
+Release assembly requires a clean checkout whose `HEAD` is the exact requested
+tag. It generates one deterministic Documentation Bundle, compares it with a
+fresh archive of that tag, appends the same verified bytes to every executable,
+and verifies each packaged Manifest before creating checksums.
+
 The builder produces:
 
 ```text
@@ -127,9 +132,11 @@ release/v0.4.0/
 └── checksums.txt
 ```
 
-Each platform archive contains the executable, the CTK `LICENSE`, and generated
-`THIRD_PARTY_NOTICES`. Regenerate the checked-in notice inventory after
-dependency changes:
+Each platform archive contains the executable with version-matched CTK
+documentation, the CTK `LICENSE`, and generated `THIRD_PARTY_NOTICES`. The
+packaged binary provides `ctk docs` navigation and safe `ctk docs export
+<directory>` for repository-style full-text search. Regenerate the checked-in
+notice inventory after dependency changes:
 
 ```bash
 go/third-party-notices.sh

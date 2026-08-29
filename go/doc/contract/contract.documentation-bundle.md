@@ -163,6 +163,23 @@ before rendering content. It does not discover or load a Workspace. The CLI
 provides Bootstrap, Node listing and shortcuts, Resolve, and Show. Help remains
 available even when a development binary has no Bundle.
 
+## Release verification
+
+Release assembly requires a clean checkout whose `HEAD` is the exact requested
+Release tag. It generates the Bundle once with that version, full revision, and
+tag, then independently regenerates it from a fresh `git archive` of the tag.
+The byte streams must match.
+
+Every target executable receives the same validated Bundle bytes. The Release
+tool reopens each final executable without executing the target architecture
+and verifies version, revision, tag, and aggregate content digest. When one
+built target is native to the Release host, assembly also exercises version,
+Bootstrap, Node, Resolve, Show, and Export from a directory without a Workspace.
+
+Platform archives and their checksums are created only after the Bundle is
+appended and verified, so the published checksum covers both executable and
+documentation content.
+
 ## Boundary
 
 The current implementation does not define local source configuration, network
