@@ -42,6 +42,9 @@ ctk docs
     Concept API navigation
     exact-version source link
 
+ctk docs core
+    show the Core Node README, not every Core document
+
 ctk docs resolve <terms...>
     find candidate documents without printing their full contents
 
@@ -111,6 +114,7 @@ fields include:
 
 - canonical identity, when the document declares one;
 - repository-relative path;
+- a concise Node alias such as `core` or `contract`, when one applies;
 - document title and headings;
 - document role or selected bundle group;
 - source content hash.
@@ -133,9 +137,17 @@ fragment selects one section, allowing an indexed See also link to keep its
 original precision. Missing and ambiguous references should report candidates
 rather than selecting one silently.
 
-This replaces category-wide output such as `ctk docs core`. A broad term such
-as `core` may discover several documents, but the reader or AI assistant chooses
-one result to Show instead of receiving the whole domain at once.
+A concise Node alias may be exposed as a direct shortcut. For example,
+`ctk docs core` is equivalent to showing `Knowledge.core.md` or
+`doc/core/README.md`; it prints the Core Node README rather than concatenating
+every Core document. Workbench, Integration, Contract, Note, and other useful
+bundled Nodes can follow the same rule without creating a separate category
+dump behavior. Node aliases belong in the central index and must not collide
+with command names such as `resolve`, `show`, or `export`.
+
+`ctk docs resolve core` remains distinct: it may discover the Node and several
+detailed documents, then let the reader or AI assistant choose one result to
+Show.
 
 ## Links in generated output
 
