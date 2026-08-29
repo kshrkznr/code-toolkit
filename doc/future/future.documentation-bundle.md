@@ -184,7 +184,8 @@ Inclusion should follow the document's primary responsibility:
 | --- | --- | --- |
 | Include | Public entry, navigation, accepted concepts, agreements, current operational guidance, and rationale needed to interpret current behavior | `README.md`, Documentation Resolver, Core, Workbench, Integration, Contract, Note, Design Note, current Go README and Contracts |
 | Include as a concrete entry | A small maintained example that helps a reader apply the concepts without defining them | Author's Recipe Node |
-| Repository only | How Knowledge was created, reviewed, or evolved | Project Knowledge, including its Experiments, Notes, and Design Notes |
+| Include as an explicit Project Knowledge exception | A self-contained observation directly useful while applying bundled current Knowledge | Collaborative Review Surfaces |
+| Repository only by default | How Knowledge was created, reviewed, or evolved | Project Knowledge, including its Experiments, Notes, and Design Notes |
 | Repository only | Unsettled candidate directions | Future |
 | Repository only | Personal or generated instance data rather than CTK responsibility | Author's Recipe Inspect snapshots |
 | Repository only | Contribution process, tests, retained implementation evidence, and other development-only material | `.github`, test data, and the retained Bash documentation |
@@ -192,7 +193,36 @@ Inclusion should follow the document's primary responsibility:
 Note and Design Note remain included by default because operational guidance
 and accepted design rationale can explain how or why the current product
 behaves. A document retained mainly as historical evidence may become an
-explicit exception without changing the default for its role.
+explicit repository-only exception without changing the default for its role.
+
+Project Knowledge has the opposite default. Most of it is valuable repository
+context but is not necessary beside every installed binary. A Project
+Knowledge document may become an explicit bundle exception when it:
+
+- is directly useful while applying or reviewing current bundled Knowledge;
+- is self-contained enough to use without replaying its originating
+  Experiment or conversation;
+- states its non-authoritative boundary clearly;
+- adds context not already supplied by a smaller accepted document.
+
+The current explicit exception is [Collaborative Review
+Surfaces](../project-knowledge/note/note.collaborative-review-surfaces.md).
+Bundled [Workbench Review](../note/note.workbench-review.md) already routes to
+it when review needs shared context about participants, AI assistants, and
+mechanical views. Its originating Experiments and the Project Knowledge Node
+remain repository-only and use the common exact-version GitHub route when
+referenced.
+
+Bundle inclusion does not promote this Note into accepted Knowledge or change
+its canonical identity. Document role describes authority; Bundle selection
+describes availability in one distribution. The Bundle Definition should keep
+the exception visible as one exact path rather than including the surrounding
+Project Knowledge subtree.
+
+No additional repository-only exception is currently identified for the main
+`doc/note/` and `doc/design-note/` roles. Their operational guidance and current
+design rationale remain included by default even when a document also preserves
+some historical context.
 
 This boundary should not be expressed by adding a required bundle tag to every
 Knowledge document. Canonical identity and document role already communicate
@@ -393,11 +423,6 @@ This candidate does not define:
 Cookbooks, Distributions, Workbench output, and temporary review material are
 not published Knowledge merely because they exist beside documentation in a
 development checkout.
-
-## Open questions
-
-- Which retained historical Notes or Design Notes need repository-only
-  exceptions?
 
 ## Revisit when
 
