@@ -127,23 +127,3 @@ intended workflow.
 This remains an interesting cultural possibility, not a sharing protocol or
 roadmap item. Reconsider it when independently maintained Recipes expose a
 concrete need for publication, discovery, or compatibility boundaries.
-
-## AI documentation bundle
-
-After CTK's documentation roles and contents become stable enough, the Release
-process may produce a documentation bundle that can be shared with an AI
-assistant without sharing the entire repository.
-
-`for-your-ai.zip` is a provisional name for this possible Artifact. It does not
-exist in the current Release and is not part of the present onboarding flow.
-
-Questions to resolve include:
-
-- which curated documents belong in the bundle
-- whether Notes, Design Notes, Experiments, Future, or Raw should be included
-- how the bundle communicates document role and maturity
-- how it remains aligned with a particular CTK Release
-- whether `release.sh` should generate it with the binary Artifacts
-
-This would be a convenience for future AI-assisted workflows, not a requirement
-for using CTK or its Documentation Resolver.
