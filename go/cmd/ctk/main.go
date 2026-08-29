@@ -572,7 +572,7 @@ func runDocs(output io.Writer, bundle *docbundle.Bundle, args []string) error {
 		return fmt.Errorf("ctk docs export is not implemented")
 	default:
 		if len(args) != 1 {
-			return fmt.Errorf("usage: ctk docs [node|resolve <terms...>|show <reference>]")
+			return fmt.Errorf("usage: ctk docs [<node>|resolve <terms...>|show <reference>]")
 		}
 		content, err := bundle.ShowNode(args[0])
 		if err != nil {
@@ -1646,7 +1646,7 @@ Commands:
                       Temporarily launch a Distribution
   workbench [draft|inspect] [viewpoint] [--editor command]
                       Open a Draft or Inspect Workbench
-  docs [node|resolve <terms...>|show <reference>]
+  docs [<node>|resolve <terms...>|show <reference>]
                       Navigate documentation packaged with this binary
   select              Select a command interactively
   version             Show binary version and build provenance

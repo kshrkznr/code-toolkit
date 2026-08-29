@@ -32,7 +32,7 @@ func TestRunDocsNavigatesPackagedBundle(t *testing.T) {
 		args     []string
 		contains []string
 	}{
-		{name: "help", args: []string{"--help"}, contains: []string{"ctk docs resolve", "ctk docs show"}},
+		{name: "help", args: []string{"--help"}, contains: []string{"ctk docs <node>", "ctk docs resolve", "ctk docs show"}},
 		{name: "nodes", args: []string{"nodes"}, contains: []string{"core\tdoc/core/README.md"}},
 		{name: "core", args: []string{"core"}, contains: []string{"# Concept Domain: Core", "doc/core/core.cookbook.md"}},
 		{name: "resolve", args: []string{"resolve", "Settings Variant precedence"}, contains: []string{"IDENTITY\tPATH\tTITLE\tMATCHED", "Knowledge.note.variant.md\tdoc/note/note.variant.md"}},
