@@ -76,7 +76,7 @@ Changing a selected location changes subsequent resolution only. Workspace
 does not imply migration, an old-location registry, persistence of `CTK_HOME`,
 or a user-global active-Workspace selector.
 
-## Ownership boundary
+## Ownership boundary: Dist, Archive, and Workbench
 
 Package managers may install the CTK binary and compiled Built-in Platform
 definitions. They do not own or update Workspace configuration, Cookbook

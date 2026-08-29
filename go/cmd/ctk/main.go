@@ -538,7 +538,7 @@ func runDocs(output io.Writer, bundle *docbundle.Bundle, args []string) error {
 		}
 		candidates := bundle.Resolve(args[1:])
 		if len(candidates) == 0 {
-			return fmt.Errorf("no bundled documentation matches: %s; try fewer or broader terms", strings.Join(args[1:], " "))
+			return fmt.Errorf("no bundled documentation metadata matches: %s; try fewer terms or report a missing documentation route", strings.Join(args[1:], " "))
 		}
 		if _, err := fmt.Fprintln(output, "IDENTITY\tPATH\tTITLE\tMATCHED"); err != nil {
 			return err
@@ -592,6 +592,7 @@ func writeDocsUsage(output io.Writer) error {
   ctk docs show <reference>        Show an identity or path, optionally #heading
 
 Resolve output is tab-separated. Copy its IDENTITY or PATH into docs show.
+Resolve searches identity, path, Node alias, title, and headings, not bodies.
 Repository-only material is linked at this binary's exact tag or commit.
 `)
 	return err

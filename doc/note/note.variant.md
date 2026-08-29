@@ -1,7 +1,7 @@
 # Knowledge.note.variant.md
 ============================================================
 
-# Variant Usage
+# Settings Variant Usage
 
 Platform selection belongs to the Recipe. Ingredient responsibilities should
 remain Platform-independent.
@@ -46,7 +46,7 @@ Base Ingredient responsibility
 
 The Base Ingredient remains the subject in every case.
 
-## Current scope
+## Current scope and precedence
 
 The current implementation applies Variants only to Settings. It resolves OS
 and Platform independently in this order:

@@ -110,14 +110,19 @@ repository-relative path, or Node alias. Canonical identity is read from the
 first Markdown heading when it declares a CTK Knowledge or Go document
 identity; it is not required for an implementation README addressable by path.
 
-Resolve searches identity, path, alias, title, headings, and selected document
-text case-insensitively. Exact identity, path, and Node alias matches take
-priority. Other queries are tokenized, common navigation words are ignored,
-and title, identity/path, heading, and content matches receive decreasing
-weight. A result reports the matched query terms so a caller can understand
-the ranking. Ties are repository-path ordered. Resolve returns candidates
-rather than full documents; the CLI shows at most ten and asks the caller to
-narrow a larger result.
+Resolve searches canonical identity, repository-relative path, Node alias,
+title, and headings case-insensitively. It does not search document bodies.
+Exact identity, path, and Node alias matches take priority. Other queries are
+tokenized and common navigation words are ignored. Documents matching more
+query terms precede documents matching fewer; matching metadata fields then
+receive a small fixed priority. A result reports the matched query terms so a
+caller can understand the ranking. Ties are repository-path ordered. Resolve
+returns candidates rather than full documents; the CLI shows at most ten and
+asks the caller to narrow a larger result.
+
+Full-text search belongs to repository tools over `ctk docs export` output.
+Until Export is implemented, its full-text scenarios remain pending Release
+coverage and do not expand Resolve responsibility.
 
 Show requires one identity or repository-relative path, matched
 case-insensitively, with an optional heading fragment. Duplicate Markdown

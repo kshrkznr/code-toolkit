@@ -46,7 +46,7 @@ ctk docs core
     show the Core Node README, not every Core document
 
 ctk docs resolve <terms...>
-    find candidate documents without printing their full contents
+    find candidate documents from maintained metadata without searching bodies
 
 ctk docs show <canonical-identity-or-path>[#heading]
     print one detailed document
@@ -125,11 +125,20 @@ an implementation README may remain addressable by repository path when they
 do not declare a Knowledge identity.
 
 `ctk docs resolve <terms...>` could perform deterministic search over this
-index and selected document text. It should return a small ordered candidate
-list containing identity, path, and title rather than concatenating every
-matching document. Exact identity or path matches precede metadata and content
-matches; ties remain path-ordered and visible. Resolve is document discovery,
-not semantic question answering.
+index: canonical identity, repository-relative path, Node alias, document
+title, and headings. It should not search document bodies. Resolve returns a
+small ordered candidate list containing identity, path, and title rather than
+concatenating matching documents. Exact identity, path, or Node alias matches
+precede token matches. Token results prefer more matched terms, then the
+metadata field, while ties remain path-ordered and visible. Resolve is document
+discovery, not full-text search or semantic question answering.
+
+This boundary makes documentation discoverability observable. When a likely
+question cannot find the responsible document from its maintained metadata,
+the preferred response is to improve its title, headings, or Node route. A
+documentation-only Issue is useful even when no implementation defect exists.
+Full-text investigation belongs to ordinary repository tools over an exported
+Bundle rather than an increasingly semantic Resolve ranking.
 
 `ctk docs show <reference>` could resolve an exact canonical identity or
 repository-relative path and print that one document. An optional heading
@@ -364,6 +373,11 @@ The first export behavior should be deliberately narrow:
 - write files in sorted order with fixed file and directory modes;
 - reserve the generated Manifest path so source content cannot replace it;
 - verify the exported aggregate digest before publication.
+
+Export is required for the first Release that presents packaged documentation
+as complete. Until Export exists, tests should evaluate Resolve as metadata
+navigation and record full-text search scenarios as pending Export coverage,
+not broaden Resolve to compensate for the missing command.
 
 An explicit replace or merge mode can remain a later candidate with its own
 conflict and recovery Contract. It is not necessary for the first reproducible

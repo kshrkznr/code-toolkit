@@ -220,10 +220,11 @@ func (bundle *Bundle) Resolve(terms []string) []Candidate {
 			weight int
 			tokens []string
 		}{
-			{weight: 1_200, tokens: searchTokens(document.Title)},
-			{weight: 800, tokens: searchTokens(document.Identity + " " + document.Path + " " + strings.Join(document.Aliases, " "))},
-			{weight: 400, tokens: searchTokens(strings.Join(document.Headings, " "))},
-			{weight: 10, tokens: searchTokens(string(bundle.documents[document.Path]))},
+			{weight: 500, tokens: searchTokens(strings.Join(document.Aliases, " "))},
+			{weight: 400, tokens: searchTokens(document.Identity)},
+			{weight: 300, tokens: searchTokens(document.Path)},
+			{weight: 200, tokens: searchTokens(document.Title)},
+			{weight: 100, tokens: searchTokens(strings.Join(document.Headings, " "))},
 		}
 		matched := []string{}
 		zoneScore := 0
@@ -239,8 +240,8 @@ func (bundle *Bundle) Resolve(terms []string) []Candidate {
 				zoneScore += termScore
 			}
 		}
-		if len(matched) >= minimumTokenMatches(len(normalized)) {
-			score := len(matched)*1_000 + zoneScore
+		if len(matched) > 0 {
+			score := len(matched)*10_000 + zoneScore
 			result = append(result, Candidate{Identity: document.Identity, Path: document.Path, Title: document.Title, Aliases: append([]string(nil), document.Aliases...), Score: score, Matched: matched})
 		}
 	}
@@ -300,13 +301,6 @@ func commonRunePrefix(left, right string) int {
 		}
 	}
 	return limit
-}
-
-func minimumTokenMatches(count int) int {
-	if count <= 2 {
-		return count
-	}
-	return (count*3 + 4) / 5
 }
 
 func decodeManifest(content []byte) (Manifest, error) {

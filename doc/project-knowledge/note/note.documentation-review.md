@@ -42,6 +42,20 @@ Consistent names and hierarchy can improve navigation, but consistency is a
 means rather than the objective. The objective is to make the document's role
 and the next useful context easier to recognize.
 
+## Treat failed discovery as documentation feedback
+
+Packaged documentation resolves documents from maintained navigation metadata:
+canonical identity, repository path, Node alias, title, and headings. It does
+not hide missing routes behind document-body search.
+
+When a person or AI expects a document to answer a question but cannot find it
+from that metadata, the failure is useful documentation feedback. Prefer a
+focused documentation-only Issue proposing a clearer title, heading, or Node
+route. No implementation change is required for that Issue to improve CTK.
+
+Full-text search remains useful for investigation after exporting or cloning
+the documentation. It does not replace review of the navigation interface.
+
 ## Boundary
 
 Reviewing documentation with source-like care does not make prose executable,

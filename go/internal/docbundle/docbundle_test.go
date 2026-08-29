@@ -202,6 +202,20 @@ func TestBundleLookupUsesNodeIdentityPathAndHeading(t *testing.T) {
 	if len(settingsVariant) == 0 || settingsVariant[0].Path != "doc/note/note.variant.md" {
 		t.Fatalf("Settings Variant Resolve candidates = %+v", settingsVariant)
 	}
+	workspace := bundle.Resolve([]string{"Workspace Dist Archive Workbench"})
+	if len(workspace) == 0 || workspace[0].Path != "doc/integration/integration.workspace.md" {
+		t.Fatalf("Workspace ownership Resolve candidates = %+v", workspace)
+	}
+}
+
+func TestResolveDoesNotSearchDocumentBodies(t *testing.T) {
+	bundle := &Bundle{
+		manifest:  Manifest{Documents: []ManifestDocument{{Path: "doc.md", Identity: "Knowledge.index.md", Title: "Index Title", Headings: []string{"Index Heading"}}}},
+		documents: map[string][]byte{"doc.md": []byte("bodyonlyneedle")},
+	}
+	if candidates := bundle.Resolve([]string{"bodyonlyneedle"}); len(candidates) != 0 {
+		t.Fatalf("Resolve unexpectedly searched document bodies: %+v", candidates)
+	}
 }
 
 func TestSelectHeadingUsesDuplicateMarkdownAnchorSuffix(t *testing.T) {
