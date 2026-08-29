@@ -19,6 +19,7 @@ import (
 	"github.com/kshrkznr/code-toolkit/go/internal/converge"
 	"github.com/kshrkznr/code-toolkit/go/internal/cookbook"
 	"github.com/kshrkznr/code-toolkit/go/internal/distribution"
+	"github.com/kshrkznr/code-toolkit/go/internal/docbundle"
 	"github.com/kshrkznr/code-toolkit/go/internal/launcher"
 	"github.com/kshrkznr/code-toolkit/go/internal/lifecycle"
 	"github.com/kshrkznr/code-toolkit/go/internal/platform"
@@ -44,6 +45,9 @@ func run(args []string) error {
 	if len(args) == 0 {
 		args = []string{"select"}
 	}
+	if handled, err := runSelfDescription(args); handled {
+		return err
+	}
 
 	root, err := projectRoot()
 	if err != nil {
@@ -62,15 +66,6 @@ func run(args []string) error {
 	service := lifecycleService(poolDir, cookbookDir, nativeSelector)
 
 	switch args[0] {
-	case "help", "-h", "--help":
-		usage()
-		return nil
-	case "version", "--version":
-		if len(args) != 1 {
-			return fmt.Errorf("usage: ctk version")
-		}
-		fmt.Println(buildinfo.String())
-		return nil
 	case "list":
 		if len(args) != 1 {
 			return fmt.Errorf("usage: ctk list")
@@ -111,7 +106,7 @@ func run(args []string) error {
 		if len(args) != 1 {
 			return fmt.Errorf("usage: ctk select")
 		}
-		command, err := nativeSelector.Select("Select command", []string{"activate", "apply", "archive", "build", "current", "deactivate", "freeze commit", "freeze draft", "help", "launch", "list", "lock", "sync", "use", "version", "view", "workbench"})
+		command, err := nativeSelector.Select("Select command", []string{"activate", "apply", "archive", "build", "current", "deactivate", "docs", "freeze commit", "freeze draft", "help", "launch", "list", "lock", "sync", "use", "version", "view", "workbench"})
 		if err != nil {
 			return err
 		}
@@ -468,6 +463,138 @@ func run(args []string) error {
 	default:
 		return fmt.Errorf("unknown command: %s", args[0])
 	}
+}
+
+func runSelfDescription(args []string) (bool, error) {
+	switch args[0] {
+	case "help", "-h", "--help":
+		if len(args) != 1 {
+			return true, fmt.Errorf("usage: ctk help")
+		}
+		usage()
+		return true, nil
+	case "version", "--version":
+		if len(args) != 1 {
+			return true, fmt.Errorf("usage: ctk version")
+		}
+		fmt.Println(buildinfo.String())
+		return true, nil
+	case "docs":
+		if len(args) == 2 && slices.Contains([]string{"help", "-h", "--help"}, args[1]) {
+			return true, writeDocsUsage(os.Stdout)
+		}
+		bundle, err := executableDocumentationBundle()
+		if err != nil {
+			return true, err
+		}
+		return true, runDocs(os.Stdout, bundle, args[1:])
+	default:
+		return false, nil
+	}
+}
+
+func executableDocumentationBundle() (*docbundle.Bundle, error) {
+	executable, err := os.Executable()
+	if err != nil {
+		return nil, fmt.Errorf("resolve executable Documentation Bundle: %w", err)
+	}
+	executable, err = filepath.EvalSymlinks(executable)
+	if err != nil {
+		return nil, fmt.Errorf("resolve executable Documentation Bundle symlinks: %w", err)
+	}
+	bundle, err := docbundle.OpenExecutable(executable)
+	if err != nil {
+		return nil, fmt.Errorf("load packaged documentation: %w", err)
+	}
+	return bundle, nil
+}
+
+func runDocs(output io.Writer, bundle *docbundle.Bundle, args []string) error {
+	if len(args) == 0 {
+		_, err := output.Write(bundle.Bootstrap())
+		return err
+	}
+	switch args[0] {
+	case "help", "-h", "--help":
+		if len(args) != 1 {
+			return fmt.Errorf("usage: ctk docs help")
+		}
+		return writeDocsUsage(output)
+	case "nodes":
+		if len(args) != 1 {
+			return fmt.Errorf("usage: ctk docs nodes")
+		}
+		for _, document := range bundle.Manifest().Documents {
+			for _, alias := range document.Aliases {
+				if _, err := fmt.Fprintf(output, "%s\t%s\t%s\n", alias, document.Path, document.Title); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	case "resolve":
+		if len(args) < 2 {
+			return fmt.Errorf("usage: ctk docs resolve <terms...>")
+		}
+		candidates := bundle.Resolve(args[1:])
+		if len(candidates) == 0 {
+			return fmt.Errorf("no bundled documentation matches: %s; try fewer or broader terms", strings.Join(args[1:], " "))
+		}
+		if _, err := fmt.Fprintln(output, "IDENTITY\tPATH\tTITLE\tMATCHED"); err != nil {
+			return err
+		}
+		limit := min(len(candidates), 10)
+		for _, candidate := range candidates[:limit] {
+			identity := candidate.Identity
+			if identity == "" {
+				identity = "-"
+			}
+			if _, err := fmt.Fprintf(output, "%s\t%s\t%s\t%s\n", identity, candidate.Path, candidate.Title, strings.Join(candidate.Matched, ",")); err != nil {
+				return err
+			}
+		}
+		if len(candidates) > limit {
+			_, err := fmt.Fprintf(output, "# showing %d of %d candidates; add terms to narrow\n", limit, len(candidates))
+			return err
+		}
+		return nil
+	case "show":
+		if len(args) != 2 {
+			return fmt.Errorf("usage: ctk docs show <canonical-identity-or-path>[#heading]")
+		}
+		content, err := bundle.Show(args[1])
+		if err != nil {
+			return fmt.Errorf("%w; find bundled references with: ctk docs resolve <terms...>; full repository: %s", err, bundle.RepositoryReference())
+		}
+		_, err = output.Write(content)
+		return err
+	case "export":
+		return fmt.Errorf("ctk docs export is not implemented")
+	default:
+		if len(args) != 1 {
+			return fmt.Errorf("usage: ctk docs [node|resolve <terms...>|show <reference>]")
+		}
+		content, err := bundle.ShowNode(args[0])
+		if err != nil {
+			return err
+		}
+		_, err = output.Write(content)
+		return err
+	}
+}
+
+func writeDocsUsage(output io.Writer) error {
+	_, err := fmt.Fprint(output, `Usage:
+  ctk docs                         Show the Concept and resolver Bootstrap
+  ctk docs nodes                   List short navigation Node aliases
+  ctk docs <node>                  Show one Node README (for example: core)
+  ctk docs resolve <terms...>      Rank matching bundled documents
+  ctk docs show <reference>        Show an identity or path, optionally #heading
+
+Resolve output is tab-separated. Copy its IDENTITY or PATH into docs show.
+Repository-only material is linked at this binary's exact tag or commit.
+`)
+	return err
 }
 
 func printActivePlatforms(output io.Writer, distDir string) error {
@@ -1518,6 +1645,8 @@ Commands:
                       Temporarily launch a Distribution
   workbench [draft|inspect] [viewpoint] [--editor command]
                       Open a Draft or Inspect Workbench
+  docs [node|resolve <terms...>|show <reference>]
+                      Navigate documentation packaged with this binary
   select              Select a command interactively
   version             Show binary version and build provenance
   help                Show this help`)

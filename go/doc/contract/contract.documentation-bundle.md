@@ -41,9 +41,13 @@ selected set.
 The checked-in Bootstrap template supports only:
 
 ```text
+{{ bundle-provenance }}
 {{ include-range "<path>" from="<heading>" before="<heading>" }}
 {{ include-document "<path>" }}
 ```
+
+The provenance placeholder emits the CTK version, source revision, and the
+exact-tag-or-revision repository route recorded for the generated Bundle.
 
 Paths must select bundled Markdown documents. A range heading is an exact
 Markdown ATX heading including its level. It must occur exactly once, and the
@@ -107,17 +111,37 @@ first Markdown heading when it declares a CTK Knowledge or Go document
 identity; it is not required for an implementation README addressable by path.
 
 Resolve searches identity, path, alias, title, headings, and selected document
-text. Exact identity and path matches precede metadata and content matches;
-ties are repository-path ordered. Resolve returns candidates rather than full
-documents.
+text case-insensitively. Exact identity, path, and Node alias matches take
+priority. Other queries are tokenized, common navigation words are ignored,
+and title, identity/path, heading, and content matches receive decreasing
+weight. A result reports the matched query terms so a caller can understand
+the ranking. Ties are repository-path ordered. Resolve returns candidates
+rather than full documents; the CLI shows at most ten and asks the caller to
+narrow a larger result.
 
-Show requires one exact identity or repository-relative path, with an optional
-heading fragment. Missing and ambiguous references fail rather than selecting
-one document silently.
+Show requires one identity or repository-relative path, matched
+case-insensitively, with an optional heading fragment. Duplicate Markdown
+heading anchors use the usual numeric suffix (`#responsibility-1`, then
+`#responsibility-2`). Missing and ambiguous references fail rather than
+selecting one document silently, and a miss routes the caller to Resolve and
+the exact Bundle repository reference.
+
+## Executable transport and CLI
+
+Release assembly appends the deterministic Bundle ZIP to each Go executable.
+ZIP readers locate the archive from its end record, so the native executable
+prefix remains runnable while the Bundle can be verified with the same reader
+used for a standalone archive. Appending refuses an invalid Bundle or an
+executable that already contains one.
+
+`ctk docs` reads and verifies the Bundle from its own resolved executable path
+before rendering content. It does not discover or load a Workspace. The CLI
+provides Bootstrap, Node listing and shortcuts, Resolve, and Show. Help remains
+available even when a development binary has no Bundle.
 
 ## Boundary
 
-The first implementation slice does not define executable transport, local
-source configuration, filesystem export, network fetching, semantic question
-answering, interactive selection, or pager behavior. The generator and read
-model must remain independently testable before a Release transport is chosen.
+The current implementation does not define local source configuration,
+filesystem export, network fetching, semantic question answering, interactive
+selection, or pager behavior. The generator and read model remain independently
+testable from executable transport.

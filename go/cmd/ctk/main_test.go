@@ -6,10 +6,51 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
+	"github.com/kshrkznr/code-toolkit/go/internal/docbundle"
 	"github.com/kshrkznr/code-toolkit/go/internal/recipe"
 )
+
+func TestRunDocsNavigatesPackagedBundle(t *testing.T) {
+	repositoryRoot, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	generated, err := docbundle.Generate(repositoryRoot, docbundle.Metadata{Version: "dev", Revision: "test-revision"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	bundle, err := docbundle.Open(generated.Archive)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, test := range []struct {
+		name     string
+		args     []string
+		contains []string
+	}{
+		{name: "help", args: []string{"--help"}, contains: []string{"ctk docs resolve", "ctk docs show"}},
+		{name: "nodes", args: []string{"nodes"}, contains: []string{"core\tdoc/core/README.md"}},
+		{name: "core", args: []string{"core"}, contains: []string{"# Concept Domain: Core", "doc/core/core.cookbook.md"}},
+		{name: "resolve", args: []string{"resolve", "Settings Variant precedence"}, contains: []string{"IDENTITY\tPATH\tTITLE\tMATCHED", "Knowledge.note.variant.md\tdoc/note/note.variant.md"}},
+		{name: "show folded identity and duplicate heading", args: []string{"show", "knowledge.core.cookbook.md#responsibility-1"}, contains: []string{"## Responsibility", "Ingredients provide reusable building blocks"}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			var output bytes.Buffer
+			if err := runDocs(&output, bundle, test.args); err != nil {
+				t.Fatal(err)
+			}
+			for _, expected := range test.contains {
+				if !strings.Contains(output.String(), expected) {
+					t.Fatalf("output does not contain %q:\n%s", expected, output.String())
+				}
+			}
+		})
+	}
+}
 
 func TestDetectViewSourceFromContentAndKnownNames(t *testing.T) {
 	root := t.TempDir()

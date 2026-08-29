@@ -36,6 +36,9 @@ func TestGenerateRepositoryBundleIsDeterministic(t *testing.T) {
 			t.Fatalf("Bootstrap does not contain %q", included)
 		}
 	}
+	if !strings.Contains(bootstrap, "Bundle provenance: CTK `v0.4.0`, source `abc1234`") {
+		t.Fatal("Bootstrap does not expose Bundle provenance")
+	}
 	for _, excluded := range []string{"## Why CTK?", "# Installation", "# Getting Started"} {
 		if strings.Contains(bootstrap, excluded) {
 			t.Fatalf("Bootstrap unexpectedly contains %q", excluded)
@@ -164,6 +167,10 @@ func TestBundleLookupUsesNodeIdentityPathAndHeading(t *testing.T) {
 	if !bytes.Equal(byNode, byIdentity) || !bytes.Equal(byNode, byPath) {
 		t.Fatal("Node, identity, and path did not resolve to the same document")
 	}
+	byFoldedIdentity, err := bundle.Show("knowledge.core.md")
+	if err != nil || !bytes.Equal(byNode, byFoldedIdentity) {
+		t.Fatalf("case-folded identity lookup failed: %v", err)
+	}
 	if !strings.Contains(string(byNode), "doc/core/core.cookbook.md") {
 		t.Fatal("Show did not rewrite included links to repository-root-relative paths")
 	}
@@ -180,11 +187,49 @@ func TestBundleLookupUsesNodeIdentityPathAndHeading(t *testing.T) {
 	}
 
 	candidates := bundle.Resolve([]string{"core"})
-	if len(candidates) == 0 || candidates[0].Path != "doc/core/README.md" || candidates[0].Score != 1 {
+	if len(candidates) == 0 || candidates[0].Path != "doc/core/README.md" {
 		t.Fatalf("Core Resolve candidates = %+v", candidates)
 	}
 	exact := bundle.Resolve([]string{"Knowledge.core.cookbook.md"})
-	if len(exact) == 0 || exact[0].Path != "doc/core/core.cookbook.md" || exact[0].Score != 0 {
+	if len(exact) == 0 || exact[0].Path != "doc/core/core.cookbook.md" {
 		t.Fatalf("exact Resolve candidates = %+v", exact)
+	}
+	leaving := bundle.Resolve([]string{"leave CTK and restore editor safely"})
+	if len(leaving) == 0 || leaving[0].Path != "doc/note/note.leaving-ctk.md" {
+		t.Fatalf("natural-language Leaving CTK Resolve candidates = %+v", leaving)
+	}
+	settingsVariant := bundle.Resolve([]string{"Settings Variant precedence"})
+	if len(settingsVariant) == 0 || settingsVariant[0].Path != "doc/note/note.variant.md" {
+		t.Fatalf("Settings Variant Resolve candidates = %+v", settingsVariant)
+	}
+}
+
+func TestSelectHeadingUsesDuplicateMarkdownAnchorSuffix(t *testing.T) {
+	content := "# Example\n## Responsibility\nfirst\n## Responsibility\nsecond\n## Next\nthird\n"
+	section, err := selectHeading(content, "responsibility-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if section != "## Responsibility\nsecond\n" {
+		t.Fatalf("duplicate heading section = %q", section)
+	}
+}
+
+func TestOpenAcceptsBundleAppendedToExecutablePrefix(t *testing.T) {
+	root, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	generated, err := Generate(root, Metadata{Version: "dev", Revision: "abc1234"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	executable := append([]byte("mock executable prefix\n"), generated.Archive...)
+	bundle, err := Open(executable)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bundle.Manifest().ContentSHA256 != generated.Manifest.ContentSHA256 {
+		t.Fatal("appended Bundle Manifest differs from generated Manifest")
 	}
 }

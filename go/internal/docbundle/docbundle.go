@@ -313,6 +313,18 @@ func renderBootstrap(template []byte, documents map[string][]byte, repository st
 	lines := strings.SplitAfter(string(template), "\n")
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
+		if trimmed == "{{ bundle-provenance }}" {
+			version := metadata.Version
+			if version == "" {
+				version = "unknown"
+			}
+			revision := metadata.Revision
+			if revision == "" {
+				revision = "unknown"
+			}
+			fmt.Fprintf(&output, "Bundle provenance: CTK `%s`, source `%s`, [full repository](%s).\n", version, revision, repositoryReference(repository, metadata))
+			continue
+		}
 		if matches := includeDocumentPattern.FindStringSubmatch(trimmed); matches != nil {
 			documentPath, err := cleanRelative(matches[1])
 			if err != nil {

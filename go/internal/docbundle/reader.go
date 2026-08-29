@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"path"
 	"sort"
 	"strings"
@@ -18,6 +19,7 @@ type Bundle struct {
 	bootstrap  []byte
 	documents  map[string][]byte
 	byIdentity map[string][]string
+	byPath     map[string]string
 	byAlias    map[string]string
 }
 
@@ -27,6 +29,40 @@ type Candidate struct {
 	Title    string
 	Aliases  []string
 	Score    int
+	Matched  []string
+}
+
+func OpenExecutable(executable string) (*Bundle, error) {
+	content, err := os.ReadFile(executable)
+	if err != nil {
+		return nil, fmt.Errorf("read executable Documentation Bundle: %w", err)
+	}
+	return Open(content)
+}
+
+func AppendExecutable(executable string, archive []byte) error {
+	if _, err := Open(archive); err != nil {
+		return fmt.Errorf("validate Documentation Bundle before append: %w", err)
+	}
+	if existing, err := OpenExecutable(executable); err == nil && existing != nil {
+		return fmt.Errorf("executable already contains a Documentation Bundle: %s", executable)
+	}
+	file, err := os.OpenFile(executable, os.O_WRONLY|os.O_APPEND, 0)
+	if err != nil {
+		return fmt.Errorf("open executable for Documentation Bundle append: %w", err)
+	}
+	if _, err := file.Write(archive); err != nil {
+		file.Close()
+		return fmt.Errorf("append Documentation Bundle: %w", err)
+	}
+	if err := file.Sync(); err != nil {
+		file.Close()
+		return fmt.Errorf("sync executable Documentation Bundle: %w", err)
+	}
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("close executable Documentation Bundle: %w", err)
+	}
+	return nil
 }
 
 func Open(archive []byte) (*Bundle, error) {
@@ -79,6 +115,7 @@ func Open(archive []byte) (*Bundle, error) {
 	}
 	documents := make(map[string][]byte, len(manifest.Documents))
 	byIdentity := map[string][]string{}
+	byPath := map[string]string{}
 	byAlias := map[string]string{}
 	contentEntries := map[string][]byte{manifest.Bootstrap.Path: bootstrap}
 	for _, document := range manifest.Documents {
@@ -90,15 +127,17 @@ func Open(archive []byte) (*Bundle, error) {
 			return nil, fmt.Errorf("duplicate document in Documentation Manifest: %s", document.Path)
 		}
 		documents[document.Path] = content
+		byPath[strings.ToLower(document.Path)] = document.Path
 		contentEntries[document.Path] = content
 		if document.Identity != "" {
-			byIdentity[document.Identity] = append(byIdentity[document.Identity], document.Path)
+			byIdentity[strings.ToLower(document.Identity)] = append(byIdentity[strings.ToLower(document.Identity)], document.Path)
 		}
 		for _, alias := range document.Aliases {
-			if previous, exists := byAlias[alias]; exists {
+			foldedAlias := strings.ToLower(alias)
+			if previous, exists := byAlias[foldedAlias]; exists {
 				return nil, fmt.Errorf("duplicate documentation Node alias %s: %s and %s", alias, previous, document.Path)
 			}
-			byAlias[alias] = document.Path
+			byAlias[foldedAlias] = document.Path
 		}
 	}
 	if aggregateDigest(contentEntries) != manifest.ContentSHA256 {
@@ -112,7 +151,7 @@ func Open(archive []byte) (*Bundle, error) {
 			return nil, fmt.Errorf("Documentation Bundle contains unmanifested entry: %s", name)
 		}
 	}
-	return &Bundle{manifest: manifest, bootstrap: bootstrap, documents: documents, byIdentity: byIdentity, byAlias: byAlias}, nil
+	return &Bundle{manifest: manifest, bootstrap: bootstrap, documents: documents, byIdentity: byIdentity, byPath: byPath, byAlias: byAlias}, nil
 }
 
 func (bundle *Bundle) Manifest() Manifest {
@@ -123,13 +162,17 @@ func (bundle *Bundle) Bootstrap() []byte {
 	return bytes.Clone(bundle.bootstrap)
 }
 
+func (bundle *Bundle) RepositoryReference() string {
+	return repositoryReference(bundle.manifest.Repository, Metadata{Revision: bundle.manifest.Revision, Tag: bundle.manifest.Tag})
+}
+
 func (bundle *Bundle) Show(reference string) ([]byte, error) {
 	value, fragment := splitReference(reference)
 	paths := []string{}
-	if _, ok := bundle.documents[value]; ok {
-		paths = append(paths, value)
+	if documentPath, ok := bundle.byPath[strings.ToLower(value)]; ok {
+		paths = append(paths, documentPath)
 	}
-	paths = append(paths, bundle.byIdentity[value]...)
+	paths = append(paths, bundle.byIdentity[strings.ToLower(value)]...)
 	paths = compactSorted(paths)
 	if len(paths) == 0 {
 		return nil, fmt.Errorf("documentation reference not found: %s", value)
@@ -149,7 +192,7 @@ func (bundle *Bundle) Show(reference string) ([]byte, error) {
 }
 
 func (bundle *Bundle) ShowNode(alias string) ([]byte, error) {
-	target, ok := bundle.byAlias[alias]
+	target, ok := bundle.byAlias[strings.ToLower(alias)]
 	if !ok {
 		return nil, fmt.Errorf("documentation Node alias not found: %s", alias)
 	}
@@ -157,44 +200,113 @@ func (bundle *Bundle) ShowNode(alias string) ([]byte, error) {
 }
 
 func (bundle *Bundle) Resolve(terms []string) []Candidate {
-	normalized := make([]string, 0, len(terms))
-	for _, term := range terms {
-		term = strings.ToLower(strings.TrimSpace(term))
-		if term != "" {
-			normalized = append(normalized, term)
-		}
-	}
+	normalized := searchTokens(strings.Join(terms, " "))
 	if len(normalized) == 0 {
 		return nil
 	}
 	result := []Candidate{}
 	for _, document := range bundle.manifest.Documents {
-		identity := strings.ToLower(document.Identity)
-		documentPath := strings.ToLower(document.Path)
-		aliases := strings.ToLower(strings.Join(document.Aliases, "\n"))
-		metadata := strings.ToLower(document.Title + "\n" + strings.Join(document.Headings, "\n"))
-		content := strings.ToLower(string(bundle.documents[document.Path]))
-		score := -1
-		if len(normalized) == 1 && (normalized[0] == identity || normalized[0] == documentPath) {
-			score = 0
-		} else if len(normalized) == 1 && containsExactFold(document.Aliases, normalized[0]) {
-			score = 1
-		} else if containsAll(identity+"\n"+documentPath+"\n"+aliases+"\n"+metadata, normalized) {
-			score = 2
-		} else if containsAll(content, normalized) {
-			score = 3
+		exactQuery := strings.ToLower(strings.TrimSpace(strings.Join(terms, " ")))
+		if exactQuery == strings.ToLower(document.Identity) || exactQuery == strings.ToLower(document.Path) {
+			result = append(result, Candidate{Identity: document.Identity, Path: document.Path, Title: document.Title, Aliases: append([]string(nil), document.Aliases...), Score: 1_000_000, Matched: normalized})
+			continue
 		}
-		if score >= 0 {
-			result = append(result, Candidate{Identity: document.Identity, Path: document.Path, Title: document.Title, Aliases: append([]string(nil), document.Aliases...), Score: score})
+		if containsExactFold(document.Aliases, exactQuery) {
+			result = append(result, Candidate{Identity: document.Identity, Path: document.Path, Title: document.Title, Aliases: append([]string(nil), document.Aliases...), Score: 900_000, Matched: normalized})
+			continue
+		}
+
+		zones := []struct {
+			weight int
+			tokens []string
+		}{
+			{weight: 1_200, tokens: searchTokens(document.Title)},
+			{weight: 800, tokens: searchTokens(document.Identity + " " + document.Path + " " + strings.Join(document.Aliases, " "))},
+			{weight: 400, tokens: searchTokens(strings.Join(document.Headings, " "))},
+			{weight: 10, tokens: searchTokens(string(bundle.documents[document.Path]))},
+		}
+		matched := []string{}
+		zoneScore := 0
+		for _, query := range normalized {
+			termScore := 0
+			for _, zone := range zones {
+				if tokenMatchesAny(query, zone.tokens) {
+					termScore += zone.weight
+				}
+			}
+			if termScore > 0 {
+				matched = append(matched, query)
+				zoneScore += termScore
+			}
+		}
+		if len(matched) >= minimumTokenMatches(len(normalized)) {
+			score := len(matched)*1_000 + zoneScore
+			result = append(result, Candidate{Identity: document.Identity, Path: document.Path, Title: document.Title, Aliases: append([]string(nil), document.Aliases...), Score: score, Matched: matched})
 		}
 	}
 	sort.Slice(result, func(left, right int) bool {
 		if result[left].Score != result[right].Score {
-			return result[left].Score < result[right].Score
+			return result[left].Score > result[right].Score
 		}
 		return result[left].Path < result[right].Path
 	})
 	return result
+}
+
+var searchStopWords = map[string]bool{
+	"a": true, "an": true, "and": true, "are": true, "as": true, "at": true,
+	"be": true, "by": true, "for": true, "from": true, "how": true, "in": true,
+	"into": true, "is": true, "it": true, "of": true, "on": true, "or": true,
+	"the": true, "to": true, "with": true,
+}
+
+func searchTokens(value string) []string {
+	tokens := []string{}
+	seen := map[string]bool{}
+	for _, token := range strings.FieldsFunc(strings.ToLower(value), func(character rune) bool {
+		return !unicode.IsLetter(character) && !unicode.IsDigit(character)
+	}) {
+		if searchStopWords[token] || seen[token] {
+			continue
+		}
+		seen[token] = true
+		tokens = append(tokens, token)
+	}
+	return tokens
+}
+
+func tokenMatchesAny(query string, candidates []string) bool {
+	for _, candidate := range candidates {
+		if query == candidate {
+			return true
+		}
+		if len([]rune(query)) >= 4 && len([]rune(candidate)) >= 4 && commonRunePrefix(query, candidate) >= 4 {
+			return true
+		}
+	}
+	return false
+}
+
+func commonRunePrefix(left, right string) int {
+	leftRunes := []rune(left)
+	rightRunes := []rune(right)
+	limit := len(leftRunes)
+	if len(rightRunes) < limit {
+		limit = len(rightRunes)
+	}
+	for index := 0; index < limit; index++ {
+		if leftRunes[index] != rightRunes[index] {
+			return index
+		}
+	}
+	return limit
+}
+
+func minimumTokenMatches(count int) int {
+	if count <= 2 {
+		return count
+	}
+	return (count*3 + 4) / 5
 }
 
 func decodeManifest(content []byte) (Manifest, error) {
@@ -232,13 +344,20 @@ func selectHeading(content, fragment string) (string, error) {
 	lines := strings.SplitAfter(content, "\n")
 	start := -1
 	level := 0
+	anchors := map[string]int{}
 	for index, line := range lines {
 		match := headingPattern.FindStringSubmatch(strings.TrimRight(line, "\r\n"))
 		if match == nil {
 			continue
 		}
+		base := markdownAnchor(match[2])
+		anchor := base
+		if duplicate := anchors[base]; duplicate > 0 {
+			anchor = fmt.Sprintf("%s-%d", base, duplicate)
+		}
+		anchors[base]++
 		if start < 0 {
-			if markdownAnchor(match[2]) == fragment {
+			if anchor == fragment {
 				start = index
 				level = len(match[1])
 			}
@@ -270,19 +389,6 @@ func markdownAnchor(value string) string {
 		}
 	}
 	return strings.Trim(output.String(), "-")
-}
-
-func containsAll(value string, terms []string) bool {
-	for _, term := range terms {
-		if !containsTerm(value, term) {
-			return false
-		}
-	}
-	return true
-}
-
-func containsTerm(value, term string) bool {
-	return strings.Contains(value, term)
 }
 
 func containsExactFold(values []string, want string) bool {

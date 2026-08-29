@@ -12,6 +12,7 @@ import (
 func main() {
 	repositoryRoot := flag.String("root", "..", "CTK repository root")
 	output := flag.String("output", "", "output Bundle ZIP path")
+	appendTo := flag.String("append-to", "", "optional executable to receive the generated Bundle")
 	version := flag.String("version", "dev", "CTK version recorded in the Manifest")
 	revision := flag.String("revision", "unknown", "source revision recorded in the Manifest")
 	tag := flag.String("tag", "", "optional Release tag recorded in the Manifest")
@@ -32,6 +33,12 @@ func main() {
 	if err := os.WriteFile(*output, result.Archive, 0o644); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
+	}
+	if *appendTo != "" {
+		if err := docbundle.AppendExecutable(*appendTo, result.Archive); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 	}
 	fmt.Printf("%s\ncontent-sha256: %s\n", *output, result.Manifest.ContentSHA256)
 }
