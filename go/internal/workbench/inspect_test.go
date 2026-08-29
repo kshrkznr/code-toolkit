@@ -101,6 +101,38 @@ func TestDisplayPathPreservesSourcesOutsideWorkspace(t *testing.T) {
 	}
 }
 
+func TestRecipeViewReadsExternalCookbookAndWritesWorkspaceInspect(t *testing.T) {
+	workspace := t.TempDir()
+	source := t.TempDir()
+	workbench := filepath.Join(workspace, "cookbook")
+	recipePath := filepath.Join(source, "recipe", "sample.yaml")
+	writeInspectTest(t, recipePath, "name: sample\nos: macos\nplatform: code\nruntime: [sample]\n")
+	writeInspectTest(t, filepath.Join(source, "ingredient", "runtime.sample.extensions"), "one.extension\n")
+	service := Service{WorkspaceRoot: workspace, CookbookRoot: source, WorkbenchRoot: workbench}
+
+	completed, err := service.RecipeSource(recipePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := service.GenerateRecipeView(completed, "replace")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Path != filepath.Join(workbench, "inspect", "recipe.sample") {
+		t.Fatalf("Recipe View path = %s", result.Path)
+	}
+	if _, err := os.Stat(filepath.Join(source, "inspect")); !os.IsNotExist(err) {
+		t.Fatalf("Inspect leaked into Cookbook Source: %v", err)
+	}
+	summary, err := os.ReadFile(filepath.Join(result.Path, "summary.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(summary), "Recipe source: `"+recipePath+"`") {
+		t.Fatalf("external Recipe provenance = %s", summary)
+	}
+}
+
 func TestSyncComparesRecipeCompletedStates(t *testing.T) {
 	root := t.TempDir()
 	leftPath := filepath.Join(root, "left.yaml")

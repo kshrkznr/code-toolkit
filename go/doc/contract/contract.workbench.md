@@ -26,16 +26,21 @@ Recipe-to-Recipe; Ingredient is not a Sync source.
 ## Repository placement
 
 ```text
-cookbook/draft
-cookbook/inspect/dist.<name>
-cookbook/inspect/recipe.<name>
-cookbook/inspect/ingredient.<name>
-cookbook/inspect/sync.<left>.<right>
+CTK_HOME/cookbook/draft
+CTK_HOME/cookbook/inspect/dist.<name>
+CTK_HOME/cookbook/inspect/recipe.<name>
+CTK_HOME/cookbook/inspect/ingredient.<name>
+CTK_HOME/cookbook/inspect/sync.<left>.<right>
 ```
 
 Generation uses staging and atomic replacement. Freeze Draft retains at most
 one `.old` generation. Inspect viewpoints are disposable and do not retain
 `.old` after successful replacement.
+
+These paths remain Workspace-local when `.config/workspace.yaml` selects an
+external Cookbook Source. Recipe and Ingredient reads and Freeze Commit writes
+use that resolved Source; generated Draft and Inspect state does not move with
+it. The [Go Workspace Contract](contract.workspace.md) owns path resolution.
 
 ## Typed Artifacts
 

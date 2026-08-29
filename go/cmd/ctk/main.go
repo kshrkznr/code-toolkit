@@ -28,6 +28,7 @@ import (
 	"github.com/kshrkznr/code-toolkit/go/internal/runtimeio/vscode"
 	"github.com/kshrkznr/code-toolkit/go/internal/runtimelock"
 	"github.com/kshrkznr/code-toolkit/go/internal/workbench"
+	ctkworkspace "github.com/kshrkznr/code-toolkit/go/internal/workspace"
 )
 
 func main() {
@@ -48,10 +49,17 @@ func run(args []string) error {
 	if err != nil {
 		return err
 	}
-	distDir := filepath.Join(root, "dist")
-	cookbookDir := filepath.Join(root, "cookbook")
+	paths, err := ctkworkspace.Load(root)
+	if err != nil {
+		return err
+	}
+	distDir := paths.Dist
+	cookbookDir := paths.CookbookSource
+	workbenchDir := paths.Workbench
+	archiveDir := paths.Archive
+	poolDir := paths.Pool
 	nativeSelector := selector.New()
-	service := lifecycleService(root, cookbookDir, nativeSelector)
+	service := lifecycleService(poolDir, cookbookDir, nativeSelector)
 
 	switch args[0] {
 	case "help", "-h", "--help":
@@ -141,7 +149,7 @@ func run(args []string) error {
 				return err
 			}
 		}
-		result, err := codevenvService(root, nativeSelector).Activate(context.Background(), platformName, codevenv.ActivateOptions{Force: force})
+		result, err := codevenvService(poolDir, distDir, nativeSelector).Activate(context.Background(), platformName, codevenv.ActivateOptions{Force: force})
 		if err != nil {
 			return err
 		}
@@ -168,7 +176,7 @@ func run(args []string) error {
 				return err
 			}
 		}
-		result, err := codevenvService(root, nativeSelector).Deactivate(context.Background(), platformName, codevenv.DeactivateOptions{Force: force, ForceEmpty: forceEmpty})
+		result, err := codevenvService(poolDir, distDir, nativeSelector).Deactivate(context.Background(), platformName, codevenv.DeactivateOptions{Force: force, ForceEmpty: forceEmpty})
 		if err != nil {
 			return err
 		}
@@ -196,13 +204,13 @@ func run(args []string) error {
 		}
 		return runtimeLauncher.Launch(context.Background(), dist, forward)
 	case "workbench":
-		return openWorkbench(cookbookDir, args[1:], nativeSelector)
+		return openWorkbench(workbenchDir, args[1:], nativeSelector)
 	case "build":
 		options, err := parseBuildArgs(args[1:])
 		if err != nil {
 			return err
 		}
-		sourceKind, sourcePath, err := selectRuntimeSource(root, cookbookDir, options.recipe, nativeSelector)
+		sourceKind, sourcePath, err := selectRuntimeSource(archiveDir, cookbookDir, options.recipe, nativeSelector)
 		if err != nil {
 			return err
 		}
@@ -272,7 +280,7 @@ func run(args []string) error {
 			return err
 		}
 		sourceArg := options.source
-		sourceKind, sourcePath, err := selectRuntimeSource(root, cookbookDir, sourceArg, nativeSelector)
+		sourceKind, sourcePath, err := selectRuntimeSource(archiveDir, cookbookDir, sourceArg, nativeSelector)
 		if err != nil {
 			return err
 		}
@@ -335,7 +343,7 @@ func run(args []string) error {
 			return err
 		}
 		mode := options.onConflict
-		archiveRoot := filepath.Join(root, "archive")
+		archiveRoot := archiveDir
 		if pathIsDir(filepath.Join(archiveRoot, dist.Name)) && mode == "" && isTerminal() {
 			available, _ := ctkarchive.NextAvailableName(archiveRoot, dist.Name)
 			choice, selectErr := nativeSelector.Select("Archive already exists", []string{"Abort", "Replace", "Archive as " + available})
@@ -351,7 +359,7 @@ func run(args []string) error {
 				mode = "suffix"
 			}
 		}
-		result, err := archiveService(root, cookbookDir, nativeSelector).Create(context.Background(), archiveRoot, dist, ctkarchive.Options{OnConflict: mode})
+		result, err := archiveService(poolDir, cookbookDir, nativeSelector).Create(context.Background(), archiveRoot, dist, ctkarchive.Options{OnConflict: mode})
 		if err != nil {
 			return err
 		}
@@ -392,7 +400,7 @@ func run(args []string) error {
 					return fmt.Errorf("usage: ctk freeze commit [--force]")
 				}
 			}
-			result, err := (workbench.Service{CookbookRoot: cookbookDir}).Commit(force)
+			result, err := (workbench.Service{WorkspaceRoot: root, CookbookRoot: cookbookDir, WorkbenchRoot: workbenchDir}).Commit(force)
 			if err != nil {
 				return err
 			}
@@ -407,7 +415,7 @@ func run(args []string) error {
 		if err != nil {
 			return err
 		}
-		return generateWorkbench(context.Background(), root, distDir, cookbookDir, workbench.FreezeDraft, options, nativeSelector)
+		return generateWorkbench(context.Background(), root, distDir, cookbookDir, workbenchDir, workbench.FreezeDraft, options, nativeSelector)
 	case "view":
 		viewType, viewArgs := "", args[1:]
 		if len(viewArgs) > 0 && (viewArgs[0] == "dist" || viewArgs[0] == "recipe" || viewArgs[0] == "ingredient") {
@@ -423,13 +431,13 @@ func run(args []string) error {
 				return err
 			}
 		}
-		return generateTypedView(context.Background(), root, distDir, cookbookDir, viewType, options, nativeSelector)
+		return generateTypedView(context.Background(), root, distDir, cookbookDir, workbenchDir, viewType, options, nativeSelector)
 	case "sync":
 		options, inputs, err := parseSyncArgs(args[1:])
 		if err != nil {
 			return err
 		}
-		service := workbenchService(root, cookbookDir, nativeSelector)
+		service := workbenchService(root, cookbookDir, workbenchDir, nativeSelector)
 		var left, right workbench.CompletedSource
 		if len(inputs) > 0 {
 			left, err = resolveCompletedSource(context.Background(), service, distDir, cookbookDir, inputs[0])
@@ -447,7 +455,7 @@ func run(args []string) error {
 		if err != nil {
 			return err
 		}
-		conflict, err := inspectConflict(filepath.Join(cookbookDir, "inspect", "sync."+sourceLabel(left)+"."+sourceLabel(right)), options.onConflict, "Sync", nativeSelector)
+		conflict, err := inspectConflict(filepath.Join(workbenchDir, "inspect", "sync."+sourceLabel(left)+"."+sourceLabel(right)), options.onConflict, "Sync", nativeSelector)
 		if err != nil {
 			return err
 		}
@@ -570,7 +578,7 @@ func parseWorkbenchArgs(args []string) (workbenchOptions, error) {
 	return options, nil
 }
 
-func generateWorkbench(ctx context.Context, root, distDir, cookbookDir string, kind workbench.Kind, options workbenchOptions, selection selector.Selector) error {
+func generateWorkbench(ctx context.Context, root, distDir, cookbookDir, workbenchDir string, kind workbench.Kind, options workbenchOptions, selection selector.Selector) error {
 	name, err := selectDistribution(distDir, nonEmptyArg(options.dist), selection)
 	if err != nil {
 		return err
@@ -584,7 +592,7 @@ func generateWorkbench(ctx context.Context, root, distDir, cookbookDir string, k
 		directory = "draft"
 	}
 	conflict := options.onConflict
-	if _, err := os.Lstat(filepath.Join(cookbookDir, directory)); err == nil && conflict == "" {
+	if _, err := os.Lstat(filepath.Join(workbenchDir, directory)); err == nil && conflict == "" {
 		if !isTerminal() {
 			conflict = "abort"
 		} else {
@@ -598,7 +606,7 @@ func generateWorkbench(ctx context.Context, root, distDir, cookbookDir string, k
 			conflict = "replace"
 		}
 	}
-	service := workbenchService(root, cookbookDir, selection)
+	service := workbenchService(root, cookbookDir, workbenchDir, selection)
 	result, err := service.Generate(ctx, kind, dist, conflict)
 	if err != nil {
 		return err
@@ -740,8 +748,8 @@ func inspectWorkbenches(cookbookDir string) ([]string, error) {
 	return names, nil
 }
 
-func generateTypedView(ctx context.Context, root, distDir, cookbookDir, explicit string, options workbenchOptions, selection selector.Selector) error {
-	service := workbenchService(root, cookbookDir, selection)
+func generateTypedView(ctx context.Context, root, distDir, cookbookDir, workbenchDir, explicit string, options workbenchOptions, selection selector.Selector) error {
+	service := workbenchService(root, cookbookDir, workbenchDir, selection)
 	kind, value, err := detectViewSource(distDir, cookbookDir, explicit, options.dist)
 	if err != nil {
 		return err
@@ -763,7 +771,7 @@ func generateTypedView(ctx context.Context, root, distDir, cookbookDir, explicit
 			return loadErr
 		}
 		options.dist = dist.Name
-		return generateWorkbench(ctx, root, distDir, cookbookDir, workbench.View, options, selection)
+		return generateWorkbench(ctx, root, distDir, cookbookDir, workbenchDir, workbench.View, options, selection)
 	case "recipe":
 		path, selectErr := selectRecipe(cookbookDir, value, selection)
 		if selectErr != nil {
@@ -773,7 +781,7 @@ func generateTypedView(ctx context.Context, root, distDir, cookbookDir, explicit
 		if sourceErr != nil {
 			return sourceErr
 		}
-		target := filepath.Join(cookbookDir, "inspect", "recipe."+source.Name)
+		target := filepath.Join(workbenchDir, "inspect", "recipe."+source.Name)
 		conflict, conflictErr := inspectConflict(target, options.onConflict, "Recipe View", selection)
 		if conflictErr != nil {
 			return conflictErr
@@ -811,7 +819,7 @@ func generateTypedView(ctx context.Context, root, distDir, cookbookDir, explicit
 				}
 			}
 		}
-		target := filepath.Join(cookbookDir, "inspect", "ingredient."+strings.ReplaceAll(query, "/", "-"))
+		target := filepath.Join(workbenchDir, "inspect", "ingredient."+strings.ReplaceAll(query, "/", "-"))
 		conflict, conflictErr := inspectConflict(target, options.onConflict, "Ingredient View", selection)
 		if conflictErr != nil {
 			return conflictErr
@@ -1031,8 +1039,7 @@ func ingredientLayers(identities []string) []string {
 	return layers
 }
 
-func selectRuntimeSource(root, cookbookDir, value string, selection selector.Selector) (string, string, error) {
-	archiveRoot := filepath.Join(root, "archive")
+func selectRuntimeSource(archiveRoot, cookbookDir, value string, selection selector.Selector) (string, string, error) {
 	if value != "" {
 		recipeCandidate := value
 		if filepath.Ext(recipeCandidate) == "" {
@@ -1180,7 +1187,7 @@ func parseApplyArgs(args []string) (applyOptions, error) {
 	return options, nil
 }
 
-func lifecycleService(root, cookbookDir string, selection selector.Selector) lifecycle.Service {
+func lifecycleService(poolRoot, cookbookDir string, selection selector.Selector) lifecycle.Service {
 	stopper := platform.NewProcessStopper()
 	factory := func(dist distribution.Distribution) (runtimeio.Runtime, error) {
 		definition, err := platform.Lookup(dist.Recipe.Platform)
@@ -1199,8 +1206,8 @@ func lifecycleService(root, cookbookDir string, selection selector.Selector) lif
 	}
 	return lifecycle.Service{
 		Cookbook: cookbook.Repository{Root: filepath.Join(cookbookDir, "ingredient")},
-		Runtime:  factory, Pool: converge.Pool{Root: filepath.Join(root, ".vsix")},
-		PoolUpdate: converge.PoolUpdater{Root: filepath.Join(root, ".vsix")}, Locks: runtimelock.Store{},
+		Runtime:  factory, Pool: converge.Pool{Root: poolRoot},
+		PoolUpdate: converge.PoolUpdater{Root: poolRoot}, Locks: runtimelock.Store{},
 		ChooseLock: func() (string, error) {
 			choice, err := selection.Select("Lock after mutation", []string{"Abort", "Refresh", "Reuse"})
 			if err != nil {
@@ -1211,7 +1218,7 @@ func lifecycleService(root, cookbookDir string, selection selector.Selector) lif
 	}
 }
 
-func archiveService(root, cookbookDir string, selection selector.Selector) ctkarchive.Service {
+func archiveService(poolRoot, cookbookDir string, selection selector.Selector) ctkarchive.Service {
 	stopper := platform.NewProcessStopper()
 	factory := func(dist distribution.Distribution) (runtimeio.Runtime, error) {
 		definition, err := platform.Lookup(dist.Recipe.Platform)
@@ -1225,7 +1232,7 @@ func archiveService(root, cookbookDir string, selection selector.Selector) ctkar
 		dataDir := filepath.Join(dist.Path, ".data")
 		return vscode.Adapter{Command: command, UserDataDir: dataDir, ExtensionsDir: filepath.Join(dist.Path, ".ext"), StopForDatabaseWrite: func(ctx context.Context) error { return stopper.StopRuntime(ctx, dist.Recipe.Platform, dataDir) }}, nil
 	}
-	return ctkarchive.Service{Cookbook: cookbook.Repository{Root: filepath.Join(cookbookDir, "ingredient")}, Runtime: factory, Locks: runtimelock.Store{}, Pool: converge.PoolUpdater{Root: filepath.Join(root, ".vsix")}, ChooseLock: func() (string, error) {
+	return ctkarchive.Service{Cookbook: cookbook.Repository{Root: filepath.Join(cookbookDir, "ingredient")}, Runtime: factory, Locks: runtimelock.Store{}, Pool: converge.PoolUpdater{Root: poolRoot}, ChooseLock: func() (string, error) {
 		choice, err := selection.Select("Lock for Archive", []string{"Abort", "Refresh", "Reuse"})
 		if err != nil {
 			return "", err
@@ -1234,7 +1241,7 @@ func archiveService(root, cookbookDir string, selection selector.Selector) ctkar
 	}}
 }
 
-func workbenchService(root, cookbookDir string, selection selector.Selector) workbench.Service {
+func workbenchService(root, cookbookDir, workbenchDir string, selection selector.Selector) workbench.Service {
 	stopper := platform.NewProcessStopper()
 	factory := func(dist distribution.Distribution) (runtimeio.Runtime, error) {
 		definition, err := platform.Lookup(dist.Recipe.Platform)
@@ -1252,7 +1259,7 @@ func workbenchService(root, cookbookDir string, selection selector.Selector) wor
 		}, nil
 	}
 	return workbench.Service{
-		CookbookRoot: cookbookDir, Runtime: factory, Locks: runtimelock.Store{},
+		WorkspaceRoot: root, CookbookRoot: cookbookDir, WorkbenchRoot: workbenchDir, Runtime: factory, Locks: runtimelock.Store{},
 		ChooseLock: func() (string, error) {
 			choice, err := selection.Select("Lock for Workbench", []string{"Abort", "Refresh", "Reuse"})
 			if err != nil {
@@ -1263,7 +1270,7 @@ func workbenchService(root, cookbookDir string, selection selector.Selector) wor
 	}
 }
 
-func codevenvService(root string, selection selector.Selector) codevenv.Service {
+func codevenvService(poolRoot, distRoot string, selection selector.Selector) codevenv.Service {
 	stopper := platform.NewProcessStopper()
 	factory := func(platformName, userDataDir, extensionsDir string) (runtimeio.Runtime, error) {
 		definition, err := platform.Lookup(platformName)
@@ -1279,8 +1286,8 @@ func codevenvService(root string, selection selector.Selector) codevenv.Service 
 			StopForDatabaseWrite: func(ctx context.Context) error { return stopper.StopRuntime(ctx, platformName, userDataDir) },
 		}, nil
 	}
-	pool := converge.Pool{Root: filepath.Join(root, ".vsix")}
-	poolUpdate := converge.PoolUpdater{Root: filepath.Join(root, ".vsix")}
+	pool := converge.Pool{Root: poolRoot}
+	poolUpdate := converge.PoolUpdater{Root: poolRoot}
 	locks := runtimelock.Store{}
 	gate := codevenv.SafetyGate(nil)
 	if isTerminal() {
@@ -1297,7 +1304,7 @@ func codevenvService(root string, selection selector.Selector) codevenv.Service 
 		}
 	}
 	return codevenv.Service{
-		DistRoot: filepath.Join(root, "dist"), Runtime: factory, Stopper: stopper, Locks: locks, SafetyGate: gate,
+		DistRoot: distRoot, Runtime: factory, Stopper: stopper, Locks: locks, SafetyGate: gate,
 		Recovery: recovery.Service{Pool: pool, PoolUpdate: poolUpdate, Locks: locks},
 	}
 }
@@ -1477,7 +1484,7 @@ func findProjectRoot(configured, workingDirectory, executable string) (string, e
 }
 
 func isProjectRoot(path string) bool {
-	return pathIsDir(filepath.Join(path, "cookbook", "recipe")) && pathIsDir(filepath.Join(path, "cookbook", "ingredient"))
+	return ctkworkspace.HasMarker(path)
 }
 
 func usage() {

@@ -11,20 +11,7 @@ This Future preserves that unimplemented extension point. The operational
 behavior of the current Registry has moved to the
 [Built-in Platform Registry Note](../note/note.platform-registry.md).
 
-## Current foundation
-
-The Go implementation already centralizes:
-
-- identity and command
-- macOS and Windows Host paths
-- process identities and registered additional filter IDs
-- ordered Pool Repository candidates and download capability
-
-Named filters, Repository connectors, the shared VS Code Runtime Adapter, and
-CodeVenv lifecycle behavior remain implemented services. Completeness tests and
-macOS and Windows validation cover all five Built-in definitions.
-
-The remaining candidate is loading an equivalent validated definition from:
+The remaining candidate is loading a complete validated definition from:
 
 ```text
 CTK_HOME/.config/platform/*.yaml
@@ -104,13 +91,7 @@ CTK Runtime ownership, stop, and wait
 
 The first loading slice should accept Built-in Filter Registry IDs only. It
 should not discover or execute regular expressions, scripts, interpreters, or
-external providers.
-
-If an external filter provider is later observed as necessary, its location,
-manifest, runtime, trust, timeout, versioned I/O, diagnostics, and failure
-behavior need one independent design. A shell script and an interpreter-backed
-provider must identify their execution requirements explicitly rather than
-being inferred from a filename.
+external providers. External provider execution is outside this candidate.
 
 ## Pool and Repository separation
 
@@ -137,8 +118,7 @@ At registration:
 - `download: false` may use the ID only as a local Pool identity.
 
 The first loading slice should accept Built-in Repository IDs and connectors
-only. External Repository connector providers have the same design burden as
-external process filters and remain independently deferred.
+only. External Repository connector providers are outside this candidate.
 
 ## Identity and collision boundary
 
@@ -155,61 +135,6 @@ not attempt to infer whether two independently authored definitions represent
 the same application beyond observable managed evidence. Compatibility of the
 custom definition remains its author's responsibility.
 
-## Workspace ownership
-
-External definitions are Workspace integration configuration, not Recipe
-Source, Kitchen Notes, or OS user-global configuration.
-
-```text
-CTK_HOME/
-├── .config/
-│   ├── workspace.yaml       optional location overrides
-│   └── platform/            external Platform definitions
-├── cookbook/
-│   ├── draft/               Workspace-local Workbench output
-│   └── inspect/             Workspace-local Workbench output
-├── dist/
-├── archive/
-└── .vsix/
-```
-
-An optional Workspace configuration may later relocate only static Cookbook
-Source and the Dist root:
-
-```yaml
-paths:
-  cookbook-source: /path/to/cookbook
-  dist: /path/to/dist
-```
-
-`cookbook-source` contains `recipe/` and `ingredient/`. Workbench `draft/` and
-`inspect/` remain below `CTK_HOME/cookbook` so generated review state does not
-enter a versioned Source repository accidentally.
-
-Archive and Pool remain under `CTK_HOME` until a concrete sharing requirement
-is observed. No `ctk init` is required: absent configuration resolves current
-default directories. CTK does not persist `CTK_HOME`, track an old Dist root,
-or migrate managed state after a location change.
-
-Package managers distribute the binary and compiled Built-in definitions. They
-do not own or update Workspace configuration, Cookbook, Dist, Archive, or Pool
-state.
-
-## Support boundary
-
-`Supported` is reserved for Built-in Platforms incorporated and validated by
-CTK. A Workspace definition is a user extension point, not a self-declared CTK
-support claim.
-
-The definition author owns compatibility with the selected application,
-command, Host paths, process declarations, Repository policy, and intended OS.
-CTK remains responsible for schema validation and its common lifecycle,
-recovery, and artifact safety invariants.
-
-Promoting a Workspace definition to Built-in requires normal Intake,
-implementation review, automated tests, and real-machine validation on every
-claimed OS.
-
 ## Initial implementation boundary
 
 The first useful slice would include:
@@ -225,17 +150,8 @@ The first useful slice would include:
 6. validate at least one disposable Workspace definition on each claimed OS.
 
 After implementation, definition locations, fields, diagnostics, and examples
-should move to a Platform Definition Note. Provider mechanisms that remain
-unimplemented should stay in Future.
-
-## Deferred independently
-
-- external process filter providers
-- external Repository connector providers
-- automatic Dist relocation or migration
-- multiple active Workspace selection
-- Archive or Pool location overrides
-- non-VS Code ecosystem Runtime adapters
+should move to a Platform Definition Note. External provider mechanisms would
+require a separate candidate if concrete evidence makes them worth revisiting.
 
 ## Related knowledge
 

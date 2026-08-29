@@ -115,6 +115,35 @@ func TestCommitAllowsExtensionsWithoutRecipeDraft(t *testing.T) {
 	}
 }
 
+func TestCommitReadsWorkspaceDraftAndWritesExternalCookbookSource(t *testing.T) {
+	source := t.TempDir()
+	workbench := t.TempDir()
+	for _, path := range []string{filepath.Join(source, "ingredient"), filepath.Join(workbench, "draft")} {
+		if err := os.MkdirAll(path, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	draft := "# Extensions Draft\n\n## Difference\n\n### runtime.test.extensions\n\n```diff\n+ new.id\n```\n"
+	if err := os.WriteFile(filepath.Join(workbench, "draft", "extensions.draft.md"), []byte(draft), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := (Service{CookbookRoot: source, WorkbenchRoot: workbench}).Commit(false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	target := filepath.Join(source, "ingredient", "runtime.test.extensions")
+	if len(result.Files) != 1 || result.Files[0] != target {
+		t.Fatalf("Commit files = %#v", result.Files)
+	}
+	if data, err := os.ReadFile(target); err != nil || string(data) != "new.id\n" {
+		t.Fatalf("external Cookbook target = %q, %v", data, err)
+	}
+	if _, err := os.Stat(filepath.Join(source, "draft")); !os.IsNotExist(err) {
+		t.Fatalf("Draft leaked into Cookbook Source: %v", err)
+	}
+}
+
 func TestCommitRejectsCommentedJSONCWithoutForce(t *testing.T) {
 	root := t.TempDir()
 	os.MkdirAll(filepath.Join(root, "draft"), 0755)
