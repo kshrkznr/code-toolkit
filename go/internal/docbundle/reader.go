@@ -15,12 +15,13 @@ import (
 )
 
 type Bundle struct {
-	manifest   Manifest
-	bootstrap  []byte
-	documents  map[string][]byte
-	byIdentity map[string][]string
-	byPath     map[string]string
-	byAlias    map[string]string
+	manifest    Manifest
+	manifestRaw []byte
+	bootstrap   []byte
+	documents   map[string][]byte
+	byIdentity  map[string][]string
+	byPath      map[string]string
+	byAlias     map[string]string
 }
 
 type Candidate struct {
@@ -151,7 +152,7 @@ func Open(archive []byte) (*Bundle, error) {
 			return nil, fmt.Errorf("Documentation Bundle contains unmanifested entry: %s", name)
 		}
 	}
-	return &Bundle{manifest: manifest, bootstrap: bootstrap, documents: documents, byIdentity: byIdentity, byPath: byPath, byAlias: byAlias}, nil
+	return &Bundle{manifest: manifest, manifestRaw: bytes.Clone(manifestBytes), bootstrap: bootstrap, documents: documents, byIdentity: byIdentity, byPath: byPath, byAlias: byAlias}, nil
 }
 
 func (bundle *Bundle) Manifest() Manifest {

@@ -569,10 +569,18 @@ func runDocs(output io.Writer, bundle *docbundle.Bundle, args []string) error {
 		_, err = output.Write(content)
 		return err
 	case "export":
-		return fmt.Errorf("ctk docs export is not implemented")
+		if len(args) != 2 {
+			return fmt.Errorf("usage: ctk docs export <directory>")
+		}
+		result, err := bundle.Export(args[1])
+		if err != nil {
+			return err
+		}
+		_, err = fmt.Fprintf(output, "%s\ncontent-sha256: %s\n", result.Path, result.ContentSHA256)
+		return err
 	default:
 		if len(args) != 1 {
-			return fmt.Errorf("usage: ctk docs [<node>|resolve <terms...>|show <reference>]")
+			return fmt.Errorf("usage: ctk docs [<node>|resolve <terms...>|show <reference>|export <directory>]")
 		}
 		content, err := bundle.ShowNode(args[0])
 		if err != nil {
@@ -590,6 +598,7 @@ func writeDocsUsage(output io.Writer) error {
   ctk docs <node>                  Show one Node README (for example: core)
   ctk docs resolve <terms...>      Rank matching bundled documents
   ctk docs show <reference>        Show an identity or path, optionally #heading
+  ctk docs export <directory>      Export the verified Bundle for full-text search
 
 Resolve output is tab-separated. Copy its IDENTITY or PATH into docs show.
 Resolve searches identity, path, Node alias, title, and headings, not bodies.
@@ -1646,7 +1655,7 @@ Commands:
                       Temporarily launch a Distribution
   workbench [draft|inspect] [viewpoint] [--editor command]
                       Open a Draft or Inspect Workbench
-  docs [<node>|resolve <terms...>|show <reference>]
+  docs [<node>|resolve <terms...>|show <reference>|export <directory>]
                       Navigate documentation packaged with this binary
   select              Select a command interactively
   version             Show binary version and build provenance

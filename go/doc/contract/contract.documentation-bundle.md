@@ -121,8 +121,7 @@ returns candidates rather than full documents; the CLI shows at most ten and
 asks the caller to narrow a larger result.
 
 Full-text search belongs to repository tools over `ctk docs export` output.
-Until Export is implemented, its full-text scenarios remain pending Release
-coverage and do not expand Resolve responsibility.
+It does not expand Resolve responsibility.
 
 Show requires one identity or repository-relative path, matched
 case-insensitively, with an optional heading fragment. Duplicate Markdown
@@ -130,6 +129,26 @@ heading anchors use the usual numeric suffix (`#responsibility-1`, then
 `#responsibility-2`). Missing and ambiguous references fail rather than
 selecting one document silently, and a miss routes the caller to Resolve and
 the exact Bundle repository reference.
+
+## Filesystem Export
+
+`ctk docs export <directory>` publishes the verified Bundle as its logical
+directory tree, including the generated Manifest and Bootstrap. Selected source
+documents retain their repository-relative paths and original bytes, making
+ordinary repository full-text tools available without a clone.
+
+The target must be absent or an empty directory. Its parent must already exist
+as a directory and cannot itself be a symlink. A file, symlink, special file,
+or non-empty target fails without merge or replacement.
+
+Export writes fixed-mode files and directories to a sibling staging directory.
+It then rereads the complete staged inventory, rejects missing, unexpected,
+symlinked, special, case-colliding, or byte-mismatched entries, and publishes
+the verified tree by replacing only the reserved empty target. A failure does
+not publish a partial final tree or modify a pre-existing non-empty target.
+
+Successful CLI output reports the absolute exported path and the aggregate
+content digest recorded by the verified Manifest.
 
 ## Executable transport and CLI
 
@@ -146,7 +165,7 @@ available even when a development binary has no Bundle.
 
 ## Boundary
 
-The current implementation does not define local source configuration,
-filesystem export, network fetching, semantic question answering, interactive
-selection, or pager behavior. The generator and read model remain independently
-testable from executable transport.
+The current implementation does not define local source configuration, network
+fetching, semantic question answering, interactive selection, or pager
+behavior. The generator and read model remain independently testable from
+executable transport.

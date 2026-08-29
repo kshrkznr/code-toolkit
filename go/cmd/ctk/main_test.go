@@ -50,6 +50,18 @@ func TestRunDocsNavigatesPackagedBundle(t *testing.T) {
 			}
 		})
 	}
+
+	exportTarget := filepath.Join(t.TempDir(), "documentation")
+	var exportOutput bytes.Buffer
+	if err := runDocs(&exportOutput, bundle, []string{"export", exportTarget}); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(exportOutput.String(), exportTarget+"\ncontent-sha256: ") {
+		t.Fatalf("Export output = %q", exportOutput.String())
+	}
+	if _, err := os.Stat(filepath.Join(exportTarget, filepath.FromSlash(docbundle.ManifestPath))); err != nil {
+		t.Fatalf("Export Manifest missing: %v", err)
+	}
 }
 
 func TestDetectViewSourceFromContentAndKnownNames(t *testing.T) {

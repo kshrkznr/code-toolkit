@@ -3,8 +3,11 @@ package docbundle
 import (
 	"archive/zip"
 	"bytes"
+	"fmt"
 	"io"
+	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -245,5 +248,104 @@ func TestOpenAcceptsBundleAppendedToExecutablePrefix(t *testing.T) {
 	}
 	if bundle.Manifest().ContentSHA256 != generated.Manifest.ContentSHA256 {
 		t.Fatal("appended Bundle Manifest differs from generated Manifest")
+	}
+}
+
+func TestExportPublishesVerifiedTreeToAbsentOrEmptyTarget(t *testing.T) {
+	root, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	generated, err := Generate(root, Metadata{Version: "dev", Revision: "abc1234"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	bundle, err := Open(generated.Archive)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, existing := range []bool{false, true} {
+		t.Run(fmt.Sprintf("existing=%v", existing), func(t *testing.T) {
+			target := filepath.Join(t.TempDir(), "documentation")
+			if existing {
+				if err := os.Mkdir(target, 0o755); err != nil {
+					t.Fatal(err)
+				}
+			}
+			result, err := bundle.Export(target)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if result.Path != target || result.ContentSHA256 != generated.Manifest.ContentSHA256 || result.Documents != len(generated.Manifest.Documents) {
+				t.Fatalf("Export result = %+v", result)
+			}
+			for _, relative := range []string{ManifestPath, BootstrapPath, "doc/note/note.variant.md"} {
+				if _, err := os.Stat(filepath.Join(target, filepath.FromSlash(relative))); err != nil {
+					t.Fatalf("missing exported file %s: %v", relative, err)
+				}
+			}
+			variant, err := os.ReadFile(filepath.Join(target, "doc", "note", "note.variant.md"))
+			if err != nil || !bytes.Contains(variant, []byte("environmental difference")) {
+				t.Fatalf("exported documents are not available for full-text search: %v", err)
+			}
+			if runtime.GOOS != "windows" {
+				fileInfo, err := os.Stat(filepath.Join(target, filepath.FromSlash(ManifestPath)))
+				if err != nil || fileInfo.Mode().Perm() != 0o644 {
+					t.Fatalf("Manifest mode = %v, %v", fileInfo.Mode().Perm(), err)
+				}
+				directoryInfo, err := os.Stat(filepath.Join(target, "doc"))
+				if err != nil || directoryInfo.Mode().Perm() != 0o755 {
+					t.Fatalf("directory mode = %v, %v", directoryInfo.Mode().Perm(), err)
+				}
+			}
+		})
+	}
+}
+
+func TestExportRefusesNonEmptyFileAndSymlinkTargets(t *testing.T) {
+	root, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	generated, err := Generate(root, Metadata{Version: "dev", Revision: "abc1234"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	bundle, err := Open(generated.Archive)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	nonEmpty := filepath.Join(t.TempDir(), "non-empty")
+	if err := os.Mkdir(nonEmpty, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	marker := filepath.Join(nonEmpty, "keep.txt")
+	if err := os.WriteFile(marker, []byte("keep"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := bundle.Export(nonEmpty); err == nil {
+		t.Fatal("Export accepted a non-empty target")
+	}
+	if content, err := os.ReadFile(marker); err != nil || string(content) != "keep" {
+		t.Fatalf("non-empty target changed: %q, %v", content, err)
+	}
+
+	fileTarget := filepath.Join(t.TempDir(), "file")
+	if err := os.WriteFile(fileTarget, []byte("keep"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := bundle.Export(fileTarget); err == nil {
+		t.Fatal("Export accepted a file target")
+	}
+
+	symlinkRoot := t.TempDir()
+	symlinkTarget := filepath.Join(symlinkRoot, "link")
+	if err := os.Symlink(t.TempDir(), symlinkTarget); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+	if _, err := bundle.Export(symlinkTarget); err == nil {
+		t.Fatal("Export accepted a symlink target")
 	}
 }
