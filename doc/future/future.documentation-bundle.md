@@ -82,8 +82,8 @@ Knowledge document. Canonical identity and document role already communicate
 what a document is responsible for; repeating distribution metadata in each
 file would introduce another classification that can drift.
 
-A central bundle manifest or equivalent build input could select role-owned
-paths and record the small number of exceptions. Validation could then report:
+A central Bundle Definition could select role-owned paths and record the small
+number of exceptions. Validation could then report:
 
 - a selected path that no longer exists;
 - a new documentation role that has no bundle decision;
@@ -94,6 +94,47 @@ The binary could carry this selected set as one versioned bundle while
 presenting only a navigation view by default. Selection controls availability;
 `ctk docs`, scoped views, and export control how much of the available set is
 shown for one task.
+
+## Bundle Definition and generated Manifest
+
+The current direction separates two related artifacts:
+
+```text
+doc/documentation-bundle.yaml
+    checked-in Bundle Definition
+    owns selection policy and explicit exceptions
+            ↓ generate and verify
+Packaged Documentation Manifest
+    generated inventory and provenance
+    travels inside the binary and exported directory
+```
+
+The checked-in Definition should live under `doc/` because documentation
+distribution is part of the documentation boundary. Its selected paths should
+remain repository-root-relative because the bundle also includes `README.md`
+and current Go implementation documents outside `doc/`.
+
+The Definition could contain a format version, included role-owned paths, and
+explicit exceptions. It should not contain source revisions, content hashes,
+or generation timestamps that would require a checked-in update after every
+ordinary documentation edit.
+
+The generated Manifest could contain:
+
+- Manifest and Bundle Definition format versions;
+- CTK version, exact source revision, and Release tag when one applies;
+- a digest of the Bundle Definition;
+- the sorted repository-relative document inventory and a hash for each file;
+- one aggregate content digest derived deterministically from that inventory.
+
+Wall-clock generation time should not participate in reproducible content. If
+an informational timestamp becomes useful, it should remain outside the
+content identity or derive from stable source provenance.
+
+The Definition and generator should be introduced together. Checking in an
+unvalidated YAML shape before any consumer exists would turn a Future example
+into a de facto configuration format without proving that it selects and
+verifies the intended documents.
 
 ## Version and source provenance
 
@@ -115,6 +156,19 @@ Knowledge merely because a clone is nearby. A local revision that differs from
 the binary should remain visible rather than being presented as version-matched
 documentation.
 
+Local-source status can use the same Definition and generated Manifest rather
+than relying on one ambiguous `dirty` label. It could report independently:
+
+- whether the local Git revision matches the binary revision;
+- whether the local Bundle Definition matches the embedded Definition digest;
+- whether selected local document bytes match the embedded aggregate digest;
+- which selected paths differ from their local revision.
+
+Changes outside the selected document set may make the repository dirty, but
+should not make the documentation bundle dirty. That repository state may be
+shown as an additional diagnostic. A non-Git source can report an unknown
+revision while still computing its Definition and content digests.
+
 Whether local selection belongs to an explicit command option, Workspace
 configuration, or another integration surface remains open. The default
 `docs` path should still work when no Workspace can be discovered.
@@ -123,12 +177,48 @@ configuration, or another integration surface remains open. The default
 
 Export could preserve paths such as `README.md`, `doc/core/`, and
 `doc/contract/` so that relative links and document roles remain inspectable.
-An accompanying manifest could record bundle version, source revision,
-document inventory, and hashes.
+The generated Manifest should travel with those files so an exported directory
+can be verified without the original binary or repository.
 
-Export should not make replacement or merge behavior implicit. Empty-target,
-conflict, atomic publication, and explicit-overwrite rules need observation
-before they become a Contract.
+The first export behavior should be deliberately narrow:
+
+- accept an absent or empty target directory;
+- refuse to merge with or replace a non-empty target;
+- write to a sibling staging directory and publish the completed tree
+  atomically when the OS permits it;
+- preserve repository-relative paths while rejecting traversal, symlinks,
+  special files, duplicate paths, and cross-platform case collisions;
+- write files in sorted order with fixed file and directory modes;
+- reserve the generated Manifest path so source content cannot replace it;
+- verify the exported aggregate digest before publication.
+
+An explicit replace or merge mode can remain a later candidate with its own
+conflict and recovery Contract. It is not necessary for the first reproducible
+export.
+
+## Release verification
+
+Release generation can use the same artifacts as a closed verification chain:
+
+```text
+clean checkout at the requested tag
+        ↓
+load and validate Bundle Definition
+        ↓
+generate one ordered bundle and Manifest
+        ↓
+embed the same generated input in every target binary
+        ↓
+compare a native binary's exposed Manifest with the generated Manifest
+        ↓
+regenerate from a fresh tag checkout and compare the aggregate digest
+```
+
+Release should fail when the requested tag does not identify the source
+revision, the checkout is dirty, a selected or excepted path is invalid, or
+regenerated Definition and content digests differ. Cross-compiled binaries do
+not each need a separate documentation selection pass; they should consume the
+same already verified generated bundle input.
 
 ## Boundary
 
@@ -155,12 +245,8 @@ development checkout.
   Markdown output?
 - Should a link from bundled Knowledge to repository-only material become an
   exact-version GitHub link, an unavailable route, or a small packaged stub?
-- How should a local source expose dirty state and revision mismatch?
-- Which manifest and conflict rules make export safe and reproducible?
 - Should `help`, `version`, and `docs` share one Workspace-independent command
   boundary in the Go CLI?
-- How should Release generation verify that the packaged bundle matches the
-  source tag or commit?
 
 ## Revisit when
 
