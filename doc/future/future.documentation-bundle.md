@@ -55,11 +55,45 @@ ctk docs export <directory>
 These forms illustrate the candidate responsibility. Names, arguments, output
 format, and group boundaries remain open.
 
-One possible packaging strategy is to carry all published Knowledge in a
-versioned bundle while presenting only a navigation set by default. This could
-keep relative document relationships complete without making every invocation
-return the entire collection. A curated partial bundle remains possible if a
-closed and maintainable document boundary becomes clearer.
+## Candidate content boundary
+
+The current direction is to carry nearly all Knowledge needed to understand,
+use, and troubleshoot the current CTK version, but not the entire repository
+documentation tree.
+
+Inclusion should follow the document's primary responsibility:
+
+| Bundle | Primary responsibility | Current examples |
+| --- | --- | --- |
+| Include | Public entry, navigation, accepted concepts, agreements, current operational guidance, and rationale needed to interpret current behavior | `README.md`, Documentation Resolver, Core, Workbench, Integration, Contract, Note, Design Note, current Go README and Contracts |
+| Include as a concrete entry | A small maintained example that helps a reader apply the concepts without defining them | Author's Recipe Node |
+| Repository only | How Knowledge was created, reviewed, or evolved | Project Knowledge, including its Experiments, Notes, and Design Notes |
+| Repository only | Unsettled candidate directions | Future |
+| Repository only | Personal or generated instance data rather than CTK responsibility | Author's Recipe Inspect snapshots |
+| Repository only | Contribution process, tests, retained implementation evidence, and other development-only material | `.github`, test data, and the retained Bash documentation |
+
+Note and Design Note remain included by default because operational guidance
+and accepted design rationale can explain how or why the current product
+behaves. A document retained mainly as historical evidence may become an
+explicit exception without changing the default for its role.
+
+This boundary should not be expressed by adding a required bundle tag to every
+Knowledge document. Canonical identity and document role already communicate
+what a document is responsible for; repeating distribution metadata in each
+file would introduce another classification that can drift.
+
+A central bundle manifest or equivalent build input could select role-owned
+paths and record the small number of exceptions. Validation could then report:
+
+- a selected path that no longer exists;
+- a new documentation role that has no bundle decision;
+- an included document whose local link targets repository-only content;
+- an exception that no longer differs from its role default.
+
+The binary could carry this selected set as one versioned bundle while
+presenting only a navigation view by default. Selection controls availability;
+`ctk docs`, scoped views, and export control how much of the available set is
+shown for one task.
 
 ## Version and source provenance
 
@@ -114,11 +148,13 @@ development checkout.
 
 ## Open questions
 
-- Which documents form the default navigation set?
-- Should the binary carry all published Knowledge or a selected closed set?
-- Which document roles belong in scoped views and a full export?
+- Which documents form the default navigation view within the selected set?
+- Which retained historical Notes or Design Notes need repository-only
+  exceptions?
 - How should canonical identities and relative links appear in concatenated
   Markdown output?
+- Should a link from bundled Knowledge to repository-only material become an
+  exact-version GitHub link, an unavailable route, or a small packaged stub?
 - How should a local source expose dirty state and revision mismatch?
 - Which manifest and conflict rules make export safe and reproducible?
 - Should `help`, `version`, and `docs` share one Workspace-independent command
