@@ -35,6 +35,9 @@ Start with the question closest to the current work:
 - How could a standalone CTK binary expose version-matched Knowledge to people
   and AI assistants without requiring a repository checkout?
   → [Packaged Documentation Bundle](future.documentation-bundle.md)
+- How could Help reveal the Workspace and documentation sources selected for
+  the current invocation without becoming Workspace-dependent?
+  → [CLI Context Observation](future.cli-context-observation.md)
 
 These routes are entry points rather than an implementation queue. Search by
 the candidate concept when a future document is not yet listed here.
