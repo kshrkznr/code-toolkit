@@ -136,6 +136,32 @@ unvalidated YAML shape before any consumer exists would turn a Future example
 into a de facto configuration format without proving that it selects and
 verifies the intended documents.
 
+## Repository-only links
+
+Bundled Knowledge may link to Project Knowledge, Future, generated Author's
+Recipe Inspect snapshots, or other material intentionally kept in the
+repository. The bundle does not need a packaged stub or an exact replacement
+URL for every excluded document.
+
+During bundle generation, a relative link whose target is valid repository
+content but excluded by the Bundle Definition should become a repository-only
+reference to the exact-version GitHub repository root. Its presentation can be
+as small as:
+
+```text
+Repository-only material. See the CTK repository for this version:
+https://github.com/kshrkznr/code-toolkit/tree/<tag-or-commit>
+```
+
+The source Knowledge remains unchanged. Link conversion applies only to the
+generated bundle and export, keeping normal repository navigation precise
+without carrying that precision into the smaller distribution view.
+
+The generator must distinguish intentional exclusion from a broken source
+link. A relative target that does not exist in the source repository is a
+validation failure; it must not be hidden behind the general GitHub route.
+Ordinary external links and links between included documents remain unchanged.
+
 ## Version and source provenance
 
 Packaged documentation should default to the source built with the binary. A
@@ -258,8 +284,6 @@ development checkout.
   exceptions?
 - How should canonical identities and relative links appear in concatenated
   Markdown output?
-- Should a link from bundled Knowledge to repository-only material become an
-  exact-version GitHub link, an unavailable route, or a small packaged stub?
 
 ## Revisit when
 
