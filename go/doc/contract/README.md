@@ -16,6 +16,8 @@ concrete choice.
 - How does Go interpret Cookbook Source?
   → [Cookbook](contract.cookbook.md) and
   [Cookbook Resolution](contract.cookbook-resolution.md)
+- How does Go discover a Workspace and resolve its owned or selected paths?
+  → [Workspace](contract.workspace.md)
 - How does Go represent and launch a Distribution?
   → [Distribution](contract.distribution.md)
 - How does Go preserve and reconstruct an exact Runtime?

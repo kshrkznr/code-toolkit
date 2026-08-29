@@ -28,7 +28,7 @@ type patchLine struct {
 }
 
 func (s Service) Commit(force bool) (CommitResult, error) {
-	draft := filepath.Join(s.CookbookRoot, "draft")
+	draft := filepath.Join(s.workbenchRoot(), "draft")
 	result := CommitResult{}
 	writes := map[string][]byte{}
 	unionPaths := map[string][]string{}
@@ -47,7 +47,7 @@ func (s Service) Commit(force bool) (CommitResult, error) {
 			return result, fmt.Errorf("parse %s: %w", artifact, err)
 		}
 		for target, lines := range sections {
-			path, err := ingredientTarget(filepath.Join(s.CookbookRoot, "ingredient"), target, artifact)
+			path, err := ingredientTarget(filepath.Join(s.cookbookRoot(), "ingredient"), target, artifact)
 			if err != nil {
 				return result, err
 			}
@@ -84,7 +84,7 @@ func (s Service) Commit(force bool) (CommitResult, error) {
 			return result, fmt.Errorf("parse %s: %w", artifact, err)
 		}
 		for target, lines := range sections {
-			path, err := runtimeArtifactTarget(filepath.Join(s.CookbookRoot, "ingredient"), target, kind)
+			path, err := runtimeArtifactTarget(filepath.Join(s.cookbookRoot(), "ingredient"), target, kind)
 			if err != nil {
 				return result, err
 			}
@@ -129,7 +129,7 @@ func (s Service) Commit(force bool) (CommitResult, error) {
 
 	recipeDraft := filepath.Join(draft, "recipe.draft.yaml")
 	if data, err := os.ReadFile(recipeDraft); err == nil {
-		target, err := resolveRecipeTarget(filepath.Join(s.CookbookRoot, "recipe"), recipeDraft)
+		target, err := resolveRecipeTarget(filepath.Join(s.cookbookRoot(), "recipe"), recipeDraft)
 		if err != nil {
 			return result, err
 		}
@@ -140,7 +140,7 @@ func (s Service) Commit(force bool) (CommitResult, error) {
 	}
 
 	if len(unionPaths) > 0 {
-		path := filepath.Join(s.CookbookRoot, "kitchen-notes", "go.merge-rules.yaml")
+		path := filepath.Join(s.cookbookRoot(), "kitchen-notes", "go.merge-rules.yaml")
 		current, err := os.ReadFile(path)
 		if err != nil && !os.IsNotExist(err) {
 			return result, err

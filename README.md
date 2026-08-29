@@ -296,14 +296,14 @@ and place `ctk` on `PATH`:
 
 ```bash
 cd /path/to/downloaded-assets
-shasum -a 256 ctk_v0.3.0_darwin_arm64.tar.gz
-tar -xzf ctk_v0.3.0_darwin_arm64.tar.gz
+shasum -a 256 ctk_v0.4.0_darwin_arm64.tar.gz
+tar -xzf ctk_v0.4.0_darwin_arm64.tar.gz
 mkdir -p "$HOME/.local/bin"
 install -m 0755 ctk "$HOME/.local/bin/ctk"
 ```
 
 Compare the displayed SHA-256 value with the corresponding entry in
-`checksums.txt`. Use `ctk_v0.3.0_darwin_amd64.tar.gz` instead on an Intel Mac.
+`checksums.txt`. Use `ctk_v0.4.0_darwin_amd64.tar.gz` instead on an Intel Mac.
 Add `$HOME/.local/bin` to `PATH` when it is not already available.
 
 ## Windows
@@ -313,8 +313,8 @@ From PowerShell, verify that the displayed hash matches the Windows entry in
 
 ```powershell
 Set-Location C:\path\to\downloaded-assets
-Get-FileHash .\ctk_v0.3.0_windows_amd64.zip -Algorithm SHA256
-Expand-Archive .\ctk_v0.3.0_windows_amd64.zip -DestinationPath "$env:LOCALAPPDATA\CTK\bin"
+Get-FileHash .\ctk_v0.4.0_windows_amd64.zip -Algorithm SHA256
+Expand-Archive .\ctk_v0.4.0_windows_amd64.zip -DestinationPath "$env:LOCALAPPDATA\CTK\bin"
 ```
 
 Add `%LOCALAPPDATA%\CTK\bin` to the user `PATH` when necessary.
@@ -325,8 +325,10 @@ Confirm the installed binary:
 ctk version
 ```
 
-Run CTK from the repository root, or set `CTK_HOME` to that directory. CTK
-uses the workspace containing `cookbook/recipe` and `cookbook/ingredient`.
+Run CTK from the repository root, or set `CTK_HOME` to a CTK Workspace. The
+default Workspace contains `cookbook/recipe` and `cookbook/ingredient`; an
+optional `.config/workspace.yaml` can select an independently maintained
+Cookbook Source and Dist root.
 
 ============================================================
 

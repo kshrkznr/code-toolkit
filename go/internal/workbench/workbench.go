@@ -28,11 +28,13 @@ const (
 type RuntimeFactory func(distribution.Distribution) (runtimeio.Runtime, error)
 
 type Service struct {
-	CookbookRoot string
-	Runtime      RuntimeFactory
-	Locks        runtimelock.Store
-	ChooseLock   func() (string, error)
-	Now          func() time.Time
+	WorkspaceRoot string
+	CookbookRoot  string
+	WorkbenchRoot string
+	Runtime       RuntimeFactory
+	Locks         runtimelock.Store
+	ChooseLock    func() (string, error)
+	Now           func() time.Time
 }
 
 type Result struct {
@@ -41,7 +43,11 @@ type Result struct {
 }
 
 func (s Service) displayPath(path string) string {
-	workspaceRoot, err := filepath.Abs(filepath.Dir(filepath.Clean(s.CookbookRoot)))
+	workspaceRoot := s.WorkspaceRoot
+	if workspaceRoot == "" {
+		workspaceRoot = filepath.Dir(filepath.Clean(s.workbenchRoot()))
+	}
+	workspaceRoot, err := filepath.Abs(workspaceRoot)
 	if err != nil {
 		return path
 	}
@@ -62,6 +68,15 @@ func (s Service) displayPath(path string) string {
 	return "$CTK_HOME/" + filepath.ToSlash(relative)
 }
 
+func (s Service) cookbookRoot() string { return s.CookbookRoot }
+
+func (s Service) workbenchRoot() string {
+	if s.WorkbenchRoot != "" {
+		return s.WorkbenchRoot
+	}
+	return s.CookbookRoot
+}
+
 type Counts struct{ Added, Removed, Changed int }
 
 type artifactResult struct {
@@ -74,7 +89,7 @@ func (s Service) Generate(ctx context.Context, kind Kind, dist distribution.Dist
 	if kind == FreezeDraft {
 		directory = "draft"
 	}
-	target := filepath.Join(s.CookbookRoot, directory)
+	target := filepath.Join(s.workbenchRoot(), directory)
 	if _, err := os.Lstat(target); err == nil && conflict != "replace" {
 		return Result{}, fmt.Errorf("Workbench already exists: %s", target)
 	} else if err != nil && !os.IsNotExist(err) {
@@ -84,7 +99,7 @@ func (s Service) Generate(ctx context.Context, kind Kind, dist distribution.Dist
 	recipePath := filepath.Join(dist.Path, ".meta", "recipe.yaml")
 	var plan cookbook.Plan
 	if kind == FreezeDraft {
-		repository := cookbook.Repository{Root: filepath.Join(s.CookbookRoot, "ingredient")}
+		repository := cookbook.Repository{Root: filepath.Join(s.cookbookRoot(), "ingredient")}
 		var err error
 		plan, err = repository.Resolve(recipePath)
 		if err != nil {
@@ -105,7 +120,7 @@ func (s Service) Generate(ctx context.Context, kind Kind, dist distribution.Dist
 	if kind == View {
 		stagingPrefix = ".view-dist." + dist.Name + ".staging-"
 	}
-	staging, err := os.MkdirTemp(s.CookbookRoot, stagingPrefix)
+	staging, err := os.MkdirTemp(s.workbenchRoot(), stagingPrefix)
 	if err != nil {
 		return Result{}, fmt.Errorf("create Workbench staging: %w", err)
 	}
@@ -113,7 +128,7 @@ func (s Service) Generate(ctx context.Context, kind Kind, dist distribution.Dist
 
 	recipeStatus, recipeDiff := "INVENTORY", ""
 	if kind == FreezeDraft {
-		_, recipeStatus, recipeDiff = findCurrentRecipe(s.CookbookRoot, dist.Recipe, recipePath)
+		_, recipeStatus, recipeDiff = findCurrentRecipe(s.cookbookRoot(), dist.Recipe, recipePath)
 	}
 	comparisonPlan := &plan
 	if kind == View {
@@ -131,7 +146,7 @@ func (s Service) Generate(ctx context.Context, kind Kind, dist distribution.Dist
 	var used, available []string
 	if kind == FreezeDraft {
 		var inventoryErr error
-		used, available, inventoryErr = ingredientInventory(filepath.Join(s.CookbookRoot, "ingredient"), plan, dist.Recipe)
+		used, available, inventoryErr = ingredientInventory(filepath.Join(s.cookbookRoot(), "ingredient"), plan, dist.Recipe)
 		if inventoryErr != nil {
 			return Result{}, inventoryErr
 		}

@@ -25,7 +25,7 @@ type CompletedSource struct {
 }
 
 func (s Service) RecipeSource(path string) (CompletedSource, error) {
-	plan, err := (cookbook.Repository{Root: filepath.Join(s.CookbookRoot, "ingredient")}).Resolve(path)
+	plan, err := (cookbook.Repository{Root: filepath.Join(s.cookbookRoot(), "ingredient")}).Resolve(path)
 	if err != nil {
 		return CompletedSource{}, err
 	}
@@ -79,7 +79,7 @@ func snapshotFromPlan(plan cookbook.Plan) runtimelock.Snapshot {
 }
 
 func (s Service) GenerateRecipeView(source CompletedSource, conflict string) (Result, error) {
-	target := filepath.Join(s.CookbookRoot, "inspect", "recipe."+safeName(source.Name))
+	target := filepath.Join(s.workbenchRoot(), "inspect", "recipe."+safeName(source.Name))
 	staging, err := s.inspectStaging(target, conflict, ".view-recipe-")
 	if err != nil {
 		return Result{}, err
@@ -117,14 +117,14 @@ func (s Service) GenerateRecipeView(source CompletedSource, conflict string) (Re
 }
 
 func (s Service) GenerateIngredientView(query, conflict string) (Result, error) {
-	paths, err := ingredientResources(filepath.Join(s.CookbookRoot, "ingredient"), query)
+	paths, err := ingredientResources(filepath.Join(s.cookbookRoot(), "ingredient"), query)
 	if err != nil {
 		return Result{}, err
 	}
 	if len(paths) == 0 {
 		return Result{}, fmt.Errorf("Ingredient Resource not found: %s", query)
 	}
-	target := filepath.Join(s.CookbookRoot, "inspect", "ingredient."+safeName(query))
+	target := filepath.Join(s.workbenchRoot(), "inspect", "ingredient."+safeName(query))
 	staging, err := s.inspectStaging(target, conflict, ".view-ingredient-")
 	if err != nil {
 		return Result{}, err
@@ -140,7 +140,7 @@ func (s Service) GenerateIngredientView(query, conflict string) (Result, error) 
 	settingsOut.WriteString("# Settings View\n\n## Inventory\n")
 	extensionsOut.WriteString("# Extensions View\n\n## Inventory\n")
 	settingsCount, extensionCount := 0, 0
-	root := filepath.Join(s.CookbookRoot, "ingredient")
+	root := filepath.Join(s.cookbookRoot(), "ingredient")
 	resourceNames := make([]string, 0, len(paths))
 	for _, path := range paths {
 		relative, _ := filepath.Rel(root, path)
@@ -197,7 +197,7 @@ func (s Service) GenerateIngredientView(query, conflict string) (Result, error) 
 	if s.Now != nil {
 		now = s.Now()
 	}
-	identities := resolvedIngredientIdentities(s.CookbookRoot, resourceNames)
+	identities := resolvedIngredientIdentities(s.cookbookRoot(), resourceNames)
 	artifacts := map[string][]byte{"summary.md": []byte(ingredientSummary(query, s.displayPath(root), resourceNames, identities, settingsCount, extensionCount, now))}
 	if settingsCount > 0 {
 		artifacts["settings.draft.md"] = []byte(settingsOut.String())
@@ -280,7 +280,7 @@ func ingredientQueryScope(query string) string {
 }
 
 func (s Service) GenerateSync(left, right CompletedSource, conflict string) (Result, error) {
-	target := filepath.Join(s.CookbookRoot, "inspect", "sync."+safeName(left.Kind+"-"+left.Name)+"."+safeName(right.Kind+"-"+right.Name))
+	target := filepath.Join(s.workbenchRoot(), "inspect", "sync."+safeName(left.Kind+"-"+left.Name)+"."+safeName(right.Kind+"-"+right.Name))
 	staging, err := s.inspectStaging(target, conflict, ".sync-")
 	if err != nil {
 		return Result{}, err
@@ -335,7 +335,7 @@ func (s Service) inspectStaging(target, conflict, prefix string) (string, error)
 	if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
 		return "", err
 	}
-	return os.MkdirTemp(s.CookbookRoot, prefix)
+	return os.MkdirTemp(s.workbenchRoot(), prefix)
 }
 func writeArtifacts(root string, artifacts map[string][]byte) error {
 	for name, data := range artifacts {

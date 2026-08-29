@@ -83,7 +83,7 @@ implementation contract without losing their value as readable Knowledge.
 Reconsider this direction only after several implementations can be compared
 against the same stable conceptual and behavioral boundaries.
 
-## Package-manager distribution and CTK Workspace
+## Package-manager distribution
 
 CTK is implemented as a self-contained Go executable and produces versioned
 macOS and Windows Release Artifacts with checksums. The remaining distribution
@@ -93,83 +93,21 @@ candidate is publication through package managers such as:
 - Scoop
 - WinGet
 
-This direction includes signing, notarization, upgrade and rollback policy, and
-the boundary between an installed binary and the CTK Workspace. Alternative
-language implementations are not required for this candidate.
+This candidate does not reopen Workspace ownership or Direct Launcher
+independence. Those boundaries are already defined by the
+[Workspace Concept API](../integration/integration.workspace.md),
+[Workspace integration rationale](../design-note/design-note.platform-definition-scope.md),
+and [Go Distribution Contract](../../go/doc/contract/contract.distribution.md).
 
-### Current Workspace resolution
+The remaining candidate is the publication and maintenance mechanism itself:
 
-The Go implementation can produce a repository-local `bin/ctk` and macOS and
-Windows Release Artifacts. It currently resolves the Workspace in this order:
+- Homebrew Tap, Scoop Bucket, and possible WinGet package ownership
+- signing, macOS notarization, and Windows trust presentation
+- checksum publication and verification through package-manager workflows
+- upgrade, rollback, and version-retention policy
 
-```text
-CTK_HOME
-    ↓
-current directory or its ancestors
-    ↓
-repository-local executable position
-```
-
-This is sufficient for current development and manual distribution. A package
-manager would separate the binary from CTK state, requiring the relationship
-between the CLI and Workspace to be observed again.
-
-### Current package and Workspace boundary
-
-- Package managers install the binary and compiled Built-in Platform
-  definitions, not user Workspace state.
-- One invocation resolves one Workspace through the current `CTK_HOME` and
-  discovery behavior; CTK does not need a user-global active-Workspace
-  selector.
-- Workspace integration configuration belongs under `CTK_HOME/.config`, not in
-  a package-manager prefix or OS user-global configuration.
-- An optional Workspace config may relocate static Cookbook Source and the Dist
-  root. Workbench Draft and Inspect output remains under
-  `CTK_HOME/cookbook`.
-- Archive and Extension Pool locations remain Workspace-owned until a concrete
-  sharing requirement appears.
-- A dedicated `ctk init` command is not required merely to create default
-  directories or print a template.
-
-### Remaining package-manager questions
-
-- Must Direct Launchers remain stable after Homebrew or Scoop updates the
-  binary?
-- Should generated Direct Launchers continue to depend only on their Dist
-  rather than on a Workspace?
-- Which signing, macOS notarization, checksum, upgrade, and rollback concerns
-  belong to CTK distribution responsibility?
-
-### Platform scope
-
-Platform expansion remains inside the VS Code ecosystem. CTK does not keep a
-selectable Runtime Adapter open for an imagined non-VS Code-family IDE. The
-rationale is preserved in
-[Why CTK Keeps Platform Inside the VS Code Ecosystem](../design-note/design-note.vscode-ecosystem-scope.md).
-
-### Current direction
-
-Keep the current simple Workspace for now:
-
-```text
-CTK Workspace
-├── .config/
-├── cookbook/
-│   ├── draft/
-│   └── inspect/
-├── dist/
-├── archive/
-└── .vsix/
-```
-
-Static `recipe/` and `ingredient/` Source may be resolved from an independently
-versioned Cookbook root. Do not make every other location configurable in
-advance. Use observations from actual package-manager distribution or concrete
-storage pressure to promote only necessary boundaries into a Contract or
-Configuration.
-
-This is a Future theme for testing current location assumptions, not a current
-specification or roadmap.
+Reconsider it when CTK is ready to maintain one concrete package channel and
+validate installation, upgrade, rollback, and removal on its target OS.
 
 ## Shared Recipes
 

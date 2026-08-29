@@ -114,16 +114,16 @@ bash/scripts/  Bash reference source
 Create versioned macOS and Windows artifacts with checksums:
 
 ```bash
-go/release.sh v0.3.0
+go/release.sh v0.4.0
 ```
 
 The builder produces:
 
 ```text
-release/v0.3.0/
-├── ctk_v0.3.0_darwin_arm64.tar.gz
-├── ctk_v0.3.0_darwin_amd64.tar.gz
-├── ctk_v0.3.0_windows_amd64.zip
+release/v0.4.0/
+├── ctk_v0.4.0_darwin_arm64.tar.gz
+├── ctk_v0.4.0_darwin_amd64.tar.gz
+├── ctk_v0.4.0_windows_amd64.zip
 └── checksums.txt
 ```
 
@@ -150,9 +150,25 @@ CTK resolves its workspace in this order:
 2. The current directory or its ancestors.
 3. The repository-local location relative to the executable.
 
-A valid workspace contains both `cookbook/recipe` and
-`cookbook/ingredient`. This allows a Homebrew or Scoop binary to operate on
-Cookbook state without installing that state alongside the executable.
+A workspace is discoverable when it contains both `cookbook/recipe` and
+`cookbook/ingredient`, or when it contains `.config/workspace.yaml`. This
+allows a Homebrew or Scoop binary to operate on Workspace state without
+installing that state alongside the executable.
+
+The optional configuration can keep versioned Cookbook Source and generated
+Distributions in independent locations:
+
+```yaml
+paths:
+  cookbook-source: /path/to/cookbook
+  dist: /path/to/dist
+```
+
+Relative values resolve from `CTK_HOME`. Recipe and Ingredient Source moves to
+`cookbook-source`; generated `cookbook/draft` and `cookbook/inspect` remain
+under `CTK_HOME`. Archive and Extension Pool retain their Workspace-local
+defaults. See the [Go Workspace Contract](doc/contract/contract.workspace.md)
+for validation and ownership details.
 
 ## Commands
 
@@ -245,8 +261,8 @@ The operational declaration and service boundary is described in the
 
 - Optional log and Operation Report presentation modes: normal, verbose,
   quiet, and JSON.
-- Release signing, notarization, and concrete Homebrew Tap/Scoop Bucket setup.
-- Package-manager distribution questions preserved in
+- Package-manager publication, signing, notarization, upgrade, and rollback
+  questions preserved in
   [`future.candidates.md`](../doc/future/future.candidates.md).
 - Workspace-defined Platform loading preserved in
   [`future.platform-registry.md`](../doc/future/future.platform-registry.md).

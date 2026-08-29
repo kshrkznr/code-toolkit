@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -215,11 +216,11 @@ func TestSelectRuntimeSourceDetectsRecipeAndArchive(t *testing.T) {
 	os.MkdirAll(filepath.Join(root, "archive", "saved"), 0755)
 	os.WriteFile(filepath.Join(cookbook, "recipe", "sample.yaml"), []byte("name: sample\n"), 0644)
 	os.WriteFile(filepath.Join(root, "archive", "saved", "manifest.json"), []byte("{}"), 0644)
-	kind, path, err := selectRuntimeSource(root, cookbook, "sample", nil)
+	kind, path, err := selectRuntimeSource(filepath.Join(root, "archive"), cookbook, "sample", nil)
 	if err != nil || kind != "recipe" || filepath.Base(path) != "sample.yaml" {
 		t.Fatalf("Recipe source = %s %s %v", kind, path, err)
 	}
-	kind, path, err = selectRuntimeSource(root, cookbook, "saved", nil)
+	kind, path, err = selectRuntimeSource(filepath.Join(root, "archive"), cookbook, "saved", nil)
 	if err != nil || kind != "archive" || filepath.Base(path) != "saved" {
 		t.Fatalf("Archive source = %s %s %v", kind, path, err)
 	}
@@ -259,5 +260,57 @@ func TestFindProjectRootResolution(t *testing.T) {
 	fromExecutable, err := findProjectRoot("", t.TempDir(), filepath.Join(workspace, "bin", "ctk"))
 	if err != nil || fromExecutable != workspace {
 		t.Fatalf("executable root = %q, %v", fromExecutable, err)
+	}
+}
+
+func TestFindProjectRootAcceptsWorkspaceConfigurationMarker(t *testing.T) {
+	workspace := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(workspace, ".config"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(workspace, ".config", "workspace.yaml"), []byte("paths: {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := findProjectRoot("", filepath.Join(workspace, "nested"), filepath.Join(t.TempDir(), "bin", "ctk"))
+	if err != nil || got != workspace {
+		t.Fatalf("configured Workspace root = %q, %v", got, err)
+	}
+}
+
+func TestRunListUsesConfiguredCookbookAndDist(t *testing.T) {
+	workspace := t.TempDir()
+	source := t.TempDir()
+	dist := t.TempDir()
+	for _, path := range []string{filepath.Join(workspace, ".config"), filepath.Join(source, "recipe"), filepath.Join(source, "ingredient"), filepath.Join(dist, "external-dist")} {
+		if err := os.MkdirAll(path, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	config := "paths:\n  cookbook-source: " + source + "\n  dist: " + dist + "\n"
+	if err := os.WriteFile(filepath.Join(workspace, ".config", "workspace.yaml"), []byte(config), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("CTK_HOME", workspace)
+
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldStdout := os.Stdout
+	os.Stdout = writer
+	t.Cleanup(func() { os.Stdout = oldStdout })
+	if err := run([]string{"list"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	output, err := io.ReadAll(reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(output) != "external-dist\n" {
+		t.Fatalf("list output = %q", output)
 	}
 }
