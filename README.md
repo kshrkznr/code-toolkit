@@ -285,9 +285,10 @@ Primary concepts:
 
 The current macOS and Windows binaries are published on the
 [GitHub Releases page](https://github.com/kshrkznr/code-toolkit/releases/latest).
-Start from a repository checkout so the executable can discover the accompanying
-Cookbook and documentation. Download `checksums.txt` and the archive for your
-platform from the latest release Assets into a directory of your choice.
+The executable carries its version-matched documentation and can use an
+existing Workspace or initialize an optional starting point without a
+repository checkout. Download `checksums.txt` and the archive for your platform
+from the latest release Assets into a directory of your choice.
 
 ## macOS
 
@@ -325,10 +326,30 @@ Confirm the installed binary:
 ctk version
 ```
 
-Run CTK from the repository root, or set `CTK_HOME` to a CTK Workspace. The
-default Workspace contains `cookbook/recipe` and `cookbook/ingredient`; an
-optional `.config/workspace.yaml` can select an independently maintained
-Cookbook Source and Dist root.
+Run CTK from an existing Workspace root or one of its descendants, or set
+`CTK_HOME` to a CTK Workspace. A binary-only installation can optionally create
+a small starting point at an explicit path:
+
+```text
+ctk init /path/to/my-ctk
+cd /path/to/my-ctk
+```
+
+This helper is not required when a Workspace already exists. Its default
+includes an executable sample; `--exclude-sample` creates only the minimum
+`cookbook/recipe` and `cookbook/ingredient` directories. It does not persist or
+change `CTK_HOME`. An optional `.config/workspace.yaml` can select an
+independently maintained Cookbook Source and Dist root.
+
+The binary can also generate static completion scripts for package managers or
+manual installation without reading Workspace content:
+
+```text
+ctk completion bash
+ctk completion zsh
+ctk completion fish
+ctk completion powershell
+```
 
 ============================================================
 

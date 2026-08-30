@@ -162,6 +162,19 @@ A workspace is discoverable when it contains both `cookbook/recipe` and
 allows a Homebrew or Scoop binary to operate on Workspace state without
 installing that state alongside the executable.
 
+When a binary-only installation needs a new starting point, the optional
+initializer creates one at an explicit path:
+
+```text
+ctk init /path/to/my-ctk
+cd /path/to/my-ctk
+```
+
+The default includes a small executable sample. Use `--exclude-sample` to
+create only `cookbook/recipe` and `cookbook/ingredient`. Initialization does
+not select or persist `CTK_HOME`; an already configured `CTK_HOME` continues
+to take precedence over current-directory discovery.
+
 The optional configuration can keep versioned Cookbook Source and generated
 Distributions in independent locations:
 
@@ -180,6 +193,8 @@ for validation and ownership details.
 ## Commands
 
 ```text
+ctk init <path> [--exclude-sample]
+ctk completion <bash|zsh|fish|powershell>
 ctk activate [platform] [--force]
 ctk build [recipe-or-archive] [--on-conflict suffix|abort] [--keep-staging] [--force]
 ctk apply [recipe-or-archive] [dist] [--force]
@@ -198,9 +213,20 @@ ctk deactivate [platform] [--force|--force-empty]
 ctk use [dist]
 ctk launch [dist] [--] [args...]
 ctk workbench [draft|inspect] [viewpoint] [--editor command]
+ctk docs [--source <repository>] [status|nodes|resolve|toc|show|export]
 ctk select
 ctk version
 ctk help
+```
+
+Completion scripts contain static commands, subcommands, options, and closed
+option values. They do not resolve Workspace Recipes or Distributions:
+
+```text
+ctk completion bash
+ctk completion zsh
+ctk completion fish
+ctk completion powershell
 ```
 
 `ctk help` keeps its static command list available without a valid Workspace.

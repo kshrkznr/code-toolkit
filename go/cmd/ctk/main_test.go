@@ -228,6 +228,43 @@ func TestRunHelpSucceedsWithInvalidWorkspace(t *testing.T) {
 	}
 }
 
+func TestRunInitCreatesExplicitWorkspaceAndWarnsAboutDifferentCTKHome(t *testing.T) {
+	target := filepath.Join(t.TempDir(), "new-workspace")
+	t.Setenv("CTK_HOME", filepath.Join(t.TempDir(), "old-workspace"))
+	var output bytes.Buffer
+	if err := runInit(&output, []string{target, "--exclude-sample"}); err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{
+		"[initialized] " + target,
+		"[sample] excluded",
+		"Use from this Workspace:",
+		"CTK_HOME currently selects",
+		"Unset it to use current-directory discovery.",
+	} {
+		if !strings.Contains(output.String(), expected) {
+			t.Fatalf("init output does not contain %q:\n%s", expected, output.String())
+		}
+	}
+	for _, relative := range []string{"cookbook/recipe", "cookbook/ingredient"} {
+		if info, err := os.Stat(filepath.Join(target, filepath.FromSlash(relative))); err != nil || !info.IsDir() {
+			t.Fatalf("Workspace directory %s: %v", relative, err)
+		}
+	}
+}
+
+func TestRunInitDoesNotWarnWhenCTKHomeSelectsTarget(t *testing.T) {
+	target := filepath.Join(t.TempDir(), "workspace")
+	t.Setenv("CTK_HOME", target)
+	var output bytes.Buffer
+	if err := runInit(&output, []string{"--exclude-sample", target}); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(output.String(), "[note] CTK_HOME") {
+		t.Fatalf("matching CTK_HOME produced a warning:\n%s", output.String())
+	}
+}
+
 func TestDisplayHomePathDoesNotRewriteSimilarPrefix(t *testing.T) {
 	home, err := os.UserHomeDir()
 	if err != nil {
