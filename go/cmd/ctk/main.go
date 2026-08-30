@@ -473,6 +473,7 @@ func runSelfDescription(args []string) (bool, error) {
 			return true, fmt.Errorf("usage: ctk help")
 		}
 		usage()
+		writeCurrentContext(os.Stdout, observeCurrentContext())
 		return true, nil
 	case "version", "--version":
 		if len(args) != 1 {
@@ -1793,16 +1794,21 @@ func projectRoot() (string, error) {
 }
 
 func findProjectRoot(configured, workingDirectory, executable string) (string, error) {
+	root, _, err := findProjectRootWithSource(configured, workingDirectory, executable)
+	return root, err
+}
+
+func findProjectRootWithSource(configured, workingDirectory, executable string) (string, string, error) {
 	if configured != "" {
 		path, err := filepath.Abs(configured)
 		if err != nil || !isProjectRoot(path) {
-			return "", fmt.Errorf("CTK_HOME is not a CTK workspace: %s", configured)
+			return "", "CTK_HOME", fmt.Errorf("CTK_HOME is not a CTK workspace: %s", configured)
 		}
-		return path, nil
+		return path, "CTK_HOME", nil
 	}
 	for path := workingDirectory; ; path = filepath.Dir(path) {
 		if isProjectRoot(path) {
-			return path, nil
+			return path, "current directory", nil
 		}
 		parent := filepath.Dir(path)
 		if parent == path {
@@ -1811,13 +1817,109 @@ func findProjectRoot(configured, workingDirectory, executable string) (string, e
 	}
 	executableRoot := filepath.Dir(filepath.Dir(executable))
 	if isProjectRoot(executableRoot) {
-		return executableRoot, nil
+		return executableRoot, "executable-relative", nil
 	}
-	return "", fmt.Errorf("CTK workspace not found; run inside a workspace or set CTK_HOME")
+	return "", "", fmt.Errorf("CTK workspace not found; run inside a workspace or set CTK_HOME")
 }
 
 func isProjectRoot(path string) bool {
 	return ctkworkspace.HasMarker(path)
+}
+
+type currentContext struct {
+	workspacePath       string
+	workspaceSource     string
+	workspaceDiagnostic string
+	documentation       string
+	docsDiagnostic      string
+}
+
+func observeCurrentContext() currentContext {
+	var result currentContext
+	executable, executableErr := os.Executable()
+	if executableErr == nil {
+		executable, executableErr = filepath.EvalSymlinks(executable)
+	}
+	workingDirectory, workingDirectoryErr := os.Getwd()
+	if workingDirectoryErr != nil {
+		result.workspaceDiagnostic = fmt.Sprintf("resolve current directory: %v", workingDirectoryErr)
+	} else if executableErr != nil {
+		result.workspaceDiagnostic = fmt.Sprintf("resolve executable: %v", executableErr)
+	} else {
+		root, source, err := findProjectRootWithSource(os.Getenv("CTK_HOME"), workingDirectory, executable)
+		result.workspaceSource = source
+		if err != nil {
+			result.workspaceDiagnostic = err.Error()
+		} else {
+			result.workspacePath = root
+			if _, err := ctkworkspace.Load(root); err != nil {
+				result.workspaceDiagnostic = err.Error()
+			}
+		}
+	}
+
+	bundle, err := executableDocumentationBundle()
+	if err != nil {
+		result.docsDiagnostic = err.Error()
+		return result
+	}
+	status := docbundle.PackagedSourceStatus(bundle)
+	version := status.Version
+	if version == "" {
+		version = "unknown"
+	}
+	revision := status.Revision
+	if revision == "" {
+		revision = "unknown"
+	}
+	result.documentation = fmt.Sprintf("packaged %s @ %s", version, revision)
+	return result
+}
+
+func writeCurrentContext(output io.Writer, current currentContext) {
+	fmt.Fprintln(output, "\nCurrent context:")
+	workspace := "unavailable"
+	if current.workspacePath != "" {
+		workspace = displayHomePath(current.workspacePath)
+	}
+	fmt.Fprintf(output, "  Workspace:      %s\n", workspace)
+	if current.workspaceSource != "" {
+		fmt.Fprintf(output, "                  source: %s\n", current.workspaceSource)
+	}
+	if current.workspaceDiagnostic != "" {
+		fmt.Fprintf(output, "                  diagnostic: %s\n", displayHomeText(current.workspaceDiagnostic))
+	}
+	documentation := current.documentation
+	if documentation == "" {
+		documentation = "unavailable"
+	}
+	fmt.Fprintf(output, "  Documentation:  %s\n", documentation)
+	if current.docsDiagnostic != "" {
+		fmt.Fprintf(output, "                  diagnostic: %s\n", displayHomeText(current.docsDiagnostic))
+	}
+}
+
+func displayHomePath(value string) string {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return value
+	}
+	relative, err := filepath.Rel(home, value)
+	if err != nil || relative == ".." || filepath.IsAbs(relative) || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		return value
+	}
+	if relative == "." {
+		return "~"
+	}
+	return filepath.Join("~", relative)
+}
+
+func displayHomeText(value string) string {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return value
+	}
+	return strings.ReplaceAll(value, home+string(filepath.Separator), "~"+string(filepath.Separator))
 }
 
 func usage() {

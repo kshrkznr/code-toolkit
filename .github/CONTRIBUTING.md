@@ -13,3 +13,8 @@ a CTK document is difficult to discover from its identity, path, Node alias,
 title, or headings, report the question you tried to resolve. Improving that
 navigation metadata is a useful project change even when the implementation is
 already correct.
+
+CLI context and documentation-source diagnostics can include Workspace or
+repository paths outside your home directory. Review diagnostic output before
+pasting it into a public Issue. Paths below your home are shortened, but an
+organization or project name in another path is not automatically hidden.

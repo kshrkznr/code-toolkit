@@ -47,6 +47,12 @@ before Workspace discovery. Exact commands, argument validation, output, exit
 behavior, and initialization order belong in the
 [Go CLI Contract](../../go/doc/contract/contract.cli.md).
 
+Static Help can remain Workspace-independent while adding best-effort context
+about the Workspace and packaged Knowledge that the invocation would use. That
+observation reports discovery or validation failure instead of turning Help
+into a Workspace-dependent operation. It does not authorize loading Cookbook,
+Distribution, Workbench, or Host state.
+
 The navigation and source-provenance observations learned from packaged
 Knowledge are preserved by [Packaged Documentation
 Navigation](note.packaged-documentation-navigation.md). Exact Bundle and CLI

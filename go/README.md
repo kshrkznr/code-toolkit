@@ -203,6 +203,12 @@ ctk version
 ctk help
 ```
 
+`ctk help` keeps its static command list available without a valid Workspace.
+It follows that list with a best-effort summary of the selected Workspace, its
+selection source, and the packaged documentation version and revision. Use
+`ctk docs status` for full Bundle provenance or `ctk docs --source
+<repository> status` for explicit local-source comparison.
+
 `launch` forwards trailing file, directory, and Platform arguments without
 changing them. Use an empty Distribution slot or `--` to select a Distribution
 interactively while still providing launch targets:
