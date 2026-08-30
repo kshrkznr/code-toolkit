@@ -42,6 +42,11 @@ func TestRunDocsNavigatesPackagedBundle(t *testing.T) {
 		{name: "toc", args: []string{"toc", "knowledge.core.cookbook.md"}, contains: []string{"- [Concept API: Cookbook](doc/core/core.cookbook.md#concept-api-cookbook)", "  - [Responsibility](doc/core/core.cookbook.md#responsibility)"}},
 		{name: "show folded identity and duplicate heading", args: []string{"show", "knowledge.core.cookbook.md#responsibility-1"}, contains: []string{"## Responsibility", "Ingredients provide reusable building blocks"}},
 		{name: "show depth", args: []string{"show", "knowledge.core.cookbook.md#responsibility-1", "--depth", "0"}, contains: []string{"## Responsibility", "Ingredients provide reusable building blocks"}},
+		{name: "subcommand help CodeVenv reference", args: []string{"show", "Knowledge.integration.code-venv.md#platform-activation"}, contains: []string{"## Platform activation", "ctk activate code"}},
+		{name: "subcommand help Build reference", args: []string{"show", "Knowledge.core.build-lifecycle.md"}, contains: []string{"# Concept API: Build Lifecycle"}},
+		{name: "subcommand help Persistence reference", args: []string{"show", "Knowledge.core.persistence-lifecycle.md"}, contains: []string{"# Concept API: Persistence Lifecycle"}},
+		{name: "subcommand help Workbench reference", args: []string{"show", "Knowledge.contract.workbench.md#view-and-sync"}, contains: []string{"## View and Sync"}},
+		{name: "subcommand help Workspace reference", args: []string{"show", "Knowledge.integration.workspace.md"}, contains: []string{"# Concept API: Workspace"}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			var output bytes.Buffer
@@ -227,6 +232,40 @@ func TestRunHelpSucceedsWithInvalidWorkspace(t *testing.T) {
 		if !strings.Contains(string(output), expected) {
 			t.Fatalf("help does not contain %q:\n%s", expected, output)
 		}
+	}
+}
+
+func TestRunSubcommandHelpSucceedsWithInvalidWorkspace(t *testing.T) {
+	t.Setenv("CTK_HOME", filepath.Join(t.TempDir(), "missing"))
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldStdout := os.Stdout
+	os.Stdout = writer
+	t.Cleanup(func() { os.Stdout = oldStdout })
+
+	if err := run([]string{"activate", "--help"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	output, err := io.ReadAll(reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{
+		"Usage:\n  ctk activate [platform] [flags]",
+		"--force",
+		"ctk docs show Knowledge.integration.code-venv.md#platform-activation",
+	} {
+		if !strings.Contains(string(output), expected) {
+			t.Fatalf("subcommand help does not contain %q:\n%s", expected, output)
+		}
+	}
+	if strings.Contains(string(output), "Current context:") {
+		t.Fatalf("subcommand help unexpectedly contains current context:\n%s", output)
 	}
 }
 

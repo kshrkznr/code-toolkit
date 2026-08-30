@@ -87,22 +87,29 @@ Workspace](../../../doc/note/note.binary-self-description.md). Documentation
 lookup and packaged representation are defined by the [Go Documentation Bundle
 Contract](contract.documentation-bundle.md).
 
-## Workspace-independent bootstrap and completion
+## Workspace-independent bootstrap, help, and completion
 
-Two additional commands run before Workspace discovery without becoming
-lifecycle operations or extending self-description:
+Static subcommand Help and two additional commands run before Workspace
+discovery without becoming lifecycle operations:
+
+- `ctk <command> -h|--help` shows concise command syntax, options, and a static
+  `ctk docs show <reference>` hint when the command has a clear conceptual
+  owner;
 
 - `ctk init <path> [--exclude-sample]` creates the optional footing defined by
   the [Go Workspace Contract](contract.workspace.md);
 - `ctk completion <bash|zsh|fish|powershell>` writes a shell-completion script
   to standard output.
 
-Completion is static. It completes CTK commands, subcommands, options, and
-closed option values without reading Recipe, Distribution, Cookbook,
-Workbench, Archive, Extension Pool, Host, or Workspace state. Its hidden shell
-protocol follows the same Workspace-independent boundary. The generated
-scripts are suitable for direct installation by a binary package definition;
-the command does not modify shell configuration itself.
+Subcommand Help and Completion share a static command description. They do not
+read Recipe, Distribution, Cookbook, Workbench, Archive, Extension Pool, Host,
+Workspace, or the packaged Documentation Bundle. Help remains an operational
+reference; Concepts, Contracts, rationale, and lifecycle detail remain owned
+by `ctk docs`. Completion provides commands, subcommands, options, and closed
+option values. Its hidden shell protocol follows the same Workspace-independent
+boundary. The generated scripts are suitable for direct installation by a
+binary package definition; the command does not modify shell configuration
+itself.
 
 ## Interactive activation bootstrap
 

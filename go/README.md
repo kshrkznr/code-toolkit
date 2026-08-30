@@ -226,6 +226,12 @@ ctk version
 ctk help
 ```
 
+Use `ctk <command> --help` (or `-h`) for concise command syntax and options.
+Subcommand help is available without resolving a Workspace. Commands with a
+clear conceptual owner also provide a copyable `ctk docs show <reference>`
+route into the packaged Concepts and Contracts; detailed explanation remains
+owned by `ctk docs` rather than being duplicated in Help.
+
 Completion scripts contain static commands, subcommands, options, and closed
 option values. They do not resolve Workspace Recipes or Distributions:
 
