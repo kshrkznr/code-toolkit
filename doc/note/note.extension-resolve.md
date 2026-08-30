@@ -375,7 +375,8 @@ missing a locked extension artifact.
 
 Pool management has no dedicated command.
 
-Pool update may eventually use sources other than direct Marketplace download, such as a Master Runtime or an internal Repository.
+Pool update may eventually use sources other than direct Marketplace download,
+such as an internal Repository.
 
 Downloads should be written to a temporary file and renamed only after success so incomplete artifacts never become Pool entries.
 
@@ -389,7 +390,6 @@ The following remain intentionally outside the current model:
 - Pool cleanup commands
 - multiple retained versions
 - Pool distribution
-- Master Runtime
 - internal Repository synchronization
 
 They should be introduced only when actual operation requires them.
