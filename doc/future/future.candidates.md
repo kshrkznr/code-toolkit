@@ -9,28 +9,6 @@ Future documents.
 The candidates have different priorities and levels of evidence. None of them
 is an accepted responsibility or implementation commitment.
 
-## Master Runtime
-
-A Master Runtime could be an internal CTK Runtime rather than a Runtime selected
-by a user's Recipe.
-
-Possible responsibilities include:
-
-- resolving Extension versions
-- synchronizing the Extension Pool
-- collecting Extension metadata
-- maintaining a future cache
-- keeping CTK-related Extensions available in one internal environment
-- supporting Extension mode or source management
-
-The candidate remains underspecified. CTK does not yet need a separate Runtime
-identity for these operations, and existing Build, Lock, and Pool behavior
-should not be moved behind a Master Runtime without a concrete operational
-need.
-
-Reconsider it when several internal operations require one shared, managed
-Runtime whose lifecycle is clearly different from a user Runtime.
-
 ## Documentation maturity and glossary
 
 Knowledge may intentionally lag behind implementation while a concept is still
@@ -86,8 +64,12 @@ against the same stable conceptual and behavioral boundaries.
 ## Package-manager distribution
 
 CTK is implemented as a self-contained Go executable and produces versioned
-macOS and Windows Release Artifacts with checksums. The remaining distribution
-candidate is publication through package managers such as:
+macOS and Windows Release Artifacts with checksums. Its Workspace-independent
+documentation, optional Workspace initializer, and static completion generation
+remove the need for a source checkout from those package installation paths.
+
+The remaining distribution candidate is publication through package managers
+such as:
 
 - Homebrew
 - Scoop
@@ -106,8 +88,42 @@ The remaining candidate is the publication and maintenance mechanism itself:
 - checksum publication and verification through package-manager workflows
 - upgrade, rollback, and version-retention policy
 
+Executable signing may interact with the appended Documentation Bundle. That
+transport-specific question remains in the packaged documentation follow-ups
+below; it does not create a second owner for package publication.
+
 Reconsider it when CTK is ready to maintain one concrete package channel and
 validate installation, upgrade, rollback, and removal on its target OS.
+
+## Packaged documentation follow-ups
+
+The Go executable now carries version-matched Knowledge with progressive
+navigation, safe Export, reproducible Release verification, and explicit local
+source comparison. Current behavior belongs to [Packaged Documentation
+Navigation](../note/note.packaged-documentation-navigation.md) and the [Go
+Documentation Bundle Contract](../../go/doc/contract/contract.documentation-bundle.md).
+
+A few smaller candidates remain after that implementation:
+
+- Persist local-source selection only if repeated documentation development
+  shows that explicit `--source` use is material friction. Packaged Knowledge
+  must remain the obvious default, comparison state must stay visible, and the
+  owning configuration surface is still open.
+- Distinguish an excluded repository reference from an arbitrary typo only if
+  real navigation attempts repeatedly confuse those cases. Avoid packaging
+  repository-only stubs or a complete excluded-file inventory without an
+  independent need.
+- Add a concise human-oriented Bootstrap only if terminal feedback shows that
+  the current AI-readable default obscures the next action. Generate it from the
+  same sources rather than maintaining another Resolver authority.
+- Before claiming signed or notarized artifacts, validate build, Bundle append,
+  signing, packaging, installation, execution, and Bundle reopening on every
+  target. If append is incompatible with a required signing system, a versioned
+  sidecar may be reconsidered as a fallback.
+
+These are independent follow-ups rather than one new Documentation Bundle
+responsibility. [Issue #20](https://github.com/kshrkznr/code-toolkit/issues/20)
+records the completed implementation from which they remain.
 
 ## Shared Recipes
 
