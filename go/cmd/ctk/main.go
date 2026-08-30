@@ -49,6 +49,18 @@ func run(args []string) error {
 	if len(args) == 0 {
 		args = []string{"select"}
 	}
+	if ctkcompletion.IsHelpRequest(args) {
+		if args[0] == "docs" {
+			_, docsArgs, err := parseDocsSource(args[1:])
+			if err != nil {
+				return err
+			}
+			if len(docsArgs) == 1 && slices.Contains([]string{"-h", "--help"}, docsArgs[0]) {
+				return writeDocsUsage(os.Stdout)
+			}
+		}
+		return ctkcompletion.Help(os.Stdout, os.Stderr, args)
+	}
 	if handled, err := runSelfDescription(args); handled {
 		return err
 	}
@@ -2046,31 +2058,36 @@ func usage() {
 	fmt.Println(`Usage: ctk <command>
 
 Commands:
-  init <path> [--exclude-sample]
+  init <path> [options]
                       Create an optional CTK Workspace footing
   completion <bash|zsh|fish|powershell>
                       Generate a static shell-completion script
-  activate [platform] [--force]
+  activate [platform] [options]
                       Import and manage a Platform's default Runtime
-  build [recipe-or-archive] [--force]
+  build [recipe-or-archive] [options]
                       Build a new Distribution
-  apply [recipe-or-archive] [dist] [--force]
+  apply [recipe-or-archive] [dist] [options]
                       Converge an existing Distribution
-  archive [dist] [--on-conflict suffix|replace|abort]
+  archive [dist] [options]
                       Preserve an offline-reconstructable Runtime
   lock [dist]         Observe a Distribution into its Lock
-  freeze draft [dist] Generate a Freeze Draft Workbench
-  freeze commit       Commit present Draft Artifacts into the Cookbook
-  view [source]       Auto-detect and view a Distribution, Recipe, or Ingredient
-  view dist [dist]    View a Distribution Inventory explicitly
-  view recipe [recipe]
+  freeze draft [dist] [options]
+                      Generate a Freeze Draft Workbench
+  freeze commit [options]
+                      Commit present Draft Artifacts into the Cookbook
+  view [source] [options]
+                      Auto-detect and view a Distribution, Recipe, or Ingredient
+  view dist [dist] [options]
+                      View a Distribution Inventory explicitly
+  view recipe [recipe] [options]
                       View a resolved Recipe Inventory explicitly
-  view ingredient [all|layer|layer.name]
+  view ingredient [all|layer|layer.name] [options]
                       View all, one layer, or one Ingredient explicitly
-  sync [left] [right] Compare Distribution or Recipe completed states
+  sync [left] [right] [options]
+                      Compare Distribution or Recipe completed states
   list                List Distributions
   current [platform]  Show selected Runtime(s)
-  deactivate [platform] [--force|--force-empty]
+  deactivate [platform] [options]
                       Restore a Platform's imported default Runtime
   use [dist]          Select a Runtime for its active Platform
   launch [dist] [--] [args...]

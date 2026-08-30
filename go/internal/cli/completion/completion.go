@@ -1,11 +1,12 @@
-// Package completion provides CTK's static shell-completion surface. It uses
-// Cobra only as a completion generator; normal CTK command dispatch remains
+// Package completion provides CTK's static command-description surface for
+// subcommand help and shell completion. Normal CTK command dispatch remains
 // owned by cmd/ctk.
 package completion
 
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -41,58 +42,97 @@ func Complete(output, diagnostics io.Writer, args []string) error {
 	return err
 }
 
+// IsHelpRequest reports whether args request help for a subcommand. Arguments
+// after -- belong to the launched Platform and are not CTK help requests.
+func IsHelpRequest(args []string) bool {
+	if len(args) < 2 {
+		return false
+	}
+	for _, arg := range args[1:] {
+		if arg == "--" {
+			return false
+		}
+		if arg == "-h" || arg == "--help" {
+			return true
+		}
+	}
+	return false
+}
+
+// Help renders static subcommand help without resolving a CTK Workspace or
+// loading the packaged Documentation Bundle.
+func Help(output, diagnostics io.Writer, args []string) error {
+	root := commandTree()
+	root.SetArgs(args)
+	root.SetOut(output)
+	root.SetErr(diagnostics)
+	root.SilenceErrors = true
+	root.SilenceUsage = true
+	_, err := root.ExecuteC()
+	return err
+}
+
 func commandTree() *cobra.Command {
 	root := node("ctk", "CTK Cookbook and Runtime integration")
 	root.CompletionOptions.DisableDefaultCmd = true
 
-	activate := node("activate [platform]", "Import and manage a Platform's default Runtime")
+	activate := documentedNode(
+		"activate [platform]",
+		"Import and manage a Platform's default Runtime",
+		"When platform is omitted, CTK selects an available Platform interactively.",
+		"Knowledge.integration.code-venv.md#platform-activation",
+	)
 	activate.Flags().Bool("force", false, "continue when the Platform is running")
 
-	build := node("build [recipe-or-archive]", "Build a new Distribution")
+	build := documentedNode(
+		"build [recipe-or-archive]",
+		"Build a new Distribution",
+		"When the source is omitted, CTK selects a Recipe or Archive interactively.",
+		"Knowledge.core.build-lifecycle.md",
+	)
 	build.Flags().Bool("force", false, "replace conflicting output")
 	build.Flags().Bool("keep-staging", false, "retain staging output")
 	choiceFlag(build, "on-conflict", []string{"suffix", "abort"})
 
-	apply := node("apply [recipe-or-archive] [dist]", "Converge an existing Distribution")
+	apply := documentedNode("apply [recipe-or-archive] [dist]", "Converge an existing Distribution", "", "Knowledge.core.build-lifecycle.md")
 	apply.Flags().Bool("force", false, "continue when the Platform is running")
 
-	archive := node("archive [dist]", "Preserve an offline-reconstructable Runtime")
+	archive := documentedNode("archive [dist]", "Preserve an offline-reconstructable Runtime", "", "Knowledge.core.persistence-lifecycle.md")
 	choiceFlag(archive, "on-conflict", []string{"suffix", "replace", "abort"})
 
-	lock := node("lock [dist]", "Observe a Distribution into its Lock")
+	lock := documentedNode("lock [dist]", "Observe a Distribution into its Lock", "", "Knowledge.core.persistence-lifecycle.md")
 
-	freeze := node("freeze", "Generate or commit a Freeze Draft")
-	freezeDraft := node("draft [dist]", "Generate a Freeze Draft Workbench")
+	freeze := documentedNode("freeze", "Generate or commit a Freeze Draft", "Choose draft or commit explicitly.", "Knowledge.contract.workbench.md")
+	freezeDraft := documentedNode("draft [dist]", "Generate a Freeze Draft Workbench", "", "Knowledge.contract.workbench.md")
 	choiceFlag(freezeDraft, "on-conflict", []string{"abort", "replace"})
-	freezeCommit := node("commit", "Commit present Draft Artifacts into the Cookbook")
+	freezeCommit := documentedNode("commit", "Commit present Draft Artifacts into the Cookbook", "", "Knowledge.contract.workbench.md#freeze-commit-boundary")
 	freezeCommit.Flags().Bool("force", false, "replace conflicting Cookbook content")
 	freeze.AddCommand(freezeDraft, freezeCommit)
 
-	view := node("view [source]", "View a Distribution, Recipe, or Ingredient")
+	view := documentedNode("view [source]", "View a Distribution, Recipe, or Ingredient", "", "Knowledge.contract.workbench.md#view-and-sync")
 	choiceFlag(view, "on-conflict", []string{"abort", "replace"})
 	for _, child := range []*cobra.Command{
-		node("dist [dist]", "View a Distribution Inventory"),
-		node("recipe [recipe]", "View a resolved Recipe Inventory"),
-		node("ingredient [all|layer|layer.name]", "View Ingredient content"),
+		documentedNode("dist [dist]", "View a Distribution Inventory", "", "Knowledge.contract.workbench.md#view-and-sync"),
+		documentedNode("recipe [recipe]", "View a resolved Recipe Inventory", "", "Knowledge.contract.workbench.md#view-and-sync"),
+		documentedNode("ingredient [all|layer|layer.name]", "View Ingredient content", "", "Knowledge.contract.workbench.md#view-and-sync"),
 	} {
 		choiceFlag(child, "on-conflict", []string{"abort", "replace"})
 		view.AddCommand(child)
 	}
 
-	syncCommand := node("sync [left] [right]", "Compare Distribution or Recipe completed states")
+	syncCommand := documentedNode("sync [left] [right]", "Compare Distribution or Recipe completed states", "", "Knowledge.contract.workbench.md#view-and-sync")
 	choiceFlag(syncCommand, "on-conflict", []string{"abort", "replace"})
 
-	deactivate := node("deactivate [platform]", "Restore a Platform's imported default Runtime")
+	deactivate := documentedNode("deactivate [platform]", "Restore a Platform's imported default Runtime", "", "Knowledge.integration.code-venv.md#deactivation")
 	deactivate.Flags().Bool("force", false, "continue when the Platform is running")
 	deactivate.Flags().Bool("force-empty", false, "restore an empty Runtime when origin is unavailable")
 
-	launch := node("launch [dist] -- [args...]", "Temporarily launch a Distribution")
+	launch := documentedNode("launch [dist] -- [args...]", "Temporarily launch a Distribution", "Arguments after -- are forwarded to the Platform command.", "Knowledge.integration.code-venv.md#launch")
 
-	workbench := node("workbench", "Open a Draft or Inspect Workbench")
-	workbenchDraft := node("draft", "Open the Draft Workbench")
-	workbenchInspect := node("inspect [viewpoint]", "Open an Inspect Workbench")
-	workbenchDraft.Flags().String("editor", "", "editor command")
-	workbenchInspect.Flags().String("editor", "", "editor command")
+	workbench := documentedNode("workbench [draft|inspect] [viewpoint]", "Open a Draft or Inspect Workbench", "Choose draft or inspect explicitly, or omit it to select interactively.", "Knowledge.contract.workbench.md")
+	workbenchDraft := documentedNode("draft", "Open the Draft Workbench", "", "Knowledge.contract.workbench.md")
+	workbenchInspect := documentedNode("inspect [viewpoint]", "Open an Inspect Workbench", "", "Knowledge.contract.workbench.md")
+	workbench.PersistentFlags().String("editor", "", "editor command")
 	workbench.AddCommand(workbenchDraft, workbenchInspect)
 
 	docs := node("docs", "Navigate documentation packaged with this binary")
@@ -109,7 +149,7 @@ func commandTree() *cobra.Command {
 		node("export <directory>", "Export packaged documentation"),
 	)
 
-	initCommand := node("init <path>", "Create an optional CTK Workspace footing")
+	initCommand := documentedNode("init <path>", "Create an optional CTK Workspace footing", "", "Knowledge.integration.workspace.md")
 	initCommand.Flags().Bool("exclude-sample", false, "create only the minimum Workspace directories")
 	completionCommand := node("completion <shell>", "Generate a static shell-completion script")
 	completionCommand.ValidArgs = append([]string(nil), shells...)
@@ -117,9 +157,9 @@ func commandTree() *cobra.Command {
 	root.AddCommand(
 		activate, build, apply, archive, lock, freeze, view, syncCommand,
 		node("list", "List Distributions"),
-		node("current [platform]", "Show selected Runtime(s)"),
+		documentedNode("current [platform]", "Show selected Runtime(s)", "", "Knowledge.integration.code-venv.md#runtime-selection"),
 		deactivate,
-		node("use [dist]", "Select a Runtime for its active Platform"),
+		documentedNode("use [dist]", "Select a Runtime for its active Platform", "", "Knowledge.integration.code-venv.md#runtime-selection"),
 		launch, workbench, docs,
 		node("select", "Select a command interactively"),
 		node("version", "Show binary version and build provenance"),
@@ -127,6 +167,17 @@ func commandTree() *cobra.Command {
 		initCommand, completionCommand,
 	)
 	return root
+}
+
+func documentedNode(use, description, detail, reference string) *cobra.Command {
+	command := node(use, description)
+	sections := []string{description}
+	if detail != "" {
+		sections = append(sections, detail)
+	}
+	sections = append(sections, "Related documentation:\n  ctk docs show "+reference)
+	command.Long = strings.Join(sections, "\n\n")
+	return command
 }
 
 func node(use, description string) *cobra.Command {
@@ -140,7 +191,7 @@ func node(use, description string) *cobra.Command {
 }
 
 func choiceFlag(command *cobra.Command, name string, values []string) {
-	command.Flags().String(name, "", "conflict policy")
+	command.Flags().String(name, "", "conflict policy ("+strings.Join(values, "|")+")")
 	_ = command.RegisterFlagCompletionFunc(name, func(*cobra.Command, []string, string) ([]cobra.Completion, cobra.ShellCompDirective) {
 		result := make([]cobra.Completion, len(values))
 		for index, value := range values {
