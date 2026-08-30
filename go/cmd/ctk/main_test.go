@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/kshrkznr/code-toolkit/go/internal/cli/selector"
 	"github.com/kshrkznr/code-toolkit/go/internal/docbundle"
 	"github.com/kshrkznr/code-toolkit/go/internal/recipe"
 )
@@ -516,32 +518,130 @@ func TestFindProjectRootResolution(t *testing.T) {
 		}
 	}
 
-	fromWorkingTree, err := findProjectRoot("", filepath.Join(workspace, "dist", "sample"), filepath.Join(t.TempDir(), "bin", "ctk"))
+	fromWorkingTree, err := findProjectRoot("", filepath.Join(workspace, "dist", "sample"))
 	if err != nil || fromWorkingTree != workspace {
 		t.Fatalf("working tree root = %q, %v", fromWorkingTree, err)
 	}
 
-	fromConfigured, err := findProjectRoot(workspace, t.TempDir(), filepath.Join(t.TempDir(), "bin", "ctk"))
+	fromConfigured, err := findProjectRoot(workspace, t.TempDir())
 	if err != nil || fromConfigured != workspace {
 		t.Fatalf("configured root = %q, %v", fromConfigured, err)
 	}
 
-	fromExecutable, err := findProjectRoot("", t.TempDir(), filepath.Join(workspace, "bin", "ctk"))
-	if err != nil || fromExecutable != workspace {
-		t.Fatalf("executable root = %q, %v", fromExecutable, err)
+	if _, err := findProjectRoot("", t.TempDir()); !errors.Is(err, errWorkspaceNotFound) || !strings.Contains(err.Error(), "ctk init <path>") {
+		t.Fatalf("missing Workspace error = %v", err)
 	}
 
-	_, source, err := findProjectRootWithSource(workspace, t.TempDir(), filepath.Join(t.TempDir(), "bin", "ctk"))
+	_, source, err := findProjectRootWithSource(workspace, t.TempDir())
 	if err != nil || source != "CTK_HOME" {
 		t.Fatalf("configured source = %q, %v", source, err)
 	}
-	_, source, err = findProjectRootWithSource("", filepath.Join(workspace, "dist", "sample"), filepath.Join(t.TempDir(), "bin", "ctk"))
+	_, source, err = findProjectRootWithSource("", filepath.Join(workspace, "dist", "sample"))
 	if err != nil || source != "current directory" {
 		t.Fatalf("working-directory source = %q, %v", source, err)
 	}
-	_, source, err = findProjectRootWithSource("", t.TempDir(), filepath.Join(workspace, "bin", "ctk"))
-	if err != nil || source != "executable-relative" {
-		t.Fatalf("executable source = %q, %v", source, err)
+}
+
+type workspaceInputFunc func(title, initial string) (string, error)
+
+func (f workspaceInputFunc) Input(title, initial string) (string, error) {
+	return f(title, initial)
+}
+
+func TestBootstrapActivationWorkspaceCreatesMinimumFooting(t *testing.T) {
+	target := filepath.Join(t.TempDir(), "chosen-ctk")
+	var output strings.Builder
+	root, err := bootstrapActivationWorkspace(workspaceInputFunc(func(title, initial string) (string, error) {
+		if title != "Workspace path" || initial != defaultActivationWorkspace {
+			t.Fatalf("prompt = %q, %q", title, initial)
+		}
+		return target, nil
+	}), &output)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if root != target || output.String() != "[initialized] "+target+"\nFor later commands, run within this Workspace or set CTK_HOME to it.\n" {
+		t.Fatalf("bootstrap = %q, output %q", root, output.String())
+	}
+	for _, relative := range []string{"cookbook/recipe", "cookbook/ingredient"} {
+		if info, err := os.Stat(filepath.Join(root, filepath.FromSlash(relative))); err != nil || !info.IsDir() {
+			t.Fatalf("minimum Workspace directory %s: %v", relative, err)
+		}
+	}
+	if matches, err := filepath.Glob(filepath.Join(root, "cookbook", "recipe", "*")); err != nil || len(matches) != 0 {
+		t.Fatalf("activation bootstrap Recipe files = %v, %v", matches, err)
+	}
+}
+
+func TestBootstrapActivationWorkspaceAcceptsExistingWorkspace(t *testing.T) {
+	target := t.TempDir()
+	for _, relative := range []string{"cookbook/recipe", "cookbook/ingredient"} {
+		if err := os.MkdirAll(filepath.Join(target, filepath.FromSlash(relative)), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var output strings.Builder
+	root, err := bootstrapActivationWorkspace(workspaceInputFunc(func(string, string) (string, error) {
+		return target, nil
+	}), &output)
+	if err != nil || root != target {
+		t.Fatalf("existing Workspace bootstrap = %q, %v", root, err)
+	}
+	wantOutput := "[selected] " + target + "\nFor later commands, run within this Workspace or set CTK_HOME to it.\n"
+	if output.String() != wantOutput {
+		t.Fatalf("existing Workspace output = %q", output.String())
+	}
+}
+
+func TestBootstrapActivationWorkspaceCancellationDoesNotWrite(t *testing.T) {
+	target := filepath.Join(t.TempDir(), "not-created")
+	var output strings.Builder
+	_, err := bootstrapActivationWorkspace(workspaceInputFunc(func(string, string) (string, error) {
+		return target, selector.ErrCancelled
+	}), &output)
+	if !errors.Is(err, selector.ErrCancelled) {
+		t.Fatalf("bootstrap error = %v", err)
+	}
+	if _, err := os.Stat(target); !os.IsNotExist(err) {
+		t.Fatalf("cancelled bootstrap wrote target: %v", err)
+	}
+	if output.Len() != 0 {
+		t.Fatalf("cancelled bootstrap output = %q", output.String())
+	}
+}
+
+func TestExpandHomePath(t *testing.T) {
+	home := filepath.Join(string(filepath.Separator), "users", "sample")
+	got, err := expandHomePath(filepath.Join("~", "ctk"), home)
+	if err != nil || got != filepath.Join(home, "ctk") {
+		t.Fatalf("expandHomePath() = %q, %v", got, err)
+	}
+	if _, err := expandHomePath("~another/ctk", home); err == nil {
+		t.Fatal("expandHomePath() accepted another user's home shorthand")
+	}
+}
+
+func TestShouldBootstrapActivation(t *testing.T) {
+	if !shouldBootstrapActivation([]string{"activate"}, "", true, errWorkspaceNotFound) {
+		t.Fatal("interactive activation did not bootstrap")
+	}
+	for _, test := range []struct {
+		name        string
+		args        []string
+		configured  string
+		interactive bool
+		err         error
+	}{
+		{name: "explicit CTK_HOME", args: []string{"activate"}, configured: "/invalid", interactive: true, err: errWorkspaceNotFound},
+		{name: "non-interactive", args: []string{"activate"}, interactive: false, err: errWorkspaceNotFound},
+		{name: "other command", args: []string{"list"}, interactive: true, err: errWorkspaceNotFound},
+		{name: "other error", args: []string{"activate"}, interactive: true, err: errors.New("working directory")},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if shouldBootstrapActivation(test.args, test.configured, test.interactive, test.err) {
+				t.Fatal("unexpected bootstrap")
+			}
+		})
 	}
 }
 
@@ -554,7 +654,7 @@ func TestFindProjectRootAcceptsWorkspaceConfigurationMarker(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got, err := findProjectRoot("", filepath.Join(workspace, "nested"), filepath.Join(t.TempDir(), "bin", "ctk"))
+	got, err := findProjectRoot("", filepath.Join(workspace, "nested"))
 	if err != nil || got != workspace {
 		t.Fatalf("configured Workspace root = %q, %v", got, err)
 	}

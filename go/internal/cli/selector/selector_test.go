@@ -49,3 +49,20 @@ func TestSelectCandidateRules(t *testing.T) {
 		}
 	})
 }
+
+func TestInputUsesEditableInitialValue(t *testing.T) {
+	var gotTitle, gotInitial string
+	s := &Native{read: func(title, initial string) (string, error) {
+		gotTitle = title
+		gotInitial = initial
+		return "~/another-ctk", nil
+	}}
+
+	got, err := s.Input("Workspace path", "~/ctk")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "~/another-ctk" || gotTitle != "Workspace path" || gotInitial != "~/ctk" {
+		t.Fatalf("Input() = %q, title=%q initial=%q", got, gotTitle, gotInitial)
+	}
+}

@@ -53,7 +53,11 @@ func run(args []string) error {
 		return err
 	}
 
+	nativeSelector := selector.New()
 	root, err := projectRoot()
+	if shouldBootstrapActivation(args, os.Getenv("CTK_HOME"), isTerminal(), err) {
+		root, err = bootstrapActivationWorkspace(nativeSelector, os.Stdout)
+	}
 	if err != nil {
 		return err
 	}
@@ -66,7 +70,6 @@ func run(args []string) error {
 	workbenchDir := paths.Workbench
 	archiveDir := paths.Archive
 	poolDir := paths.Pool
-	nativeSelector := selector.New()
 	service := lifecycleService(poolDir, cookbookDir, nativeSelector)
 
 	switch args[0] {
@@ -1834,27 +1837,86 @@ func exitCode(err error) int {
 }
 
 func projectRoot() (string, error) {
-	executable, err := os.Executable()
-	if err != nil {
-		return "", fmt.Errorf("resolve executable: %w", err)
-	}
-	executable, err = filepath.EvalSymlinks(executable)
-	if err != nil {
-		return "", fmt.Errorf("resolve executable symlinks: %w", err)
-	}
 	workingDirectory, err := os.Getwd()
 	if err != nil {
 		return "", fmt.Errorf("resolve working directory: %w", err)
 	}
-	return findProjectRoot(os.Getenv("CTK_HOME"), workingDirectory, executable)
+	return findProjectRoot(os.Getenv("CTK_HOME"), workingDirectory)
 }
 
-func findProjectRoot(configured, workingDirectory, executable string) (string, error) {
-	root, _, err := findProjectRootWithSource(configured, workingDirectory, executable)
+var errWorkspaceNotFound = errors.New("CTK Workspace not found")
+
+const defaultActivationWorkspace = "~/ctk"
+
+type workspacePathInput interface {
+	Input(title, initial string) (string, error)
+}
+
+func shouldBootstrapActivation(args []string, configured string, interactive bool, discoveryErr error) bool {
+	return len(args) > 0 && args[0] == "activate" && configured == "" && interactive && errors.Is(discoveryErr, errWorkspaceNotFound)
+}
+
+func bootstrapActivationWorkspace(input workspacePathInput, output io.Writer) (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("resolve home directory for Workspace bootstrap: %w", err)
+	}
+	target, err := input.Input("Workspace path", defaultActivationWorkspace)
+	if err != nil {
+		return "", err
+	}
+	target, err = expandHomePath(target, home)
+	if err != nil {
+		return "", err
+	}
+	target, err = filepath.Abs(target)
+	if err != nil {
+		return "", fmt.Errorf("resolve Workspace path %s: %w", target, err)
+	}
+	if isProjectRoot(target) {
+		if _, err := ctkworkspace.Load(target); err != nil {
+			return "", err
+		}
+		if _, err := fmt.Fprintf(output, "[selected] %s\nFor later commands, run within this Workspace or set CTK_HOME to it.\n", target); err != nil {
+			return "", err
+		}
+		return target, nil
+	}
+	result, err := workspaceinit.Initialize(target, workspaceinit.Options{})
+	if err != nil {
+		return "", err
+	}
+	if _, err := ctkworkspace.Load(result.Path); err != nil {
+		return "", err
+	}
+	if _, err := fmt.Fprintf(output, "[initialized] %s\nFor later commands, run within this Workspace or set CTK_HOME to it.\n", result.Path); err != nil {
+		return "", err
+	}
+	return result.Path, nil
+}
+
+func expandHomePath(path, home string) (string, error) {
+	path = strings.TrimSpace(path)
+	if path == "~" {
+		return home, nil
+	}
+	if strings.HasPrefix(path, "~/") || strings.HasPrefix(path, `~\`) {
+		relative := path[2:]
+		relative = strings.ReplaceAll(relative, `\`, "/")
+		return filepath.Join(home, filepath.FromSlash(relative)), nil
+	}
+	if strings.HasPrefix(path, "~") {
+		return "", fmt.Errorf("Workspace path supports only ~ or ~/... home shorthand: %s", path)
+	}
+	return path, nil
+}
+
+func findProjectRoot(configured, workingDirectory string) (string, error) {
+	root, _, err := findProjectRootWithSource(configured, workingDirectory)
 	return root, err
 }
 
-func findProjectRootWithSource(configured, workingDirectory, executable string) (string, string, error) {
+func findProjectRootWithSource(configured, workingDirectory string) (string, string, error) {
 	if configured != "" {
 		path, err := filepath.Abs(configured)
 		if err != nil || !isProjectRoot(path) {
@@ -1871,11 +1933,7 @@ func findProjectRootWithSource(configured, workingDirectory, executable string) 
 			break
 		}
 	}
-	executableRoot := filepath.Dir(filepath.Dir(executable))
-	if isProjectRoot(executableRoot) {
-		return executableRoot, "executable-relative", nil
-	}
-	return "", "", fmt.Errorf("CTK workspace not found; run inside a workspace or set CTK_HOME")
+	return "", "", fmt.Errorf("%w; run inside a Workspace, set CTK_HOME, or run ctk init <path>", errWorkspaceNotFound)
 }
 
 func isProjectRoot(path string) bool {
@@ -1892,17 +1950,11 @@ type currentContext struct {
 
 func observeCurrentContext() currentContext {
 	var result currentContext
-	executable, executableErr := os.Executable()
-	if executableErr == nil {
-		executable, executableErr = filepath.EvalSymlinks(executable)
-	}
 	workingDirectory, workingDirectoryErr := os.Getwd()
 	if workingDirectoryErr != nil {
 		result.workspaceDiagnostic = fmt.Sprintf("resolve current directory: %v", workingDirectoryErr)
-	} else if executableErr != nil {
-		result.workspaceDiagnostic = fmt.Sprintf("resolve executable: %v", executableErr)
 	} else {
-		root, source, err := findProjectRootWithSource(os.Getenv("CTK_HOME"), workingDirectory, executable)
+		root, source, err := findProjectRootWithSource(os.Getenv("CTK_HOME"), workingDirectory)
 		result.workspaceSource = source
 		if err != nil {
 			result.workspaceDiagnostic = err.Error()

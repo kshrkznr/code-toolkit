@@ -58,8 +58,8 @@ errors also occur without requiring a Workspace.
 `ctk help` prints static command help first, then a concise best-effort summary
 of the context the current invocation would use. It reports:
 
-- the selected Workspace path and whether selection came from `CTK_HOME`, the
-  current-directory ancestry, or the executable-relative fallback;
+- the selected Workspace path and whether selection came from `CTK_HOME` or
+  current-directory ancestry;
 - a Workspace discovery or configuration diagnostic when selection or
   validation fails;
 - the version and revision of the packaged Documentation Bundle, or a
@@ -103,6 +103,19 @@ Workbench, Archive, Extension Pool, Host, or Workspace state. Its hidden shell
 protocol follows the same Workspace-independent boundary. The generated
 scripts are suitable for direct installation by a binary package definition;
 the command does not modify shell configuration itself.
+
+## Interactive activation bootstrap
+
+`ctk activate` remains a Workspace-dependent lifecycle command. When its
+normal discovery finds no Workspace, an interactive invocation with no
+explicit `CTK_HOME` may prompt for a path, initialize the minimum Workspace
+footing, validate it, and then resume normal activation. This guided path is
+defined by the [Go Workspace Contract](contract.workspace.md).
+
+The prompt runs only after discovery has reported that no Workspace exists. It
+does not recover from an invalid explicit `CTK_HOME`, and it does not run in a
+non-interactive invocation. Escape returns the standard CLI cancellation
+result without creating Workspace or Host content.
 
 ## Explicit collision behavior
 

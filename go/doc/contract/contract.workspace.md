@@ -12,8 +12,7 @@ the Go implementation.
 Go resolves a Workspace in this order:
 
 1. `CTK_HOME`, when explicitly configured;
-2. the current directory or its ancestors;
-3. the repository-local location relative to the executable.
+2. the current directory or its ancestors.
 
 A Workspace is discoverable when it contains either:
 
@@ -59,6 +58,30 @@ Go validates Workspace configuration before dispatching a command, including a
 command whose later operation would otherwise be read-only. This keeps one
 invocation on one inspected path model and prevents Host mutation under an
 invalid Workspace.
+
+## Activation bootstrap
+
+When interactive `ctk activate` does not discover a Workspace and `CTK_HOME`
+is not configured, Go prompts for a Workspace path before activation. The
+editable suggestion is `~/ctk`: Enter accepts it, another path replaces it,
+and Escape cancels without writing.
+
+After path confirmation, Go creates only the minimum footing and continues the
+requested activation in the same invocation. Activation bootstrap does not
+write the executable sample. The imported `origin.<platform>` Distribution and
+subsequent Freeze workflow provide the starting point for that Workspace.
+
+An explicitly configured but invalid `CTK_HOME` is reported rather than
+replaced or initialized. Non-interactive activation and other
+Workspace-dependent commands do not create a Workspace implicitly; they report
+how to run within a Workspace, set `CTK_HOME`, or use `ctk init <path>`.
+
+The suggested path is a visible, user-owned Workspace location. It is not a
+user-global active-Workspace selector, and CTK does not select it automatically
+on later invocations outside that Workspace. The user may work below the new
+Workspace or configure `CTK_HOME` for later discovery. Bootstrap output states
+that boundary so a successful first activation does not imply persisted
+selection.
 
 ## Optional initialization
 

@@ -16,11 +16,12 @@ type Selector interface {
 }
 
 type Native struct {
-	run func(title string, candidates []string) (string, error)
+	run  func(title string, candidates []string) (string, error)
+	read func(title, initial string) (string, error)
 }
 
 func New() *Native {
-	return &Native{run: runHuh}
+	return &Native{run: runHuh, read: runHuhInput}
 }
 
 func (s *Native) Select(title string, candidates []string) (string, error) {
@@ -36,6 +37,16 @@ func (s *Native) Select(title string, candidates []string) (string, error) {
 	default:
 		return s.run(title, values)
 	}
+}
+
+// Input reads one editable value. initial is accepted when the user submits
+// without changing it; Escape returns ErrCancelled.
+func (s *Native) Input(title, initial string) (string, error) {
+	read := s.read
+	if read == nil {
+		read = runHuhInput
+	}
+	return read(title, initial)
 }
 
 func compact(values []string) []string {
