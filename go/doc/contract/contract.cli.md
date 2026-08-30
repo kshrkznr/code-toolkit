@@ -87,6 +87,23 @@ Workspace](../../../doc/note/note.binary-self-description.md). Documentation
 lookup and packaged representation are defined by the [Go Documentation Bundle
 Contract](contract.documentation-bundle.md).
 
+## Workspace-independent bootstrap and completion
+
+Two additional commands run before Workspace discovery without becoming
+lifecycle operations or extending self-description:
+
+- `ctk init <path> [--exclude-sample]` creates the optional footing defined by
+  the [Go Workspace Contract](contract.workspace.md);
+- `ctk completion <bash|zsh|fish|powershell>` writes a shell-completion script
+  to standard output.
+
+Completion is static. It completes CTK commands, subcommands, options, and
+closed option values without reading Recipe, Distribution, Cookbook,
+Workbench, Archive, Extension Pool, Host, or Workspace state. Its hidden shell
+protocol follows the same Workspace-independent boundary. The generated
+scripts are suitable for direct installation by a binary package definition;
+the command does not modify shell configuration itself.
+
 ## Explicit collision behavior
 
 Go exposes conflict choices through command-specific `--on-conflict` values.

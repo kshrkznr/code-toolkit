@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"sort"
 	"strconv"
@@ -15,6 +16,7 @@ import (
 
 	ctkarchive "github.com/kshrkznr/code-toolkit/go/internal/archive"
 	"github.com/kshrkznr/code-toolkit/go/internal/buildinfo"
+	ctkcompletion "github.com/kshrkznr/code-toolkit/go/internal/cli/completion"
 	"github.com/kshrkznr/code-toolkit/go/internal/cli/selector"
 	"github.com/kshrkznr/code-toolkit/go/internal/codevenv"
 	"github.com/kshrkznr/code-toolkit/go/internal/converge"
@@ -31,6 +33,7 @@ import (
 	"github.com/kshrkznr/code-toolkit/go/internal/runtimelock"
 	"github.com/kshrkznr/code-toolkit/go/internal/workbench"
 	ctkworkspace "github.com/kshrkznr/code-toolkit/go/internal/workspace"
+	"github.com/kshrkznr/code-toolkit/go/internal/workspaceinit"
 )
 
 func main() {
@@ -468,6 +471,15 @@ func run(args []string) error {
 
 func runSelfDescription(args []string) (bool, error) {
 	switch args[0] {
+	case "init":
+		return true, runInit(os.Stdout, args[1:])
+	case "completion":
+		if len(args) != 2 {
+			return true, fmt.Errorf("usage: ctk completion <bash|zsh|fish|powershell>")
+		}
+		return true, ctkcompletion.Generate(os.Stdout, args[1])
+	case "__complete", "__completeNoDesc":
+		return true, ctkcompletion.Complete(os.Stdout, os.Stderr, args)
 	case "help", "-h", "--help":
 		if len(args) != 1 {
 			return true, fmt.Errorf("usage: ctk help")
@@ -511,6 +523,50 @@ func runSelfDescription(args []string) (bool, error) {
 	default:
 		return false, nil
 	}
+}
+
+func runInit(output io.Writer, args []string) error {
+	includeSample := true
+	target := ""
+	for _, argument := range args {
+		switch argument {
+		case "--exclude-sample":
+			includeSample = false
+		default:
+			if strings.HasPrefix(argument, "-") || target != "" {
+				return fmt.Errorf("usage: ctk init <path> [--exclude-sample]")
+			}
+			target = argument
+		}
+	}
+	if target == "" {
+		return fmt.Errorf("usage: ctk init <path> [--exclude-sample]")
+	}
+	result, err := workspaceinit.Initialize(target, workspaceinit.Options{IncludeSample: includeSample})
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(output, "[initialized] %s\n", result.Path)
+	if includeSample {
+		fmt.Fprintf(output, "[sample] created=%d unchanged=%d\n", len(result.Created), len(result.Unchanged))
+	} else {
+		fmt.Fprintln(output, "[sample] excluded")
+	}
+	fmt.Fprintf(output, "\nUse from this Workspace:\n  cd %s\n  ctk <command>\n", shellQuotedPath(result.Path))
+	if configured := os.Getenv("CTK_HOME"); configured != "" {
+		configuredPath, pathErr := filepath.Abs(configured)
+		if pathErr != nil || filepath.Clean(configuredPath) != filepath.Clean(result.Path) {
+			fmt.Fprintf(output, "\n[note] CTK_HOME currently selects %s.\n       Unset it to use current-directory discovery.\n", configured)
+		}
+	}
+	return nil
+}
+
+func shellQuotedPath(path string) string {
+	if runtime.GOOS == "windows" {
+		return "'" + strings.ReplaceAll(path, "'", "''") + "'"
+	}
+	return "'" + strings.ReplaceAll(path, "'", `'"'"'`) + "'"
 }
 
 func executableDocumentationBundle() (*docbundle.Bundle, error) {
@@ -1926,6 +1982,10 @@ func usage() {
 	fmt.Println(`Usage: ctk <command>
 
 Commands:
+  init <path> [--exclude-sample]
+                      Create an optional CTK Workspace footing
+  completion <bash|zsh|fish|powershell>
+                      Generate a static shell-completion script
   activate [platform] [--force]
                       Import and manage a Platform's default Runtime
   build [recipe-or-archive] [--force]

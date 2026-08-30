@@ -60,6 +60,32 @@ command whose later operation would otherwise be read-only. This keeps one
 invocation on one inspected path model and prevents Host mutation under an
 invalid Workspace.
 
+## Optional initialization
+
+`ctk init <path>` creates a discoverable Workspace footing at an explicit
+path. It is a convenience for binary-only installation, not a required CTK
+operation or a prerequisite for using an existing Workspace.
+
+The path argument is required. Relative paths resolve from the caller's current
+directory. Initialization does not perform Workspace discovery, select the new
+Workspace for later invocations, persist or modify `CTK_HOME`, or create
+`.config/workspace.yaml`.
+
+The minimum footing contains empty `cookbook/recipe` and
+`cookbook/ingredient` directories. By default initialization also writes the
+small macOS and Windows `vscode-sample` Recipes and their Ingredients. The
+`--exclude-sample` option creates only the minimum directories.
+
+Existing directories and byte-identical sample files are retained. If any
+sample target contains different content, initialization reports all detected
+conflicts before writing sample content and does not overwrite them. There is
+no force mode.
+
+After initialization, current-directory discovery selects the new Workspace
+from its root or descendants. An existing `CTK_HOME` continues to take
+precedence. When it identifies another path, `ctk init` reports that the caller
+must unset it to use current-directory discovery.
+
 ## Non-migration boundary
 
 Go does not create a configuration file, persist `CTK_HOME`, remember previous

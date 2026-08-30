@@ -116,6 +116,13 @@ verify_native_cli() {
     (
         cd "$verification_dir"
         env -u CTK_HOME "$native_binary" version | grep -F "$VERSION" >/dev/null
+        env -u CTK_HOME "$native_binary" completion bash | grep -F "__start_ctk" >/dev/null
+        env -u CTK_HOME "$native_binary" completion zsh | grep -F "compdef _ctk ctk" >/dev/null
+        env -u CTK_HOME "$native_binary" completion fish | grep -F "complete -c ctk" >/dev/null
+        env -u CTK_HOME "$native_binary" completion powershell | grep -F "Register-ArgumentCompleter" >/dev/null
+        env -u CTK_HOME "$native_binary" init "$verification_dir/initialized" --exclude-sample >/dev/null
+        test -d "$verification_dir/initialized/cookbook/recipe"
+        test -d "$verification_dir/initialized/cookbook/ingredient"
         env -u CTK_HOME "$native_binary" docs >/dev/null
         env -u CTK_HOME "$native_binary" docs status | grep -F "source: packaged" >/dev/null
         env -u CTK_HOME "$native_binary" docs core >/dev/null

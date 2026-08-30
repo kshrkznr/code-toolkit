@@ -1,0 +1,18 @@
+# A small executable Recipe for exploring CTK.
+# Use `ctk docs core` to learn about Recipe and Ingredient concepts.
+name: vscode-sample
+os: windows
+platform: code
+runtime:
+  - common
+  - text
+  - markdown
+config:
+  dist-strategy:
+    extension-marketplace: true
+    extension-pool: reuse
+    lock-mode: refresh
+    default-profile:
+      settings: runtime
+      extensions: runtime
+      mcp: unmanaged
