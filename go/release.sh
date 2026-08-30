@@ -128,7 +128,7 @@ verify_native_cli() {
         env -u CTK_HOME "$native_binary" docs core >/dev/null
         env -u CTK_HOME "$native_binary" docs resolve "Settings Variant precedence" | grep -F "Knowledge.note.variant.md" >/dev/null
         env -u CTK_HOME "$native_binary" docs toc "Knowledge.core.cookbook.md" | grep -F "doc/core/core.cookbook.md#responsibility-1" >/dev/null
-        env -u CTK_HOME "$native_binary" docs show "Knowledge.note.leaving-ctk.md#restore-an-activated-platform-first" >/dev/null
+        env -u CTK_HOME "$native_binary" docs show "Knowledge.note.leaving-ctk.md#restore-the-normal-ide-before-uninstalling-ctk" >/dev/null
         env -u CTK_HOME "$native_binary" docs show "Knowledge.core.cookbook.md#responsibility-1" --depth -1..1 >/dev/null
         source_status="$(env -u CTK_HOME "$native_binary" docs --source "$PROJECT_ROOT" status)"
         grep -F "revision-match: match" <<<"$source_status" >/dev/null
