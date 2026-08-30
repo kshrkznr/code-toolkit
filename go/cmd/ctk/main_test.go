@@ -645,6 +645,27 @@ func TestShouldBootstrapActivation(t *testing.T) {
 	}
 }
 
+func TestParseActivationForDispatchRejectsInvalidArgumentsBeforeBootstrap(t *testing.T) {
+	t.Setenv("CTK_HOME", filepath.Join(t.TempDir(), "invalid-workspace"))
+	if err := run([]string{"activate", "code", "extra"}); err == nil || !strings.Contains(err.Error(), "usage: ctk activate") || strings.Contains(err.Error(), "CTK_HOME") {
+		t.Fatalf("run invalid activation error = %v", err)
+	}
+
+	for _, args := range [][]string{
+		{"activate", "code", "extra"},
+		{"activate", "--unknown"},
+	} {
+		if _, _, err := parseActivationForDispatch(args); err == nil || !strings.Contains(err.Error(), "usage: ctk activate") {
+			t.Fatalf("parseActivationForDispatch(%v) error = %v", args, err)
+		}
+	}
+
+	platformName, force, err := parseActivationForDispatch([]string{"activate", "code", "--force"})
+	if err != nil || platformName != "code" || !force {
+		t.Fatalf("valid activation = %q, %t, %v", platformName, force, err)
+	}
+}
+
 func TestFindProjectRootAcceptsWorkspaceConfigurationMarker(t *testing.T) {
 	workspace := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(workspace, ".config"), 0o755); err != nil {

@@ -52,6 +52,10 @@ func run(args []string) error {
 	if handled, err := runSelfDescription(args); handled {
 		return err
 	}
+	activationPlatform, activationForce, err := parseActivationForDispatch(args)
+	if err != nil {
+		return err
+	}
 
 	nativeSelector := selector.New()
 	root, err := projectRoot()
@@ -141,10 +145,7 @@ func run(args []string) error {
 		}
 		return nil
 	case "activate":
-		platformName, force, err := parsePlatformForce(args[1:], false)
-		if err != nil {
-			return fmt.Errorf("usage: ctk activate [platform] [--force]: %w", err)
-		}
+		platformName, force := activationPlatform, activationForce
 		if platformName == "" {
 			platformName, err = selectAvailablePlatform(nativeSelector)
 			if err != nil {
@@ -1721,6 +1722,17 @@ func parsePlatformForce(args []string, required bool) (string, bool, error) {
 	}
 	if required && platformName == "" {
 		return "", false, fmt.Errorf("Platform is required")
+	}
+	return platformName, force, nil
+}
+
+func parseActivationForDispatch(args []string) (string, bool, error) {
+	if len(args) == 0 || args[0] != "activate" {
+		return "", false, nil
+	}
+	platformName, force, err := parsePlatformForce(args[1:], false)
+	if err != nil {
+		return "", false, fmt.Errorf("usage: ctk activate [platform] [--force]: %w", err)
 	}
 	return platformName, force, nil
 }

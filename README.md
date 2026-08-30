@@ -313,14 +313,14 @@ and place `ctk` on `PATH`:
 
 ```bash
 cd /path/to/downloaded-assets
-shasum -a 256 ctk_v0.4.0_darwin_arm64.tar.gz
-tar -xzf ctk_v0.4.0_darwin_arm64.tar.gz
+shasum -a 256 ctk_v0.5.0_darwin_arm64.tar.gz
+tar -xzf ctk_v0.5.0_darwin_arm64.tar.gz
 mkdir -p "$HOME/.local/bin"
 install -m 0755 ctk "$HOME/.local/bin/ctk"
 ```
 
 Compare the displayed SHA-256 value with the corresponding entry in
-`checksums.txt`. Use `ctk_v0.4.0_darwin_amd64.tar.gz` instead on an Intel Mac.
+`checksums.txt`. Use `ctk_v0.5.0_darwin_amd64.tar.gz` instead on an Intel Mac.
 Add `$HOME/.local/bin` to `PATH` when it is not already available.
 
 ## Windows
@@ -330,8 +330,8 @@ From PowerShell, verify that the displayed hash matches the Windows entry in
 
 ```powershell
 Set-Location C:\path\to\downloaded-assets
-Get-FileHash .\ctk_v0.4.0_windows_amd64.zip -Algorithm SHA256
-Expand-Archive .\ctk_v0.4.0_windows_amd64.zip -DestinationPath "$env:LOCALAPPDATA\CTK\bin"
+Get-FileHash .\ctk_v0.5.0_windows_amd64.zip -Algorithm SHA256
+Expand-Archive .\ctk_v0.5.0_windows_amd64.zip -DestinationPath "$env:LOCALAPPDATA\CTK\bin"
 ```
 
 Add `%LOCALAPPDATA%\CTK\bin` to the user `PATH` when necessary.
@@ -374,6 +374,19 @@ ctk completion zsh
 ctk completion fish
 ctk completion powershell
 ```
+
+Read the version-matched Knowledge carried by the installed executable without
+a repository checkout:
+
+```text
+ctk docs
+ctk docs resolve "Workspace bootstrap"
+ctk docs export /path/to/empty-directory
+```
+
+The default command shows the Documentation Bootstrap. Resolve searches
+maintained document metadata, while Export makes the complete packaged tree
+available to ordinary full-text tools such as `rg`.
 
 ============================================================
 

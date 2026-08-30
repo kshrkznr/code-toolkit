@@ -113,7 +113,7 @@ bootstrap-template: doc/template.md.tmpl
 }
 
 func TestSubcommandsAreReservedFromNodeAliases(t *testing.T) {
-	for _, alias := range []string{"status", "resolve", "show", "toc", "export"} {
+	for _, alias := range []string{"help", "status", "nodes", "resolve", "show", "toc", "export"} {
 		if _, err := validateNodes(map[string]string{alias: "doc.md"}, map[string][]byte{"doc.md": []byte("# Document\n")}); err == nil {
 			t.Fatalf("%s was accepted as a documentation Node alias", alias)
 		}
