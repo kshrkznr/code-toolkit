@@ -53,6 +53,29 @@ These commands do not read Cookbook Source, Dist, Archive, Extension Pool,
 Workbench, or Host integration paths. Their argument validation and usage
 errors also occur without requiring a Workspace.
 
+### Help context observation
+
+`ctk help` prints static command help first, then a concise best-effort summary
+of the context the current invocation would use. It reports:
+
+- the selected Workspace path and whether selection came from `CTK_HOME`, the
+  current-directory ancestry, or the executable-relative fallback;
+- a Workspace discovery or configuration diagnostic when selection or
+  validation fails;
+- the version and revision of the packaged Documentation Bundle, or a
+  diagnostic when the executable does not carry a valid Bundle.
+
+Context observation does not load Cookbook content, Dist, Archive, Extension
+Pool, Workbench, or Host state. A missing or invalid Workspace and a missing
+Documentation Bundle do not suppress static help or change its successful exit.
+Paths below the current user's home use `~` in this concise display; paths
+outside home remain visible.
+
+Help does not discover or select a local documentation clone. Packaged
+Knowledge remains the default. Detailed packaged/local provenance and mismatch
+diagnostics remain the responsibility of `ctk docs status` and an explicit
+per-invocation `--source` selection.
+
 All lifecycle, Runtime, Cookbook, Workbench, and Workspace inspection commands
 retain the existing Workspace discovery and validation boundary. Classifying a
 new command as read-only is not sufficient to move it into self-description;

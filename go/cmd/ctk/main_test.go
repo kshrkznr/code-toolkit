@@ -176,6 +176,73 @@ func TestMaskHomePathHidesUserSpecificPrefix(t *testing.T) {
 	}
 }
 
+func TestWriteCurrentContextKeepsHelpDiagnosticsNonFatal(t *testing.T) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Skipf("home directory unavailable: %v", err)
+	}
+	var output bytes.Buffer
+	writeCurrentContext(&output, currentContext{
+		workspacePath:       filepath.Join(home, "local", "my-ctk"),
+		workspaceSource:     "CTK_HOME",
+		workspaceDiagnostic: "parse " + filepath.Join(home, "local", "my-ctk", ".config", "workspace.yaml"),
+		documentation:       "packaged v0.5.0 @ abc123",
+	})
+	for _, expected := range []string{
+		"Current context:\n",
+		"Workspace:      " + filepath.Join("~", "local", "my-ctk"),
+		"source: CTK_HOME",
+		"diagnostic: parse " + filepath.Join("~", "local", "my-ctk", ".config", "workspace.yaml"),
+		"Documentation:  packaged v0.5.0 @ abc123",
+	} {
+		if !strings.Contains(output.String(), expected) {
+			t.Fatalf("context does not contain %q:\n%s", expected, output.String())
+		}
+	}
+}
+
+func TestRunHelpSucceedsWithInvalidWorkspace(t *testing.T) {
+	t.Setenv("CTK_HOME", filepath.Join(t.TempDir(), "missing"))
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldStdout := os.Stdout
+	os.Stdout = writer
+	t.Cleanup(func() { os.Stdout = oldStdout })
+
+	if err := run([]string{"help"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	output, err := io.ReadAll(reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{"Usage: ctk <command>", "Current context:", "Workspace:      unavailable", "source: CTK_HOME", "diagnostic: CTK_HOME is not a CTK workspace"} {
+		if !strings.Contains(string(output), expected) {
+			t.Fatalf("help does not contain %q:\n%s", expected, output)
+		}
+	}
+}
+
+func TestDisplayHomePathDoesNotRewriteSimilarPrefix(t *testing.T) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Skipf("home directory unavailable: %v", err)
+	}
+	inside := filepath.Join(home, "local", "ctk")
+	if got := displayHomePath(inside); got != filepath.Join("~", "local", "ctk") {
+		t.Fatalf("display path = %q", got)
+	}
+	similar := home + "-shared" + string(filepath.Separator) + "ctk"
+	if got := displayHomePath(similar); got != similar {
+		t.Fatalf("similar prefix changed = %q", got)
+	}
+}
+
 func TestDetectViewSourceFromContentAndKnownNames(t *testing.T) {
 	root := t.TempDir()
 	distDir := filepath.Join(root, "dist")
@@ -425,6 +492,19 @@ func TestFindProjectRootResolution(t *testing.T) {
 	fromExecutable, err := findProjectRoot("", t.TempDir(), filepath.Join(workspace, "bin", "ctk"))
 	if err != nil || fromExecutable != workspace {
 		t.Fatalf("executable root = %q, %v", fromExecutable, err)
+	}
+
+	_, source, err := findProjectRootWithSource(workspace, t.TempDir(), filepath.Join(t.TempDir(), "bin", "ctk"))
+	if err != nil || source != "CTK_HOME" {
+		t.Fatalf("configured source = %q, %v", source, err)
+	}
+	_, source, err = findProjectRootWithSource("", filepath.Join(workspace, "dist", "sample"), filepath.Join(t.TempDir(), "bin", "ctk"))
+	if err != nil || source != "current directory" {
+		t.Fatalf("working-directory source = %q, %v", source, err)
+	}
+	_, source, err = findProjectRootWithSource("", t.TempDir(), filepath.Join(workspace, "bin", "ctk"))
+	if err != nil || source != "executable-relative" {
+		t.Fatalf("executable source = %q, %v", source, err)
 	}
 }
 
