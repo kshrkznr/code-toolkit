@@ -3,9 +3,12 @@
 
 # Go Documentation Bundle Contract
 
-This Contract realizes the
-[Packaged Documentation Bundle Future](../../../doc/future/future.documentation-bundle.md)
-for the primary standalone Go executable.
+This Contract defines the current Documentation Bundle behavior of the primary
+standalone Go executable. Reusable navigation and provenance guidance belongs
+to [Packaged Documentation
+Navigation](../../../doc/note/note.packaged-documentation-navigation.md), while
+unsettled distribution candidates remain in [Packaged Documentation Bundle
+Follow-ups](../../../doc/future/future.documentation-bundle.md).
 
 ## Source Definition
 

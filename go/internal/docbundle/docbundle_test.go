@@ -347,6 +347,10 @@ func TestBundleLookupUsesNodeIdentityPathAndHeading(t *testing.T) {
 	if len(leaving) == 0 || leaving[0].Path != "doc/note/note.leaving-ctk.md" {
 		t.Fatalf("natural-language Leaving CTK Resolve candidates = %+v", leaving)
 	}
+	normalIDE := bundle.Resolve([]string{"put my normal IDE back"})
+	if len(normalIDE) == 0 || normalIDE[0].Path != "doc/note/note.leaving-ctk.md" {
+		t.Fatalf("normal IDE restoration Resolve candidates = %+v", normalIDE)
+	}
 	settingsVariant := bundle.Resolve([]string{"Settings Variant precedence"})
 	if len(settingsVariant) == 0 || settingsVariant[0].Path != "doc/note/note.variant.md" {
 		t.Fatalf("Settings Variant Resolve candidates = %+v", settingsVariant)
@@ -354,6 +358,22 @@ func TestBundleLookupUsesNodeIdentityPathAndHeading(t *testing.T) {
 	workspace := bundle.Resolve([]string{"Workspace Dist Archive Workbench"})
 	if len(workspace) == 0 || workspace[0].Path != "doc/integration/integration.workspace.md" {
 		t.Fatalf("Workspace ownership Resolve candidates = %+v", workspace)
+	}
+	stored := bundle.Resolve([]string{"where is everything stored"})
+	if len(stored) == 0 || stored[0].Path != "doc/integration/integration.workspace.md" {
+		t.Fatalf("Workspace storage Resolve candidates = %+v", stored)
+	}
+	compareStates := bundle.Resolve([]string{"compare Recipe Dist without modifying either"})
+	if len(compareStates) == 0 || compareStates[0].Path != "doc/workbench/README.md" {
+		t.Fatalf("Workbench completed-state comparison Resolve candidates = %+v", compareStates)
+	}
+	fullText := bundle.Resolve([]string{"full text documentation search"})
+	if len(fullText) == 0 || fullText[0].Path != "doc/note/note.packaged-documentation-navigation.md" {
+		t.Fatalf("packaged full-text navigation Resolve candidates = %+v", fullText)
+	}
+	localSource := bundle.Resolve([]string{"packaged documentation source provenance"})
+	if len(localSource) == 0 || localSource[0].Path != "doc/note/note.packaged-documentation-navigation.md" {
+		t.Fatalf("local source provenance Resolve candidates = %+v", localSource)
 	}
 }
 

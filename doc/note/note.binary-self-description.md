@@ -42,18 +42,18 @@ Cookbook, lifecycle, Runtime, or other Workspace-dependent operations.
 
 ## Current Go relevance
 
-The current Go CLI resolves and validates a Workspace before dispatching
-`help` and `version`. A future packaged `docs` command would encounter the same
-boundary if added after that resolution.
+The current Go CLI dispatches `help`, `version`, and packaged `docs` operations
+before Workspace discovery. Exact commands, argument validation, output, exit
+behavior, and initialization order belong in the
+[Go CLI Contract](../../go/doc/contract/contract.cli.md).
 
-For the Go binary, the candidate direction is to dispatch binary
-self-description before Workspace discovery. Exact commands, argument
-validation, output, exit behavior, and initialization order belong in the
-[Go CLI Contract](../../go/doc/contract/contract.cli.md) when the behavior is
-implemented and validated.
-
-The documentation packaging candidate is preserved by the
-[Packaged Documentation Bundle Future](../future/future.documentation-bundle.md).
+The navigation and source-provenance observations learned from packaged
+Knowledge are preserved by [Packaged Documentation
+Navigation](note.packaged-documentation-navigation.md). Exact Bundle and CLI
+behavior belongs in the [Go Documentation Bundle
+Contract](../../go/doc/contract/contract.documentation-bundle.md), while
+unsettled distribution candidates remain in [Packaged Documentation Bundle
+Follow-ups](../future/future.documentation-bundle.md).
 
 ## Boundary
 

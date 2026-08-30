@@ -146,6 +146,8 @@ cookbook/inspect/
 
 #### Sync
 
+##### Compare completed Recipe or Dist states without modifying either state
+
 `sync <left> <right>` answers: “what changed between these completed
 states?”
 

@@ -74,6 +74,9 @@ Start with the question closest to the current work:
   → [Design Notes](design-note/README.md)
 - Which reusable operational observation or loose guideline applies?
   → [Notes](note/README.md)
+- How should version-matched packaged Knowledge be navigated or compared with a
+  local documentation source?
+  → [Packaged Documentation Navigation](note/note.packaged-documentation-navigation.md)
 - Which candidate concept or direction remains unsettled?
   → [Future](future/README.md)
 - How did CTK's design, documentation, or collaboration practice evolve?

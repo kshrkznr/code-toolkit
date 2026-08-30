@@ -32,9 +32,9 @@ Start with the question closest to the current work:
 - How could a Workspace add a complete Platform definition through the current
   validated Registry?
   → [Workspace Platform Definitions](future.platform-registry.md)
-- How could a standalone CTK binary expose version-matched Knowledge to people
-  and AI assistants without requiring a repository checkout?
-  → [Packaged Documentation Bundle](future.documentation-bundle.md)
+- Which distribution and navigation follow-ups remain unsettled after the Go
+  executable gained a packaged Documentation Bundle?
+  → [Packaged Documentation Bundle Follow-ups](future.documentation-bundle.md)
 
 These routes are entry points rather than an implementation queue. Search by
 the candidate concept when a future document is not yet listed here.

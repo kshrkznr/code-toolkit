@@ -45,17 +45,23 @@ Workspace is responsible for:
 - resolving the Dist root used by lifecycle and CodeVenv operations;
 - owning Archive and Extension Pool state unless a later observed requirement
   establishes another boundary;
-- providing a local home for integration configuration, including future
-  external Platform definitions.
+- providing a Workspace-local ownership boundary for integration
+  configuration.
 
 Cookbook Source and the Dist root may be located outside the Workspace root.
 Workbench output remains below the Workspace so generated review state does not
 enter independently versioned Cookbook Source accidentally.
 
+This responsibility establishes where machine integration configuration
+belongs. Loading external Platform definitions from that boundary remains an
+unimplemented Future.
+
 ## Selection and defaults
 
 One invocation selects one Workspace. An explicit `CTK_HOME` may select it;
 implementations may also provide deterministic local discovery.
+
+### Where Workspace state is stored
 
 Absent location overrides, the Workspace resolves the familiar local layout:
 
@@ -90,4 +96,4 @@ may guide Cookbook interpretation; they do not select Workspace locations.
 
 - [Why Platform Definitions Belong to Workspace Integration](../design-note/design-note.platform-definition-scope.md)
 - [Freeze and Inspect Workbench Contract](../contract/contract.workbench.md)
-- [Workspace Platform Definitions Future](../future/future.platform-registry.md)
+- [Future: Workspace-loaded Platform definitions](../future/future.platform-registry.md)
