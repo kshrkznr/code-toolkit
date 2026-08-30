@@ -112,9 +112,11 @@ bootstrap-template: doc/template.md.tmpl
 	}
 }
 
-func TestTOCIsReservedFromNodeAliases(t *testing.T) {
-	if _, err := validateNodes(map[string]string{"toc": "doc.md"}, map[string][]byte{"doc.md": []byte("# Document\n")}); err == nil {
-		t.Fatal("TOC was accepted as a documentation Node alias")
+func TestSubcommandsAreReservedFromNodeAliases(t *testing.T) {
+	for _, alias := range []string{"status", "resolve", "show", "toc", "export"} {
+		if _, err := validateNodes(map[string]string{alias: "doc.md"}, map[string][]byte{"doc.md": []byte("# Document\n")}); err == nil {
+			t.Fatalf("%s was accepted as a documentation Node alias", alias)
+		}
 	}
 }
 

@@ -481,14 +481,32 @@ func runSelfDescription(args []string) (bool, error) {
 		fmt.Println(buildinfo.String())
 		return true, nil
 	case "docs":
-		if len(args) == 2 && slices.Contains([]string{"help", "-h", "--help"}, args[1]) {
+		source, docsArgs, err := parseDocsSource(args[1:])
+		if err != nil {
+			return true, err
+		}
+		if len(docsArgs) == 1 && slices.Contains([]string{"help", "-h", "--help"}, docsArgs[0]) {
 			return true, writeDocsUsage(os.Stdout)
 		}
 		bundle, err := executableDocumentationBundle()
 		if err != nil {
 			return true, err
 		}
-		return true, runDocs(os.Stdout, bundle, args[1:])
+		status := docbundle.PackagedSourceStatus(bundle)
+		if source != "" {
+			local, err := docbundle.OpenLocal(source, bundle)
+			if err != nil {
+				return true, err
+			}
+			bundle = local.Bundle
+			status = local.Status
+			if len(docsArgs) == 0 || docsArgs[0] != "status" {
+				if err := writeLocalSourceDiagnostic(os.Stderr, status); err != nil {
+					return true, err
+				}
+			}
+		}
+		return true, runDocsWithStatus(os.Stdout, bundle, status, docsArgs)
 	default:
 		return false, nil
 	}
@@ -511,6 +529,10 @@ func executableDocumentationBundle() (*docbundle.Bundle, error) {
 }
 
 func runDocs(output io.Writer, bundle *docbundle.Bundle, args []string) error {
+	return runDocsWithStatus(output, bundle, docbundle.PackagedSourceStatus(bundle), args)
+}
+
+func runDocsWithStatus(output io.Writer, bundle *docbundle.Bundle, status docbundle.SourceStatus, args []string) error {
 	if len(args) == 0 {
 		_, err := output.Write(bundle.Bootstrap())
 		return err
@@ -521,6 +543,11 @@ func runDocs(output io.Writer, bundle *docbundle.Bundle, args []string) error {
 			return fmt.Errorf("usage: ctk docs help")
 		}
 		return writeDocsUsage(output)
+	case "status":
+		if len(args) != 1 {
+			return fmt.Errorf("usage: ctk docs [--source <repository>] status")
+		}
+		return writeDocsSourceStatus(output, status)
 	case "nodes":
 		if len(args) != 1 {
 			return fmt.Errorf("usage: ctk docs nodes")
@@ -621,6 +648,109 @@ func runDocs(output io.Writer, bundle *docbundle.Bundle, args []string) error {
 	}
 }
 
+func parseDocsSource(args []string) (string, []string, error) {
+	if len(args) == 0 {
+		return "", nil, nil
+	}
+	if args[0] == "--source" {
+		if len(args) < 2 || strings.TrimSpace(args[1]) == "" {
+			return "", nil, fmt.Errorf("usage: ctk docs --source <repository> [<docs-operation>]")
+		}
+		if docsSourceOptionPresent(args[2:]) {
+			return "", nil, fmt.Errorf("docs accepts only one leading --source option")
+		}
+		return args[1], args[2:], nil
+	}
+	if strings.HasPrefix(args[0], "--source=") {
+		source := strings.TrimPrefix(args[0], "--source=")
+		if strings.TrimSpace(source) == "" {
+			return "", nil, fmt.Errorf("usage: ctk docs --source <repository> [<docs-operation>]")
+		}
+		if docsSourceOptionPresent(args[1:]) {
+			return "", nil, fmt.Errorf("docs accepts only one leading --source option")
+		}
+		return source, args[1:], nil
+	}
+	if docsSourceOptionPresent(args[1:]) {
+		return "", nil, fmt.Errorf("docs --source must precede the documentation operation")
+	}
+	return "", args, nil
+}
+
+func docsSourceOptionPresent(args []string) bool {
+	for _, argument := range args {
+		if argument == "--source" || strings.HasPrefix(argument, "--source=") {
+			return true
+		}
+	}
+	return false
+}
+
+func writeDocsSourceStatus(output io.Writer, status docbundle.SourceStatus) error {
+	if _, err := fmt.Fprintf(output, "source: %s\n", status.Kind); err != nil {
+		return err
+	}
+	if status.Path != "" {
+		if _, err := fmt.Fprintf(output, "path: %s\n", maskHomePath(status.Path)); err != nil {
+			return err
+		}
+	}
+	revision := status.Revision
+	if revision == "" {
+		revision = "unknown"
+	}
+	if _, err := fmt.Fprintf(output, "ctk-version: %s\nsource-revision: %s\n", status.Version, revision); err != nil {
+		return err
+	}
+	if status.Tag != "" {
+		if _, err := fmt.Fprintf(output, "release-tag: %s\n", status.Tag); err != nil {
+			return err
+		}
+	}
+	if _, err := fmt.Fprintf(output, "definition-sha256: %s\ncontent-sha256: %s\n", status.DefinitionSHA256, status.ContentSHA256); err != nil {
+		return err
+	}
+	if status.Kind == "local" {
+		packagedRevision := status.PackagedRevision
+		if packagedRevision == "" {
+			packagedRevision = "unknown"
+		}
+		if _, err := fmt.Fprintf(output, "packaged-source-revision: %s\nrevision-match: %s\npackaged-definition-sha256: %s\ndefinition-match: %s\ncomparison-content-sha256: %s\npackaged-content-sha256: %s\ncontent-match: %s\nselected-path-dirty: %s\n", packagedRevision, status.RevisionMatch, status.PackagedDefinitionSHA256, status.DefinitionMatch, status.ComparisonContentSHA256, status.PackagedContentSHA256, status.ContentMatch, status.SelectedPathDirty); err != nil {
+			return err
+		}
+		for _, dirtyPath := range status.SelectedDirtyPaths {
+			if _, err := fmt.Fprintf(output, "selected-dirty-path: %s\n", dirtyPath); err != nil {
+				return err
+			}
+		}
+		if _, err := fmt.Fprintf(output, "repository-dirty: %s\n", status.RepositoryDirty); err != nil {
+			return err
+		}
+	}
+	_, err := fmt.Fprintf(output, "repository: %s\n", status.Repository)
+	return err
+}
+
+func maskHomePath(value string) string {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return value
+	}
+	relative, err := filepath.Rel(home, value)
+	if err != nil || relative == ".." || filepath.IsAbs(relative) || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		return value
+	}
+	if relative == "." {
+		return "<home>"
+	}
+	return filepath.Join("<home>", relative)
+}
+
+func writeLocalSourceDiagnostic(output io.Writer, status docbundle.SourceStatus) error {
+	_, err := fmt.Fprintf(output, "documentation-source: local; revision-match=%s; definition-match=%s; content-match=%s; selected-path-dirty=%s\n", status.RevisionMatch, status.DefinitionMatch, status.ContentMatch, status.SelectedPathDirty)
+	return err
+}
+
 func parseDocsDepth(value string) (int, int, error) {
 	if value == "" {
 		return 0, 0, fmt.Errorf("docs show --depth requires an integer or inclusive range such as -1..2")
@@ -653,7 +783,9 @@ func docsNavigationError(bundle *docbundle.Bundle, err error) error {
 
 func writeDocsUsage(output io.Writer) error {
 	_, err := fmt.Fprint(output, `Usage:
+  ctk docs [--source <repository>] Show packaged or explicitly local documentation
   ctk docs                         Show the Concept and resolver Bootstrap
+  ctk docs status                  Show source provenance and comparison status
   ctk docs nodes                   List short navigation Node aliases
   ctk docs <node>                  Show one Node README (for example: core)
   ctk docs resolve <terms...>      Rank matching bundled documents
@@ -665,6 +797,7 @@ func writeDocsUsage(output io.Writer) error {
 Resolve output is tab-separated. Copy its IDENTITY or PATH into docs show.
 Resolve searches identity, path, Node alias, title, and headings, not bodies.
 TOC links can be copied into docs show. A depth range must contain level 0.
+Place --source before the operation; omitting it always selects packaged docs.
 Repository-only material is linked at this binary's exact tag or commit.
 `)
 	return err
@@ -1718,7 +1851,7 @@ Commands:
                       Temporarily launch a Distribution
   workbench [draft|inspect] [viewpoint] [--editor command]
                       Open a Draft or Inspect Workbench
-  docs [<node>|resolve <terms...>|toc <reference>|show <reference>|export <directory>]
+  docs [--source <repository>] [status|<node>|resolve|toc|show|export]
                       Navigate documentation packaged with this binary
   select              Select a command interactively
   version             Show binary version and build provenance

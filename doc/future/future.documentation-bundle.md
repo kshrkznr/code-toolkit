@@ -48,15 +48,23 @@ ctk docs core
 ctk docs resolve <terms...>
     find candidate documents from maintained metadata without searching bodies
 
+ctk docs status
+    show packaged source provenance
+
 ctk docs show <canonical-identity-or-path>[#heading]
     print one detailed document
 
 ctk docs export <directory>
     packaged documents in their relative repository structure
+
+ctk docs --source <repository> <operation>
+    explicitly use and compare one local documentation source
 ```
 
-These forms illustrate the candidate responsibility. Names, arguments, output
-format, and group boundaries remain open.
+These forms illustrate the candidate responsibility. The Go implementation's
+accepted names, arguments, and output boundaries are owned by its Documentation
+Bundle Contract; other distribution implementations are not required to reuse
+that CLI shape.
 
 ## Default navigation view
 
@@ -198,7 +206,7 @@ A concise Node alias may be exposed as a direct shortcut. For example,
 every Core document. Workbench, Integration, Contract, Note, and other useful
 bundled Nodes can follow the same rule without creating a separate category
 dump behavior. Node aliases belong in the central index and must not collide
-with command names such as `resolve`, `show`, `toc`, or `export`.
+with command names such as `status`, `resolve`, `show`, `toc`, or `export`.
 
 `ctk docs resolve core` remains distinct: it may discover the Node and several
 detailed documents, then let the reader or AI assistant choose one result to
@@ -397,9 +405,12 @@ should not make the documentation bundle dirty. That repository state may be
 shown as an additional diagnostic. A non-Git source can report an unknown
 revision while still computing its Definition and content digests.
 
-Whether local selection belongs to an explicit command option, Workspace
-configuration, or another integration surface remains open. The default
-`docs` path should still work when no Workspace can be discovered.
+The Go M4 implementation uses explicit per-invocation
+`ctk docs --source <repository>` selection. It does not discover a nearby clone
+or consult Workspace configuration, and the default `docs` path continues to
+use packaged Knowledge without Workspace discovery. Persisted configuration
+may be reconsidered only after explicit-source use shows that its convenience
+outweighs hidden selection and provenance costs.
 
 ## Export candidate
 

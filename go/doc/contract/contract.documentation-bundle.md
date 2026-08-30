@@ -155,6 +155,45 @@ A single negative integer `N` means `N..0`; a single non-negative integer means
 `0..N`. An explicit inclusive range must contain zero. Omitting `--depth`
 preserves Show's complete selected-subtree behavior.
 
+## Explicit local source
+
+`ctk docs --source <repository> [<docs-operation>]` explicitly selects one
+local documentation source for that invocation. `--source` precedes the docs
+operation and accepts an absolute or current-directory-relative repository
+root. CTK does not discover a nearby clone, read Workspace configuration, or
+persist the selection. Omitting it always uses the packaged Bundle.
+
+The local root must contain a valid Bundle Definition and all selected source
+material. Local loading reuses the generator's traversal, regular-file,
+symlink, duplicate, and case-collision validation. The generated local Bundle
+drives Bootstrap, Node, Resolve, TOC, Show, and Export exactly as the packaged
+read model does.
+
+Local status compares independent dimensions rather than reducing them to one
+dirty flag:
+
+- local Git `HEAD` against the packaged source revision;
+- local Bundle Definition digest against the packaged Definition digest;
+- local generated content against the packaged content while using packaged
+  metadata for a provenance-neutral comparison; status reports that comparison
+  digest separately from the locally attributed Bundle digest;
+- each locally selected document byte-for-byte against the blob at local
+  `HEAD`;
+- whole-repository dirty state as a separate diagnostic.
+
+A non-Git source reports revision, selected-path dirty, and repository dirty as
+unknown while Definition and content comparison remain available. Changes
+outside the selected document set may make the repository dirty but do not
+make selected-path status dirty.
+
+`ctk docs status` reports packaged provenance. With `--source`, it also reports
+the resolved local path, packaged comparisons, selected dirty paths, and the
+independent repository state. A path below the current user's home replaces
+that user-specific prefix with `<home>` before display. Every local navigation
+operation emits a concise source and comparison diagnostic on stderr; document
+or tabular content on stdout remains composable. Local content is therefore
+never silently presented as version-matched packaged Knowledge.
+
 ## Filesystem Export
 
 `ctk docs export <directory>` publishes the verified Bundle as its logical
@@ -185,9 +224,9 @@ executable that already contains one.
 
 `ctk docs` reads and verifies the Bundle from its own resolved executable path
 before rendering content. It does not discover or load a Workspace. The CLI
-provides Bootstrap, Node listing and shortcuts, Resolve, TOC, Show, depth
-projection, and Export. Help remains available even when a development binary
-has no Bundle.
+provides Status, Bootstrap, Node listing and shortcuts, Resolve, TOC, Show,
+depth projection, and Export. Help remains available even when a development
+binary has no Bundle.
 
 ## Release verification
 
@@ -200,8 +239,8 @@ Every target executable receives the same validated Bundle bytes. The Release
 tool reopens each final executable without executing the target architecture
 and verifies version, revision, tag, and aggregate content digest. When one
 built target is native to the Release host, assembly also exercises version,
-Bootstrap, Node, Resolve, TOC, Show, depth projection, and Export from a
-directory without a Workspace.
+packaged Status, Bootstrap, Node, Resolve, TOC, Show, depth projection, local
+source Status and Show, and Export from a directory without a Workspace.
 
 Platform archives and their checksums are created only after the Bundle is
 appended and verified, so the published checksum covers both executable and
@@ -209,7 +248,7 @@ documentation content.
 
 ## Boundary
 
-The current implementation does not define local source configuration, network
-fetching, semantic question answering, interactive selection, or pager
-behavior. The generator and read model remain independently testable from
-executable transport.
+The current implementation does not define persisted local source
+configuration, network fetching, semantic question answering, interactive
+selection, or pager behavior. The generator and read model remain
+independently testable from executable transport.

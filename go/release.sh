@@ -117,11 +117,18 @@ verify_native_cli() {
         cd "$verification_dir"
         env -u CTK_HOME "$native_binary" version | grep -F "$VERSION" >/dev/null
         env -u CTK_HOME "$native_binary" docs >/dev/null
+        env -u CTK_HOME "$native_binary" docs status | grep -F "source: packaged" >/dev/null
         env -u CTK_HOME "$native_binary" docs core >/dev/null
         env -u CTK_HOME "$native_binary" docs resolve "Settings Variant precedence" | grep -F "Knowledge.note.variant.md" >/dev/null
         env -u CTK_HOME "$native_binary" docs toc "Knowledge.core.cookbook.md" | grep -F "doc/core/core.cookbook.md#responsibility-1" >/dev/null
         env -u CTK_HOME "$native_binary" docs show "Knowledge.note.leaving-ctk.md#restore-an-activated-platform-first" >/dev/null
         env -u CTK_HOME "$native_binary" docs show "Knowledge.core.cookbook.md#responsibility-1" --depth -1..1 >/dev/null
+        source_status="$(env -u CTK_HOME "$native_binary" docs --source "$PROJECT_ROOT" status)"
+        grep -F "revision-match: match" <<<"$source_status" >/dev/null
+        grep -F "definition-match: match" <<<"$source_status" >/dev/null
+        grep -F "content-match: match" <<<"$source_status" >/dev/null
+        grep -F "selected-path-dirty: clean" <<<"$source_status" >/dev/null
+        env -u CTK_HOME "$native_binary" docs --source "$PROJECT_ROOT" show "Knowledge.core.md#responsibility" >/dev/null 2>/dev/null
         env -u CTK_HOME "$native_binary" docs export "$verification_dir/exported" >/dev/null
         test -f "$verification_dir/exported/$DOCUMENTATION_MANIFEST_PATH"
     )

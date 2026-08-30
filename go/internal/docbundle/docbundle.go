@@ -35,7 +35,7 @@ var (
 	linkPattern            = regexp.MustCompile(`\[([^\]]*)\]\(([^)]+)\)`)
 	includeDocumentPattern = regexp.MustCompile(`^\{\{ include-document "([^"]+)" \}\}$`)
 	includeRangePattern    = regexp.MustCompile(`^\{\{ include-range "([^"]+)" from="([^"]+)" before="([^"]+)" \}\}$`)
-	reservedAliases        = map[string]bool{"resolve": true, "show": true, "toc": true, "export": true}
+	reservedAliases        = map[string]bool{"status": true, "resolve": true, "show": true, "toc": true, "export": true}
 )
 
 type Definition struct {
