@@ -114,7 +114,7 @@ bash/scripts/  Bash reference source
 Create versioned macOS and Windows artifacts with checksums:
 
 ```bash
-go/release.sh v0.5.0
+go/release.sh v0.5.1
 ```
 
 Release assembly requires a clean checkout whose `HEAD` is the exact requested
@@ -125,10 +125,10 @@ and verifies each packaged Manifest before creating checksums.
 The builder produces:
 
 ```text
-release/v0.5.0/
-├── ctk_v0.5.0_darwin_arm64.tar.gz
-├── ctk_v0.5.0_darwin_amd64.tar.gz
-├── ctk_v0.5.0_windows_amd64.zip
+release/v0.5.1/
+├── ctk_v0.5.1_darwin_arm64.tar.gz
+├── ctk_v0.5.1_darwin_amd64.tar.gz
+├── ctk_v0.5.1_windows_amd64.zip
 └── checksums.txt
 ```
 
