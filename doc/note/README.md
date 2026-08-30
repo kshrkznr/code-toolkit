@@ -23,7 +23,8 @@ the observation applies to the current work.
 
 Start with the question closest to the current work:
 
-- How can I stop using CTK or remove generated environments safely?
+- How can I put my normal IDE back, stop using CTK, or remove generated
+  environments safely?
   → [Leaving CTK](note.leaving-ctk.md)
 - How should a CodeVenv be selected, activated, or recovered?
   → [CodeVenv Operations](note.codevenv.md)
@@ -49,6 +50,9 @@ Start with the question closest to the current work:
 - Why might a standalone CTK binary expose its own help, version, or packaged
   documentation before Workspace discovery?
   → [Binary Self-Description Outside a Workspace](note.binary-self-description.md)
+- How can packaged Knowledge be navigated progressively, searched by metadata,
+  and compared with an explicit local source?
+  → [Packaged Documentation Navigation](note.packaged-documentation-navigation.md)
 
 These are useful entry points rather than an exhaustive document catalog.
 Search by the current concept when none of these questions fit.

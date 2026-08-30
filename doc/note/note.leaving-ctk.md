@@ -12,7 +12,7 @@ CodeVenv management, remove generated environments, remove the CLI, or discard
 Cookbook and persistence material. These actions do not need to happen
 together.
 
-## Restore an activated Platform first
+## Restore the normal IDE before uninstalling CTK
 
 When a Platform command is managed by CodeVenv, leave through its lifecycle:
 

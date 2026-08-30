@@ -1,0 +1,30 @@
+format-version: 1
+repository: https://github.com/kshrkznr/code-toolkit
+documents:
+  files:
+    - README.md
+    - doc/README.md
+    - doc/authors-recipe/README.md
+    - doc/project-knowledge/note/note.collaborative-review-surfaces.md
+    - go/README.md
+    - go/doc/platform-support.md
+  trees:
+    - doc/contract
+    - doc/core
+    - doc/design-note
+    - doc/integration
+    - doc/note
+    - doc/workbench
+    - go/doc/contract
+  exclude: []
+nodes:
+  authors-recipe: doc/authors-recipe/README.md
+  contract: doc/contract/README.md
+  core: doc/core/README.md
+  design-note: doc/design-note/README.md
+  go: go/README.md
+  go-contract: go/doc/contract/README.md
+  integration: doc/integration/README.md
+  note: doc/note/README.md
+  workbench: doc/workbench/README.md
+bootstrap-template: doc/documentation-bootstrap.md.tmpl

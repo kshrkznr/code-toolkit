@@ -6,10 +6,175 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
+	"github.com/kshrkznr/code-toolkit/go/internal/docbundle"
 	"github.com/kshrkznr/code-toolkit/go/internal/recipe"
 )
+
+func TestRunDocsNavigatesPackagedBundle(t *testing.T) {
+	repositoryRoot, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	generated, err := docbundle.Generate(repositoryRoot, docbundle.Metadata{Version: "dev", Revision: "test-revision"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	bundle, err := docbundle.Open(generated.Archive)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, test := range []struct {
+		name     string
+		args     []string
+		contains []string
+	}{
+		{name: "help", args: []string{"--help"}, contains: []string{"--source <repository>", "ctk docs status", "ctk docs resolve", "ctk docs toc", "--depth <N|A..B>"}},
+		{name: "status", args: []string{"status"}, contains: []string{"source: packaged", "source-revision: test-revision", "definition-sha256: ", "content-sha256: ", "repository: https://github.com/kshrkznr/code-toolkit"}},
+		{name: "nodes", args: []string{"nodes"}, contains: []string{"core\tdoc/core/README.md"}},
+		{name: "core", args: []string{"core"}, contains: []string{"# Concept Domain: Core", "doc/core/core.cookbook.md"}},
+		{name: "resolve", args: []string{"resolve", "Settings Variant precedence"}, contains: []string{"IDENTITY\tPATH\tTITLE\tMATCHED", "Knowledge.note.variant.md\tdoc/note/note.variant.md"}},
+		{name: "toc", args: []string{"toc", "knowledge.core.cookbook.md"}, contains: []string{"- [Concept API: Cookbook](doc/core/core.cookbook.md#concept-api-cookbook)", "  - [Responsibility](doc/core/core.cookbook.md#responsibility)"}},
+		{name: "show folded identity and duplicate heading", args: []string{"show", "knowledge.core.cookbook.md#responsibility-1"}, contains: []string{"## Responsibility", "Ingredients provide reusable building blocks"}},
+		{name: "show depth", args: []string{"show", "knowledge.core.cookbook.md#responsibility-1", "--depth", "0"}, contains: []string{"## Responsibility", "Ingredients provide reusable building blocks"}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			var output bytes.Buffer
+			if err := runDocs(&output, bundle, test.args); err != nil {
+				t.Fatal(err)
+			}
+			for _, expected := range test.contains {
+				if !strings.Contains(output.String(), expected) {
+					t.Fatalf("output does not contain %q:\n%s", expected, output.String())
+				}
+			}
+		})
+	}
+
+	exportTarget := filepath.Join(t.TempDir(), "documentation")
+	var exportOutput bytes.Buffer
+	if err := runDocs(&exportOutput, bundle, []string{"export", exportTarget}); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(exportOutput.String(), exportTarget+"\ncontent-sha256: ") {
+		t.Fatalf("Export output = %q", exportOutput.String())
+	}
+	if _, err := os.Stat(filepath.Join(exportTarget, filepath.FromSlash(docbundle.ManifestPath))); err != nil {
+		t.Fatalf("Export Manifest missing: %v", err)
+	}
+	for _, args := range [][]string{
+		{"toc", "Knowledge.core.md#responsibility"},
+		{"show", "Knowledge.core.md", "--depth", "0"},
+		{"show", "Knowledge.core.md#responsibility", "--depth", "1..2"},
+	} {
+		if err := runDocs(io.Discard, bundle, args); err == nil {
+			t.Fatalf("invalid docs arguments were accepted: %v", args)
+		}
+	}
+}
+
+func TestParseDocsDepth(t *testing.T) {
+	for _, test := range []struct {
+		value            string
+		minimum, maximum int
+	}{
+		{value: "-1", minimum: -1, maximum: 0},
+		{value: "0", minimum: 0, maximum: 0},
+		{value: "2", minimum: 0, maximum: 2},
+		{value: "-1..2", minimum: -1, maximum: 2},
+	} {
+		minimum, maximum, err := parseDocsDepth(test.value)
+		if err != nil || minimum != test.minimum || maximum != test.maximum {
+			t.Fatalf("parseDocsDepth(%q) = %d, %d, %v", test.value, minimum, maximum, err)
+		}
+	}
+	for _, value := range []string{"", "one", "1..2", "-2..-1", "2..-1", "-1..0..2"} {
+		if _, _, err := parseDocsDepth(value); err == nil {
+			t.Fatalf("parseDocsDepth(%q) unexpectedly succeeded", value)
+		}
+	}
+}
+
+func TestParseDocsSourceRequiresLeadingExplicitSelection(t *testing.T) {
+	for _, test := range []struct {
+		args      []string
+		source    string
+		remaining []string
+	}{
+		{args: nil, remaining: nil},
+		{args: []string{"status"}, remaining: []string{"status"}},
+		{args: []string{"--source", "../clone", "show", "doc.md"}, source: "../clone", remaining: []string{"show", "doc.md"}},
+		{args: []string{"--source=/clone", "toc", "doc.md"}, source: "/clone", remaining: []string{"toc", "doc.md"}},
+	} {
+		source, remaining, err := parseDocsSource(test.args)
+		if err != nil || source != test.source || !slices.Equal(remaining, test.remaining) {
+			t.Fatalf("parseDocsSource(%v) = %q, %v, %v", test.args, source, remaining, err)
+		}
+	}
+	for _, args := range [][]string{{"--source"}, {"--source="}, {"show", "doc.md", "--source", "/clone"}, {"--source", "/one", "--source", "/two"}} {
+		if _, _, err := parseDocsSource(args); err == nil {
+			t.Fatalf("parseDocsSource(%v) unexpectedly succeeded", args)
+		}
+	}
+}
+
+func TestWriteDocsSourceStatusKeepsComparisonsIndependent(t *testing.T) {
+	status := docbundle.SourceStatus{
+		Kind:                     "local",
+		Path:                     "/clone",
+		Version:                  "v1.0.0",
+		Revision:                 "local-revision",
+		Repository:               "https://github.com/example/ctk",
+		DefinitionSHA256:         "local-definition",
+		ContentSHA256:            "local-content",
+		ComparisonContentSHA256:  "comparison-content",
+		PackagedRevision:         "packaged-revision",
+		PackagedDefinitionSHA256: "packaged-definition",
+		PackagedContentSHA256:    "packaged-content",
+		RevisionMatch:            docbundle.Mismatch,
+		DefinitionMatch:          docbundle.Match,
+		ContentMatch:             docbundle.Mismatch,
+		SelectedPathDirty:        docbundle.Dirty,
+		SelectedDirtyPaths:       []string{"doc/one.md", "doc/two.md"},
+		RepositoryDirty:          docbundle.Dirty,
+	}
+	var output bytes.Buffer
+	if err := writeDocsSourceStatus(&output, status); err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{
+		"source: local\n",
+		"revision-match: mismatch\n",
+		"definition-match: match\n",
+		"comparison-content-sha256: comparison-content\n",
+		"content-match: mismatch\n",
+		"selected-path-dirty: dirty\n",
+		"selected-dirty-path: doc/one.md\n",
+		"repository-dirty: dirty\n",
+	} {
+		if !strings.Contains(output.String(), expected) {
+			t.Fatalf("status does not contain %q:\n%s", expected, output.String())
+		}
+	}
+}
+
+func TestMaskHomePathHidesUserSpecificPrefix(t *testing.T) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Skipf("home directory unavailable: %v", err)
+	}
+	inside := filepath.Join(home, "local", "ctk")
+	if got := maskHomePath(inside); got != filepath.Join("<home>", "local", "ctk") {
+		t.Fatalf("masked path = %q", got)
+	}
+	outside := filepath.Join(filepath.Dir(home), "shared", "ctk")
+	if got := maskHomePath(outside); got != outside {
+		t.Fatalf("outside path changed = %q", got)
+	}
+}
 
 func TestDetectViewSourceFromContentAndKnownNames(t *testing.T) {
 	root := t.TempDir()

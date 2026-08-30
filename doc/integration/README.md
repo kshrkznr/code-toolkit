@@ -39,8 +39,8 @@ Start with the question closest to the current work:
 - How does CTK select, launch, and restore IDE Runtimes through Platform
   commands?
   → [Code Environment](integration.code-venv.md)
-- Which state belongs to one selected CTK Workspace, and how can Cookbook
-  Source remain separate from generated review state?
+- Where is everything stored in one selected CTK Workspace, and how can
+  Cookbook Source remain separate from generated review state?
   → [Workspace](integration.workspace.md)
 
 These routes identify the current Integration Concept APIs without duplicating

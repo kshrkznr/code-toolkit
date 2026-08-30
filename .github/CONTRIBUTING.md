@@ -7,3 +7,9 @@ record relevant validation in its description.
 Pull Requests are squash-merged. The Pull Request title becomes the commit
 title on `main`; intermediate branch commits remain useful for review without
 becoming permanent mainline history.
+
+Documentation-only Issues and Pull Requests are welcome. In particular, when
+a CTK document is difficult to discover from its identity, path, Node alias,
+title, or headings, report the question you tried to resolve. Improving that
+navigation metadata is a useful project change even when the implementation is
+already correct.

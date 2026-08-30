@@ -1,0 +1,13 @@
+# CTK Documentation Bootstrap
+
+This generated view combines CTK's Concept navigation with the Documentation
+Resolver. Use `ctk docs resolve <terms...>` to find candidates and
+`ctk docs show <canonical-identity-or-path>` to read one detailed document.
+Resolve searches maintained document metadata, not document bodies. Use an
+exported Bundle with a repository search tool when full-text search is needed.
+
+{{ bundle-provenance }}
+
+{{ include-range "README.md" from="# Concept Domains" before="# Installation" }}
+
+{{ include-document "doc/README.md" }}
