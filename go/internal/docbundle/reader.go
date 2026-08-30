@@ -169,6 +169,51 @@ func (bundle *Bundle) RepositoryReference() string {
 
 func (bundle *Bundle) Show(reference string) ([]byte, error) {
 	value, fragment := splitReference(reference)
+	documentPath, err := bundle.resolveDocument(value)
+	if err != nil {
+		return nil, err
+	}
+	content := rewriteLinks(string(bundle.documents[documentPath]), documentPath, bundle.documents, repositoryReference(bundle.manifest.Repository, Metadata{Revision: bundle.manifest.Revision, Tag: bundle.manifest.Tag}))
+	if fragment != "" {
+		section, err := parseMarkdown(content).section(fragment)
+		if err != nil {
+			return nil, fmt.Errorf("show %s: %w", reference, err)
+		}
+		content = section
+	}
+	return []byte(content), nil
+}
+
+func (bundle *Bundle) ShowDepth(reference string, minimum, maximum int) ([]byte, error) {
+	value, fragment := splitReference(reference)
+	if fragment == "" {
+		return nil, fmt.Errorf("show depth requires a heading fragment: %s", reference)
+	}
+	documentPath, err := bundle.resolveDocument(value)
+	if err != nil {
+		return nil, err
+	}
+	content := rewriteLinks(string(bundle.documents[documentPath]), documentPath, bundle.documents, repositoryReference(bundle.manifest.Repository, Metadata{Revision: bundle.manifest.Revision, Tag: bundle.manifest.Tag}))
+	projected, err := parseMarkdown(content).project(fragment, minimum, maximum)
+	if err != nil {
+		return nil, fmt.Errorf("show %s: %w", reference, err)
+	}
+	return []byte(projected), nil
+}
+
+func (bundle *Bundle) TOC(reference string) ([]byte, error) {
+	value, fragment := splitReference(reference)
+	if fragment != "" || strings.Contains(reference, "#") {
+		return nil, fmt.Errorf("documentation TOC requires a document reference without a heading fragment: %s", reference)
+	}
+	documentPath, err := bundle.resolveDocument(value)
+	if err != nil {
+		return nil, err
+	}
+	return []byte(parseMarkdown(string(bundle.documents[documentPath])).toc(documentPath)), nil
+}
+
+func (bundle *Bundle) resolveDocument(value string) (string, error) {
 	paths := []string{}
 	if documentPath, ok := bundle.byPath[strings.ToLower(value)]; ok {
 		paths = append(paths, documentPath)
@@ -176,20 +221,12 @@ func (bundle *Bundle) Show(reference string) ([]byte, error) {
 	paths = append(paths, bundle.byIdentity[strings.ToLower(value)]...)
 	paths = compactSorted(paths)
 	if len(paths) == 0 {
-		return nil, fmt.Errorf("documentation reference not found: %s", value)
+		return "", fmt.Errorf("documentation reference not found: %s", value)
 	}
 	if len(paths) > 1 {
-		return nil, fmt.Errorf("ambiguous documentation reference %s: %s", value, strings.Join(paths, ", "))
+		return "", fmt.Errorf("ambiguous documentation reference %s: %s", value, strings.Join(paths, ", "))
 	}
-	content := rewriteLinks(string(bundle.documents[paths[0]]), paths[0], bundle.documents, repositoryReference(bundle.manifest.Repository, Metadata{Revision: bundle.manifest.Revision, Tag: bundle.manifest.Tag}))
-	if fragment != "" {
-		section, err := selectHeading(content, fragment)
-		if err != nil {
-			return nil, fmt.Errorf("show %s: %w", reference, err)
-		}
-		content = section
-	}
-	return []byte(content), nil
+	return paths[0], nil
 }
 
 func (bundle *Bundle) ShowNode(alias string) ([]byte, error) {
@@ -336,36 +373,7 @@ func splitReference(reference string) (string, string) {
 }
 
 func selectHeading(content, fragment string) (string, error) {
-	lines := strings.SplitAfter(content, "\n")
-	start := -1
-	level := 0
-	anchors := map[string]int{}
-	for index, line := range lines {
-		match := headingPattern.FindStringSubmatch(strings.TrimRight(line, "\r\n"))
-		if match == nil {
-			continue
-		}
-		base := markdownAnchor(match[2])
-		anchor := base
-		if duplicate := anchors[base]; duplicate > 0 {
-			anchor = fmt.Sprintf("%s-%d", base, duplicate)
-		}
-		anchors[base]++
-		if start < 0 {
-			if anchor == fragment {
-				start = index
-				level = len(match[1])
-			}
-			continue
-		}
-		if len(match[1]) <= level {
-			return strings.Join(lines[start:index], ""), nil
-		}
-	}
-	if start < 0 {
-		return "", fmt.Errorf("heading not found: #%s", fragment)
-	}
-	return strings.Join(lines[start:], ""), nil
+	return parseMarkdown(content).section(fragment)
 }
 
 func markdownAnchor(value string) string {

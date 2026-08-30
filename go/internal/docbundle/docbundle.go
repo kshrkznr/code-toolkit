@@ -35,7 +35,7 @@ var (
 	linkPattern            = regexp.MustCompile(`\[([^\]]*)\]\(([^)]+)\)`)
 	includeDocumentPattern = regexp.MustCompile(`^\{\{ include-document "([^"]+)" \}\}$`)
 	includeRangePattern    = regexp.MustCompile(`^\{\{ include-range "([^"]+)" from="([^"]+)" before="([^"]+)" \}\}$`)
-	reservedAliases        = map[string]bool{"resolve": true, "show": true, "export": true}
+	reservedAliases        = map[string]bool{"resolve": true, "show": true, "toc": true, "export": true}
 )
 
 type Definition struct {
@@ -365,16 +365,15 @@ func headingRange(content, from, before string) (string, error) {
 	if !headingPattern.MatchString(from) || !headingPattern.MatchString(before) {
 		return "", fmt.Errorf("range selectors must be exact ATX headings")
 	}
-	lines := strings.SplitAfter(content, "\n")
+	document := parseMarkdown(content)
 	fromIndexes := []int{}
 	beforeIndexes := []int{}
-	for index, line := range lines {
-		value := strings.TrimRight(line, "\r\n")
-		if value == from {
-			fromIndexes = append(fromIndexes, index)
+	for _, heading := range document.headings {
+		if heading.Raw == from {
+			fromIndexes = append(fromIndexes, heading.Start)
 		}
-		if value == before {
-			beforeIndexes = append(beforeIndexes, index)
+		if heading.Raw == before {
+			beforeIndexes = append(beforeIndexes, heading.Start)
 		}
 	}
 	if len(fromIndexes) != 1 || len(beforeIndexes) != 1 {
@@ -383,7 +382,7 @@ func headingRange(content, from, before string) (string, error) {
 	if fromIndexes[0] >= beforeIndexes[0] {
 		return "", fmt.Errorf("range start must precede boundary")
 	}
-	return strings.Join(lines[fromIndexes[0]:beforeIndexes[0]], ""), nil
+	return strings.Join(document.lines[fromIndexes[0]:beforeIndexes[0]], ""), nil
 }
 
 func validateLinks(root string, documents map[string][]byte) error {
@@ -438,23 +437,18 @@ func resolveRelativeLink(source, target string) (string, string, bool) {
 }
 
 func inspectMarkdown(content []byte) (string, string, []string) {
-	lines := strings.Split(string(content), "\n")
+	document := parseMarkdown(string(content))
 	identity := ""
 	title := ""
 	headings := []string{}
-	for index, line := range lines {
-		match := headingPattern.FindStringSubmatch(strings.TrimRight(line, "\r"))
-		if match == nil {
+	for _, heading := range document.headings {
+		headings = append(headings, heading.Text)
+		if heading.Start == 0 && heading.Level == 1 && isCanonicalIdentity(heading.Text) {
+			identity = heading.Text
 			continue
 		}
-		text := strings.TrimSpace(match[2])
-		headings = append(headings, text)
-		if index == 0 && match[1] == "#" && isCanonicalIdentity(text) {
-			identity = text
-			continue
-		}
-		if title == "" && match[1] == "#" {
-			title = text
+		if title == "" && heading.Level == 1 {
+			title = heading.Text
 		}
 	}
 	if title == "" {

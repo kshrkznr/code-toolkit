@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -111,6 +112,12 @@ bootstrap-template: doc/template.md.tmpl
 	}
 }
 
+func TestTOCIsReservedFromNodeAliases(t *testing.T) {
+	if _, err := validateNodes(map[string]string{"toc": "doc.md"}, map[string][]byte{"doc.md": []byte("# Document\n")}); err == nil {
+		t.Fatal("TOC was accepted as a documentation Node alias")
+	}
+}
+
 func TestHeadingRangeRequiresUniqueOrderedHeadings(t *testing.T) {
 	content := "# One\nfirst\n# Two\nsecond\n# Three\n"
 	got, err := headingRange(content, "# One", "# Three")
@@ -125,6 +132,104 @@ func TestHeadingRangeRequiresUniqueOrderedHeadings(t *testing.T) {
 	}
 	if _, err := headingRange("# One\n# One\n# Two\n", "# One", "# Two"); err == nil {
 		t.Fatal("duplicate range heading was accepted")
+	}
+}
+
+func TestMarkdownStructuralNavigation(t *testing.T) {
+	content := `# Knowledge.example.md
+============================================================
+
+# Cookbook
+root body
+
+## Concepts
+concept body
+
+### Recipe
+recipe body
+
+### Ingredient
+ingredient body
+
+` + "```markdown\n#### Hidden\nhidden body\n```\n" + `
+#### Layers
+layers body
+
+#### Variant
+variant body
+
+## Boundary
+boundary body
+
+## Responsibility
+first
+
+## Responsibility
+second
+`
+	document := parseMarkdown(content)
+
+	toc := document.toc("doc/example.md")
+	for _, expected := range []string{
+		"- [Cookbook](doc/example.md#cookbook)\n",
+		"  - [Concepts](doc/example.md#concepts)\n",
+		"    - [Ingredient](doc/example.md#ingredient)\n",
+		"      - [Layers](doc/example.md#layers)\n",
+		"- [Responsibility](doc/example.md#responsibility-1)\n",
+	} {
+		if !strings.Contains(toc, expected) {
+			t.Fatalf("TOC does not contain %q:\n%s", expected, toc)
+		}
+	}
+	if strings.Contains(toc, "Knowledge.example.md") || strings.Contains(toc, "Hidden") {
+		t.Fatalf("TOC contains metadata identity or fenced heading:\n%s", toc)
+	}
+
+	for _, test := range []struct {
+		name     string
+		minimum  int
+		maximum  int
+		expected string
+	}{
+		{name: "zero", minimum: 0, maximum: 0, expected: "### Ingredient\ningredient body\n\n```markdown\n#### Hidden\nhidden body\n```\n\n"},
+		{name: "parent", minimum: -1, maximum: 0, expected: "## Concepts\nconcept body\n\n### Ingredient\ningredient body\n\n```markdown\n#### Hidden\nhidden body\n```\n\n"},
+		{name: "children", minimum: 0, maximum: 1, expected: "### Ingredient\ningredient body\n\n```markdown\n#### Hidden\nhidden body\n```\n\n#### Layers\nlayers body\n\n#### Variant\nvariant body\n\n"},
+		{name: "parent and children", minimum: -1, maximum: 1, expected: "## Concepts\nconcept body\n\n### Ingredient\ningredient body\n\n```markdown\n#### Hidden\nhidden body\n```\n\n#### Layers\nlayers body\n\n#### Variant\nvariant body\n\n"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			actual, err := document.project("ingredient", test.minimum, test.maximum)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if actual != test.expected {
+				t.Fatalf("projection = %q, want %q", actual, test.expected)
+			}
+			if strings.Contains(actual, "recipe body") || strings.Contains(actual, "boundary body") {
+				t.Fatalf("projection leaked a sibling:\n%s", actual)
+			}
+		})
+	}
+
+	complete, err := document.section("ingredient")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(complete, "variant body") || strings.Contains(complete, "boundary body") {
+		t.Fatalf("complete subtree = %q", complete)
+	}
+	if _, err := document.project("ingredient", 1, 2); err == nil {
+		t.Fatal("depth range excluding zero was accepted")
+	}
+}
+
+func TestMarkdownInspectionAndRangeIgnoreFencedHeadings(t *testing.T) {
+	content := []byte("# Knowledge.example.md\n# Example\n```markdown\n# Hidden\n```\n## Visible\n")
+	identity, title, headings := inspectMarkdown(content)
+	if identity != "Knowledge.example.md" || title != "Example" || slices.Contains(headings, "Hidden") {
+		t.Fatalf("inspection = %q, %q, %v", identity, title, headings)
+	}
+	if _, err := headingRange(string(content), "# Hidden", "## Visible"); err == nil {
+		t.Fatal("fenced heading was accepted as a Bootstrap selector")
 	}
 }
 
@@ -187,6 +292,45 @@ func TestBundleLookupUsesNodeIdentityPathAndHeading(t *testing.T) {
 	}
 	if _, err := bundle.Show("missing.md"); err == nil {
 		t.Fatal("missing Show reference was accepted")
+	}
+
+	toc, err := bundle.TOC("knowledge.core.cookbook.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(toc), "- [Concept API: Cookbook](doc/core/core.cookbook.md#concept-api-cookbook)") ||
+		!strings.Contains(string(toc), "    - [Layer Design](doc/core/core.cookbook.md#layer-design)") {
+		t.Fatalf("unexpected Cookbook TOC:\n%s", toc)
+	}
+	if strings.Contains(string(toc), "Knowledge.core.cookbook.md](") {
+		t.Fatalf("TOC exposes the canonical identity heading:\n%s", toc)
+	}
+	depthZero, err := bundle.ShowDepth("Knowledge.core.cookbook.md#ingredient-layers", 0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(string(depthZero), "# Ingredient Layers\n") || strings.Contains(string(depthZero), "## Definition") {
+		t.Fatalf("unexpected zero-depth section:\n%s", depthZero)
+	}
+	depthOne, err := bundle.ShowDepth("Knowledge.core.cookbook.md#ingredient-layers", 0, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(depthOne), "## Definition") || strings.Contains(string(depthOne), "### Layer Design") {
+		t.Fatalf("unexpected one-depth section:\n%s", depthOne)
+	}
+	withParent, err := bundle.ShowDepth("Knowledge.core.cookbook.md#layer-design", -1, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(withParent), "## Notes") || !strings.Contains(string(withParent), "### Layer Design") || strings.Contains(string(withParent), "## OS") {
+		t.Fatalf("unexpected parent projection:\n%s", withParent)
+	}
+	if _, err := bundle.TOC("Knowledge.core.cookbook.md#ingredient-layers"); err == nil {
+		t.Fatal("TOC accepted a heading fragment")
+	}
+	if _, err := bundle.ShowDepth("Knowledge.core.cookbook.md", 0, 1); err == nil {
+		t.Fatal("Show depth accepted a document without a heading fragment")
 	}
 
 	candidates := bundle.Resolve([]string{"core"})

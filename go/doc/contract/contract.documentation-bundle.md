@@ -130,6 +130,31 @@ heading anchors use the usual numeric suffix (`#responsibility-1`, then
 selecting one document silently, and a miss routes the caller to Resolve and
 the exact Bundle repository reference.
 
+### Single-document structural navigation
+
+`ctk docs toc <canonical-identity-or-path>` renders one exact document's ATX
+heading tree as nested Markdown links. Each link uses the resolved
+repository-relative path and exact heading fragment accepted by Show. The
+leading canonical identity heading is document metadata and is omitted from
+the TOC; the document title remains its first navigable entry.
+
+TOC, heading Show, and depth projection share one parsed heading model.
+Apparent headings inside fenced code blocks do not enter the model. Duplicate
+anchors are assigned across the visible document headings before any subtree
+is selected, so TOC and Show always agree.
+
+`ctk docs show <canonical-identity-or-path>#<heading> --depth <N|A..B>` limits
+output to structural levels relative to the selected heading. `--depth`
+requires a heading fragment. Level `0` is the selected heading and its direct
+body. Negative levels add ancestors on its unique heading path and their direct
+bodies without siblings. Positive levels add descendants through the requested
+tree depth. The projection is therefore not necessarily one contiguous source
+range.
+
+A single negative integer `N` means `N..0`; a single non-negative integer means
+`0..N`. An explicit inclusive range must contain zero. Omitting `--depth`
+preserves Show's complete selected-subtree behavior.
+
 ## Filesystem Export
 
 `ctk docs export <directory>` publishes the verified Bundle as its logical
@@ -160,8 +185,9 @@ executable that already contains one.
 
 `ctk docs` reads and verifies the Bundle from its own resolved executable path
 before rendering content. It does not discover or load a Workspace. The CLI
-provides Bootstrap, Node listing and shortcuts, Resolve, and Show. Help remains
-available even when a development binary has no Bundle.
+provides Bootstrap, Node listing and shortcuts, Resolve, TOC, Show, depth
+projection, and Export. Help remains available even when a development binary
+has no Bundle.
 
 ## Release verification
 
@@ -174,7 +200,8 @@ Every target executable receives the same validated Bundle bytes. The Release
 tool reopens each final executable without executing the target architecture
 and verifies version, revision, tag, and aggregate content digest. When one
 built target is native to the Release host, assembly also exercises version,
-Bootstrap, Node, Resolve, Show, and Export from a directory without a Workspace.
+Bootstrap, Node, Resolve, TOC, Show, depth projection, and Export from a
+directory without a Workspace.
 
 Platform archives and their checksums are created only after the Bundle is
 appended and verified, so the published checksum covers both executable and

@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 
 	ctkarchive "github.com/kshrkznr/code-toolkit/go/internal/archive"
@@ -558,13 +559,42 @@ func runDocs(output io.Writer, bundle *docbundle.Bundle, args []string) error {
 			return err
 		}
 		return nil
-	case "show":
+	case "toc":
 		if len(args) != 2 {
-			return fmt.Errorf("usage: ctk docs show <canonical-identity-or-path>[#heading]")
+			return fmt.Errorf("usage: ctk docs toc <canonical-identity-or-path>")
 		}
-		content, err := bundle.Show(args[1])
+		content, err := bundle.TOC(args[1])
 		if err != nil {
-			return fmt.Errorf("%w; find bundled references with: ctk docs resolve <terms...>; full repository: %s", err, bundle.RepositoryReference())
+			return docsNavigationError(bundle, err)
+		}
+		_, err = output.Write(content)
+		return err
+	case "show":
+		if len(args) < 2 || len(args) > 4 {
+			return fmt.Errorf("usage: ctk docs show <canonical-identity-or-path>[#heading] [--depth <N|A..B>]")
+		}
+		var content []byte
+		var err error
+		if len(args) == 2 {
+			content, err = bundle.Show(args[1])
+		} else {
+			depthValue := ""
+			switch {
+			case len(args) == 4 && args[2] == "--depth":
+				depthValue = args[3]
+			case len(args) == 3 && strings.HasPrefix(args[2], "--depth="):
+				depthValue = strings.TrimPrefix(args[2], "--depth=")
+			default:
+				return fmt.Errorf("usage: ctk docs show <canonical-identity-or-path>[#heading] [--depth <N|A..B>]")
+			}
+			minimum, maximum, parseErr := parseDocsDepth(depthValue)
+			if parseErr != nil {
+				return parseErr
+			}
+			content, err = bundle.ShowDepth(args[1], minimum, maximum)
+		}
+		if err != nil {
+			return docsNavigationError(bundle, err)
 		}
 		_, err = output.Write(content)
 		return err
@@ -580,7 +610,7 @@ func runDocs(output io.Writer, bundle *docbundle.Bundle, args []string) error {
 		return err
 	default:
 		if len(args) != 1 {
-			return fmt.Errorf("usage: ctk docs [<node>|resolve <terms...>|show <reference>|export <directory>]")
+			return fmt.Errorf("usage: ctk docs [<node>|resolve <terms...>|toc <reference>|show <reference>|export <directory>]")
 		}
 		content, err := bundle.ShowNode(args[0])
 		if err != nil {
@@ -591,17 +621,50 @@ func runDocs(output io.Writer, bundle *docbundle.Bundle, args []string) error {
 	}
 }
 
+func parseDocsDepth(value string) (int, int, error) {
+	if value == "" {
+		return 0, 0, fmt.Errorf("docs show --depth requires an integer or inclusive range such as -1..2")
+	}
+	if strings.Count(value, "..") == 0 {
+		depth, err := strconv.Atoi(value)
+		if err != nil {
+			return 0, 0, fmt.Errorf("invalid docs show depth %q: expected an integer or inclusive range such as -1..2", value)
+		}
+		if depth < 0 {
+			return depth, 0, nil
+		}
+		return 0, depth, nil
+	}
+	if strings.Count(value, "..") != 1 {
+		return 0, 0, fmt.Errorf("invalid docs show depth %q: expected an integer or inclusive range such as -1..2", value)
+	}
+	minimumText, maximumText, _ := strings.Cut(value, "..")
+	minimum, minimumErr := strconv.Atoi(minimumText)
+	maximum, maximumErr := strconv.Atoi(maximumText)
+	if minimumErr != nil || maximumErr != nil || minimum > 0 || maximum < 0 || minimum > maximum {
+		return 0, 0, fmt.Errorf("invalid docs show depth %q: range must contain 0", value)
+	}
+	return minimum, maximum, nil
+}
+
+func docsNavigationError(bundle *docbundle.Bundle, err error) error {
+	return fmt.Errorf("%w; find bundled references with: ctk docs resolve <terms...>; full repository: %s", err, bundle.RepositoryReference())
+}
+
 func writeDocsUsage(output io.Writer) error {
 	_, err := fmt.Fprint(output, `Usage:
   ctk docs                         Show the Concept and resolver Bootstrap
   ctk docs nodes                   List short navigation Node aliases
   ctk docs <node>                  Show one Node README (for example: core)
   ctk docs resolve <terms...>      Rank matching bundled documents
+  ctk docs toc <reference>         Show one document's heading tree
   ctk docs show <reference>        Show an identity or path, optionally #heading
+    [--depth <N|A..B>]             With #heading, include relative structural levels
   ctk docs export <directory>      Export the verified Bundle for full-text search
 
 Resolve output is tab-separated. Copy its IDENTITY or PATH into docs show.
 Resolve searches identity, path, Node alias, title, and headings, not bodies.
+TOC links can be copied into docs show. A depth range must contain level 0.
 Repository-only material is linked at this binary's exact tag or commit.
 `)
 	return err
@@ -1655,7 +1718,7 @@ Commands:
                       Temporarily launch a Distribution
   workbench [draft|inspect] [viewpoint] [--editor command]
                       Open a Draft or Inspect Workbench
-  docs [<node>|resolve <terms...>|show <reference>|export <directory>]
+  docs [<node>|resolve <terms...>|toc <reference>|show <reference>|export <directory>]
                       Navigate documentation packaged with this binary
   select              Select a command interactively
   version             Show binary version and build provenance

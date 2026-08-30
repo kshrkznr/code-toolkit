@@ -146,13 +146,59 @@ fragment selects one section, allowing an indexed See also link to keep its
 original precision. Missing and ambiguous references should report candidates
 rather than selecting one silently.
 
+Single-document structural navigation can keep that exact lookup useful
+without introducing a cross-document hierarchy. Two complementary forms are:
+
+```text
+ctk docs toc <canonical-identity-or-path>
+    print the document heading tree with references accepted by Show
+
+ctk docs show <canonical-identity-or-path>#<heading> --depth <depth-or-range>
+    project selected ancestor and descendant levels around one heading
+```
+
+`toc` operates on one exact document. Its output should preserve heading
+nesting and expose the exact fragment for each entry, including deterministic
+suffixes for duplicate Markdown anchors, so a person or AI assistant can pass
+an entry directly to `show`. It is a local map of one file, not another Node or
+Bundle-wide navigation layer.
+
+`--depth` is valid only when `show` receives a heading fragment. Relative level
+zero is the selected heading and its direct body. Negative levels add ancestors
+on the unique path to that heading, while positive levels add descendants:
+
+```text
+--depth 0       selected heading and direct body
+--depth -1      parent and selected heading, equivalent to -1..0
+--depth 1       selected heading and direct children, equivalent to 0..1
+--depth -1..2   parent through grandchildren, inclusively
+```
+
+A range must contain level zero. Ancestor projection includes each selected
+ancestor heading and its direct body but omits sibling sections, so it is a
+structural projection rather than one contiguous source slice. Descendant
+projection includes only sections within the selected heading. Omitting
+`--depth` preserves the ordinary Show behavior of printing the complete
+selected subtree.
+
+TOC and depth projection should share one Markdown heading model. At minimum it
+must retain level, text, generated anchor, source range, parent, and children;
+ignore apparent headings inside fenced code blocks; and apply the same
+duplicate-anchor rules used by heading Show. The generated Manifest may retain
+its concise heading index until a richer persisted representation proves
+necessary.
+
+The Go M3.5 implementation accepts this single-document boundary. Its exact
+syntax and observable behavior are owned by the Go Documentation Bundle
+Contract; cross-document hierarchy remains outside this direction.
+
 A concise Node alias may be exposed as a direct shortcut. For example,
 `ctk docs core` is equivalent to showing `Knowledge.core.md` or
 `doc/core/README.md`; it prints the Core Node README rather than concatenating
 every Core document. Workbench, Integration, Contract, Note, and other useful
 bundled Nodes can follow the same rule without creating a separate category
 dump behavior. Node aliases belong in the central index and must not collide
-with command names such as `resolve`, `show`, or `export`.
+with command names such as `resolve`, `show`, `toc`, or `export`.
 
 `ctk docs resolve core` remains distinct: it may discover the Node and several
 detailed documents, then let the reader or AI assistant choose one result to

@@ -32,11 +32,13 @@ func TestRunDocsNavigatesPackagedBundle(t *testing.T) {
 		args     []string
 		contains []string
 	}{
-		{name: "help", args: []string{"--help"}, contains: []string{"ctk docs <node>", "ctk docs resolve", "ctk docs show"}},
+		{name: "help", args: []string{"--help"}, contains: []string{"ctk docs <node>", "ctk docs resolve", "ctk docs toc", "--depth <N|A..B>"}},
 		{name: "nodes", args: []string{"nodes"}, contains: []string{"core\tdoc/core/README.md"}},
 		{name: "core", args: []string{"core"}, contains: []string{"# Concept Domain: Core", "doc/core/core.cookbook.md"}},
 		{name: "resolve", args: []string{"resolve", "Settings Variant precedence"}, contains: []string{"IDENTITY\tPATH\tTITLE\tMATCHED", "Knowledge.note.variant.md\tdoc/note/note.variant.md"}},
+		{name: "toc", args: []string{"toc", "knowledge.core.cookbook.md"}, contains: []string{"- [Concept API: Cookbook](doc/core/core.cookbook.md#concept-api-cookbook)", "  - [Responsibility](doc/core/core.cookbook.md#responsibility)"}},
 		{name: "show folded identity and duplicate heading", args: []string{"show", "knowledge.core.cookbook.md#responsibility-1"}, contains: []string{"## Responsibility", "Ingredients provide reusable building blocks"}},
+		{name: "show depth", args: []string{"show", "knowledge.core.cookbook.md#responsibility-1", "--depth", "0"}, contains: []string{"## Responsibility", "Ingredients provide reusable building blocks"}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			var output bytes.Buffer
@@ -61,6 +63,37 @@ func TestRunDocsNavigatesPackagedBundle(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(exportTarget, filepath.FromSlash(docbundle.ManifestPath))); err != nil {
 		t.Fatalf("Export Manifest missing: %v", err)
+	}
+	for _, args := range [][]string{
+		{"toc", "Knowledge.core.md#responsibility"},
+		{"show", "Knowledge.core.md", "--depth", "0"},
+		{"show", "Knowledge.core.md#responsibility", "--depth", "1..2"},
+	} {
+		if err := runDocs(io.Discard, bundle, args); err == nil {
+			t.Fatalf("invalid docs arguments were accepted: %v", args)
+		}
+	}
+}
+
+func TestParseDocsDepth(t *testing.T) {
+	for _, test := range []struct {
+		value            string
+		minimum, maximum int
+	}{
+		{value: "-1", minimum: -1, maximum: 0},
+		{value: "0", minimum: 0, maximum: 0},
+		{value: "2", minimum: 0, maximum: 2},
+		{value: "-1..2", minimum: -1, maximum: 2},
+	} {
+		minimum, maximum, err := parseDocsDepth(test.value)
+		if err != nil || minimum != test.minimum || maximum != test.maximum {
+			t.Fatalf("parseDocsDepth(%q) = %d, %d, %v", test.value, minimum, maximum, err)
+		}
+	}
+	for _, value := range []string{"", "one", "1..2", "-2..-1", "2..-1", "-1..0..2"} {
+		if _, _, err := parseDocsDepth(value); err == nil {
+			t.Fatalf("parseDocsDepth(%q) unexpectedly succeeded", value)
+		}
 	}
 }
 
