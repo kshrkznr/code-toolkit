@@ -155,12 +155,19 @@ CTK resolves its workspace in this order:
 
 1. `CTK_HOME`, when explicitly configured.
 2. The current directory or its ancestors.
-3. The repository-local location relative to the executable.
 
 A workspace is discoverable when it contains both `cookbook/recipe` and
 `cookbook/ingredient`, or when it contains `.config/workspace.yaml`. This
 allows a Homebrew or Scoop binary to operate on Workspace state without
 installing that state alongside the executable.
+
+When interactive `ctk activate` finds no Workspace and `CTK_HOME` is not set,
+it prompts for an editable Workspace path with `~/ctk` suggested. Enter accepts
+the suggestion, another path replaces it, and Escape cancels without writing.
+After confirmation, CTK creates the minimum footing without the executable
+sample and continues activation. Non-interactive activation does not create a
+Workspace implicitly. Later commands run from the new Workspace or use an
+explicit `CTK_HOME`; activation bootstrap does not persist that selection.
 
 When a binary-only installation needs a new starting point, the optional
 initializer creates one at an explicit path:

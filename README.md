@@ -343,8 +343,16 @@ ctk version
 ```
 
 Run CTK from an existing Workspace root or one of its descendants, or set
-`CTK_HOME` to a CTK Workspace. A binary-only installation can optionally create
-a small starting point at an explicit path:
+`CTK_HOME` to a CTK Workspace. When the first command is an interactive
+`ctk activate`, CTK instead offers an editable `~/ctk` Workspace path and
+continues activation after creating the minimum footing. Enter accepts the
+suggestion; Escape cancels without writing.
+
+The bootstrap does not persist Workspace selection. Run later commands from
+the new Workspace or set `CTK_HOME` to it.
+
+A binary-only installation can also initialize a small starting point at an
+explicit path before running another command:
 
 ```text
 ctk init /path/to/my-ctk
@@ -396,6 +404,13 @@ For example, use `code` for Visual Studio Code or `kiro` for Kiro.
 ```bash
 ctk activate code
 ```
+
+If no Workspace exists yet, interactive activation asks where to keep it. The
+editable suggestion is `~/ctk`: press Enter to accept it, type another path to
+replace it, or press Escape to cancel without writing. CTK creates only the
+minimum Workspace footing through this path, then imports the existing
+environment into `origin.<platform>`. For later commands, work from that
+Workspace or set `CTK_HOME` to it; CTK does not persist the selection.
 
 Platform activation is an explicit user action. Activating one Platform command
 does not activate or change another Platform command.
