@@ -58,8 +58,8 @@ Knowledge are preserved by [Packaged Documentation
 Navigation](note.packaged-documentation-navigation.md). Exact Bundle and CLI
 behavior belongs in the [Go Documentation Bundle
 Contract](../../go/doc/contract/contract.documentation-bundle.md), while
-unsettled distribution candidates remain in [Packaged Documentation Bundle
-Follow-ups](../future/future.documentation-bundle.md).
+unsettled distribution and navigation candidates remain in [Collected Future
+Candidates](../future/future.candidates.md#packaged-documentation-follow-ups).
 
 ## Boundary
 

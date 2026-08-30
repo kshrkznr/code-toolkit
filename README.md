@@ -98,7 +98,8 @@ Concept Domains
     └── Integration
            ├── Documentation Resolver API
            ├── Project Structure API
-           └── Code Environment API
+           ├── Code Environment API
+           └── Workspace API
 ```
 
 ============================================================
@@ -276,6 +277,21 @@ Primary concepts:
 - Runtime
 - Profile
 - Distribution
+
+---
+
+## Workspace
+
+Selects the integration context that connects Cookbook Source to generated and
+mutable CTK state without requiring them to share one repository location.
+
+See: [Workspace](doc/integration/integration.workspace.md)
+
+Primary concepts:
+- Workspace selection
+- Cookbook Source
+- Workbench ownership
+- Dist root
 
 ---
 
