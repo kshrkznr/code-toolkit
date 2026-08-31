@@ -229,7 +229,8 @@ func renderScoopManifest(value release) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("render Scoop manifest: %w", err)
 	}
-	return append(content, '\n'), nil
+	content = append(content, '\n')
+	return bytes.ReplaceAll(content, []byte("\n"), []byte("\r\n")), nil
 }
 
 func requireExistingFile(path, name string) error {

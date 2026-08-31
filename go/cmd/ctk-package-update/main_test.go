@@ -54,6 +54,10 @@ func TestRunUpdatesBothPackageDefinitions(t *testing.T) {
 			t.Fatalf("manifest does not contain %q", expected)
 		}
 	}
+	withoutCRLF := bytes.ReplaceAll(manifestContent, []byte("\r\n"), nil)
+	if !bytes.Contains(manifestContent, []byte("\r\n")) || bytes.Contains(withoutCRLF, []byte("\n")) {
+		t.Fatalf("Scoop manifest does not use CRLF consistently: %q", manifestContent)
+	}
 
 	output.Reset()
 	if err := run([]string{
