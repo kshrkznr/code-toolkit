@@ -299,17 +299,89 @@ Primary concepts:
 
 # Installation
 
-The current macOS and Windows binaries are published on the
-[GitHub Releases page](https://github.com/kshrkznr/code-toolkit/releases/latest).
-The executable carries its version-matched documentation and can use an
-existing Workspace or initialize an optional starting point without a
-repository checkout. Download `checksums.txt` and the archive for your platform
-from the latest release Assets into a directory of your choice.
+The package managers install the CTK CLI and its version-matched documentation.
+They do not install, move, or own your Workspace, Cookbook Source, or generated
+Distributions.
 
-## macOS
+## macOS with Homebrew
 
-Choose the archive for the Mac's architecture, verify the published checksums,
-and place `ctk` on `PATH`:
+Install the current published CTK Release from the public Tap:
+
+```bash
+brew install kshrkznr/tap/ctk
+```
+
+The Formula selects the macOS arm64 or amd64 archive for the current Mac and
+verifies its published SHA-256 value.
+
+## Windows with Scoop
+
+Add the public Bucket once, then install CTK:
+
+```powershell
+scoop bucket add kshrkznr https://github.com/kshrkznr/scoop-bucket
+scoop install ctk
+```
+
+The current Scoop package targets Windows amd64 and verifies the published
+archive hash. The Bucket-qualified install spelling is
+`scoop install kshrkznr/ctk`.
+
+## Confirm the CLI before choosing a Workspace
+
+These commands do not discover or create a Workspace, so they can run from any
+directory immediately after installation:
+
+```text
+ctk version
+ctk --help
+ctk docs status
+```
+
+Continue to [Getting Started](#getting-started) to import a VS Code-family
+environment you already use. The first interactive `ctk activate` can create
+the minimum Workspace footing after you confirm its path; installation itself
+does not make that decision.
+
+## Upgrade or remove the CLI
+
+Homebrew:
+
+```bash
+brew update
+brew upgrade ctk
+brew uninstall ctk
+```
+
+Scoop:
+
+```powershell
+scoop update
+scoop update ctk
+scoop uninstall ctk
+```
+
+Before uninstalling CTK while a Platform is activated, use
+`ctk deactivate <platform>` to restore that Platform's imported environment.
+See [Leaving CTK](doc/note/note.leaving-ctk.md) for recovery and removal order.
+
+Package removal removes the package-manager-owned CLI only. Independently
+located Cookbook Source, Dist, Archive, `.vsix`, and other Workspace state
+remain user-owned. Generic rollback commands are intentionally not documented
+until retained-version behavior has been exercised on each target package
+manager; use a verified archive from the corresponding GitHub Release when an
+older CLI is required.
+
+## Manual GitHub Release fallback
+
+The package definitions consume the same archives and SHA-256 values published
+on the [GitHub Releases
+page](https://github.com/kshrkznr/code-toolkit/releases/latest). Manual
+installation remains available when package-manager use is unsuitable.
+
+Download `checksums.txt` and the archive for the selected Release into one
+directory. On macOS, verify and install the archive matching the Mac's
+architecture:
 
 ```bash
 cd /path/to/downloaded-assets
@@ -319,14 +391,12 @@ mkdir -p "$HOME/.local/bin"
 install -m 0755 ctk "$HOME/.local/bin/ctk"
 ```
 
-Compare the displayed SHA-256 value with the corresponding entry in
-`checksums.txt`. Use `ctk_v0.5.2_darwin_amd64.tar.gz` instead on an Intel Mac.
-Add `$HOME/.local/bin` to `PATH` when it is not already available.
+Compare the displayed SHA-256 value with the corresponding line in
+`checksums.txt`. Use `ctk_v0.5.2_darwin_amd64.tar.gz` on an Intel Mac and add
+`$HOME/.local/bin` to `PATH` when needed.
 
-## Windows
-
-From PowerShell, verify that the displayed hash matches the Windows entry in
-`checksums.txt`, then extract the executable into a directory on `PATH`:
+On Windows, verify the amd64 archive before extracting it into a directory on
+`PATH`:
 
 ```powershell
 Set-Location C:\path\to\downloaded-assets
@@ -334,13 +404,12 @@ Get-FileHash .\ctk_v0.5.2_windows_amd64.zip -Algorithm SHA256
 Expand-Archive .\ctk_v0.5.2_windows_amd64.zip -DestinationPath "$env:LOCALAPPDATA\CTK\bin"
 ```
 
-Add `%LOCALAPPDATA%\CTK\bin` to the user `PATH` when necessary.
+Compare the displayed hash with `checksums.txt` and add
+`%LOCALAPPDATA%\CTK\bin` to the user `PATH` when needed. The archive names in
+these examples identify the current v0.5.2 Release; keep the archive,
+`checksums.txt`, and command version identical when selecting another Release.
 
-Confirm the installed binary:
-
-```text
-ctk version
-```
+## Explicit Workspace initialization
 
 Run CTK from an existing Workspace root or one of its descendants, or set
 `CTK_HOME` to a CTK Workspace. When the first command is an interactive
@@ -401,9 +470,11 @@ editor to support and let an AI assistant prepare a small, separate
 Distribution. The import workflow below remains available when there is an
 existing environment you want to preserve.
 
-You do not need to understand Ingredient Layers or Variants before getting started.
+You do not need to understand Ingredient Layers or Variants before getting
+started.
 
-The generated proposals can be committed as they are and refined gradually as your Cookbook evolves.
+The generated proposals can be committed as they are and refined gradually as
+your Cookbook evolves.
 
 ---
 
@@ -513,7 +584,8 @@ To build a separate Distribution from the same Recipe instead:
 ctk build origin.code
 ```
 
-Once your environment is managed by CTK, you can continue refining the Cookbook incrementally without repeating the initial import process.
+Once your environment is managed by CTK, you can continue refining the Cookbook
+incrementally without repeating the initial import process.
 
 ---
 
@@ -547,8 +619,14 @@ Once your environment is managed by CTK, you can continue refining the Cookbook 
 
 # Try the Sample Recipe
 
-The executable sample is a separate path for exploring CTK without importing
-the editor environment you already use.
+The sample is a separate path for exploring CTK without importing or activating
+the editor environment you already use. Initialize it at an explicit path, then
+work inside that new Workspace:
+
+```bash
+ctk init ~/ctk-sample
+cd ~/ctk-sample
+```
 
 Build the Recipe matching the current OS:
 
