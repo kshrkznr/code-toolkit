@@ -63,6 +63,7 @@ missing exact artifact.
 go/
 ├── doc/contract/          Go implementation Contracts
 ├── cmd/ctk/              CLI entry point
+├── verify.sh             Local and CI repository verification
 ├── release.sh            Cross-platform Release artifact builder
 └── internal/
     ├── archive/          Hashed snapshot packaging and validation
@@ -94,12 +95,16 @@ Build the repository binary:
 go -C go build -o ../bin/ctk ./cmd/ctk
 ```
 
-Run tests and static analysis:
+Run the same repository verification used by CI:
 
 ```bash
-go -C go test ./...
-go -C go vet ./...
+go/verify.sh
 ```
+
+It checks Go formatting, tests, vet, the Windows cross-build, Bash syntax, the
+current Documentation Bundle, generated third-party notices, and whitespace
+errors. CI also runs the Go tests natively on macOS and Windows so host-specific
+implementations and build-tagged tests execute on their target OS.
 
 The repository entry points are:
 
