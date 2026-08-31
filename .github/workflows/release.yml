@@ -1,0 +1,206 @@
+name: Draft Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Existing annotated Release tag to verify
+        required: true
+        type: string
+      create_draft:
+        description: Create a Draft GitHub Release after verification
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.event_name == 'push' && github.ref_name || inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build Release artifacts
+    runs-on: macos-latest
+    timeout-minutes: 30
+    outputs:
+      version: ${{ steps.version.outputs.value }}
+    steps:
+      - name: Resolve Release version
+        id: version
+        env:
+          REQUESTED_VERSION: ${{ github.event_name == 'push' && github.ref_name || inputs.version }}
+        run: |
+          if [[ ! "$REQUESTED_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Release version must be a v-prefixed semantic version: $REQUESTED_VERSION" >&2
+            exit 1
+          fi
+          echo "value=$REQUESTED_VERSION" >> "$GITHUB_OUTPUT"
+      - name: Check out exact tag
+        uses: actions/checkout@v6.0.2
+        with:
+          ref: refs/tags/${{ steps.version.outputs.value }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify annotated tag and main ancestry
+        env:
+          CTK_VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          if [[ "$(git cat-file -t "$CTK_VERSION")" != "tag" ]]; then
+            echo "Release tag must be annotated: $CTK_VERSION" >&2
+            exit 1
+          fi
+          if [[ "$(git rev-parse "$CTK_VERSION^{commit}")" != "$(git rev-parse HEAD)" ]]; then
+            echo "Release tag does not identify the checked-out commit: $CTK_VERSION" >&2
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor HEAD origin/main; then
+            echo "Release tag commit is not contained in main: $CTK_VERSION" >&2
+            exit 1
+          fi
+      - name: Refuse an existing Release
+        if: github.event_name == 'push' || inputs.create_draft
+        env:
+          CTK_VERSION: ${{ steps.version.outputs.value }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$CTK_VERSION" >/dev/null 2>&1; then
+            echo "GitHub Release already exists: $CTK_VERSION" >&2
+            exit 1
+          fi
+      - name: Set up Go
+        uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: go/go.mod
+          cache-dependency-path: go/go.sum
+      - name: Run repository verification
+        run: ./go/verify.sh
+      - name: Build Release artifacts once
+        env:
+          CTK_VERSION: ${{ steps.version.outputs.value }}
+        run: ./go/release.sh "$CTK_VERSION"
+      - name: Verify artifact set and checksums
+        env:
+          CTK_VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          release_dir="release/$CTK_VERSION"
+          for asset in \
+            "ctk_${CTK_VERSION}_darwin_arm64.tar.gz" \
+            "ctk_${CTK_VERSION}_darwin_amd64.tar.gz" \
+            "ctk_${CTK_VERSION}_windows_amd64.zip" \
+            checksums.txt; do
+            test -f "$release_dir/$asset"
+          done
+          (cd "$release_dir" && shasum -a 256 -c checksums.txt)
+      - name: Preserve exact Release artifacts
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: ctk-release-${{ steps.version.outputs.value }}
+          path: release/${{ steps.version.outputs.value }}/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+  windows-smoke:
+    name: Verify packaged Windows CLI
+    needs: build
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - name: Download exact Release artifacts
+        uses: actions/download-artifact@v8.0.1
+        with:
+          name: ctk-release-${{ needs.build.outputs.version }}
+          path: release/${{ needs.build.outputs.version }}
+      - name: Verify checksums and packaged behavior
+        shell: pwsh
+        env:
+          CTK_VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $releaseDirectory = Join-Path $env:GITHUB_WORKSPACE "release\$env:CTK_VERSION"
+          foreach ($line in Get-Content (Join-Path $releaseDirectory "checksums.txt")) {
+            if ($line -notmatch '^([0-9a-f]{64})\s+\*?(.+)$') {
+              throw "Invalid checksum line: $line"
+            }
+            $expected = $Matches[1]
+            $asset = Join-Path $releaseDirectory $Matches[2]
+            $actual = (Get-FileHash -LiteralPath $asset -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($actual -ne $expected) {
+              throw "Checksum mismatch: $asset"
+            }
+          }
+
+          $smokeDirectory = Join-Path $env:RUNNER_TEMP "ctk-release-smoke"
+          $archive = Join-Path $releaseDirectory "ctk_${env:CTK_VERSION}_windows_amd64.zip"
+          Expand-Archive -LiteralPath $archive -DestinationPath $smokeDirectory
+          $binary = Join-Path $smokeDirectory "ctk.exe"
+
+          function Assert-CtkOutput {
+            param([string[]] $Arguments, [string] $Expected)
+            $output = (& $binary @Arguments 2>&1 | Out-String)
+            if ($LASTEXITCODE -ne 0 -or -not $output.Contains($Expected)) {
+              throw "ctk $($Arguments -join ' ') did not contain '$Expected': $output"
+            }
+          }
+
+          Remove-Item Env:CTK_HOME -ErrorAction SilentlyContinue
+          Assert-CtkOutput -Arguments @("version") -Expected $env:CTK_VERSION
+          Assert-CtkOutput -Arguments @("completion", "powershell") -Expected "Register-ArgumentCompleter"
+          Assert-CtkOutput -Arguments @("docs", "status") -Expected "source: packaged"
+          Assert-CtkOutput -Arguments @("docs", "resolve", "Settings Variant precedence") -Expected "Knowledge.note.variant.md"
+
+          $initialized = Join-Path $env:RUNNER_TEMP "ctk-initialized"
+          & $binary init $initialized --exclude-sample
+          if ($LASTEXITCODE -ne 0 -or
+              -not (Test-Path (Join-Path $initialized "cookbook\recipe")) -or
+              -not (Test-Path (Join-Path $initialized "cookbook\ingredient"))) {
+            throw "Packaged ctk init verification failed"
+          }
+
+  draft:
+    name: Create Draft GitHub Release
+    if: github.event_name == 'push' || inputs.create_draft
+    needs:
+      - build
+      - windows-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download verified Release artifacts
+        uses: actions/download-artifact@v8.0.1
+        with:
+          name: ctk-release-${{ needs.build.outputs.version }}
+          path: release/${{ needs.build.outputs.version }}
+      - name: Reverify checksums
+        env:
+          CTK_VERSION: ${{ needs.build.outputs.version }}
+        run: cd "release/$CTK_VERSION" && sha256sum -c checksums.txt
+      - name: Create Draft Release
+        env:
+          CTK_VERSION: ${{ needs.build.outputs.version }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if gh release view "$CTK_VERSION" >/dev/null 2>&1; then
+            echo "GitHub Release already exists: $CTK_VERSION" >&2
+            exit 1
+          fi
+          release_dir="release/$CTK_VERSION"
+          gh release create "$CTK_VERSION" \
+            "$release_dir/checksums.txt" \
+            "$release_dir/ctk_${CTK_VERSION}_darwin_arm64.tar.gz" \
+            "$release_dir/ctk_${CTK_VERSION}_darwin_amd64.tar.gz" \
+            "$release_dir/ctk_${CTK_VERSION}_windows_amd64.zip" \
+            --draft \
+            --verify-tag \
+            --fail-on-no-commits \
+            --generate-notes \
+            --title "CTK $CTK_VERSION"

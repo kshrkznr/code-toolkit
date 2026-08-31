@@ -147,6 +147,19 @@ notice inventory after dependency changes:
 go/third-party-notices.sh
 ```
 
+Pushing an annotated `vX.Y.Z` tag starts the Draft Release workflow. The
+workflow accepts only a tag whose commit is contained in `main`, runs
+`go/verify.sh`, invokes this builder once on macOS, verifies the same artifact
+bytes and packaged CLI on Windows, and then creates a Draft GitHub Release.
+Manual dispatch can verify an existing tag without creating or changing a
+Release; Draft creation must be selected explicitly for a manual run.
+
+Version selection, versioned documentation updates, the release Pull Request,
+and annotated tag creation remain human-owned. After the workflow succeeds, a
+maintainer reviews the generated notes, exact assets, and checksums before
+publishing the Draft. The workflow does not replace a local `ctk` binary or
+publish to package managers.
+
 Repository builds remain the development path. Versioned Releases are the
 intended source for future Homebrew and Scoop distribution.
 
