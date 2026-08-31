@@ -2048,13 +2048,13 @@ Commands:
   freeze commit [options]
                       Commit present Draft Artifacts into the Cookbook
   view [source] [options]
-                      Auto-detect and view a Distribution, Recipe, or Ingredient
+                      Generate a Workspace-local Inspect Inventory
   view dist [dist] [options]
-                      View a Distribution Inventory explicitly
+                      Generate a Distribution Inspect Inventory
   view recipe [recipe] [options]
-                      View a resolved Recipe Inventory explicitly
+                      Generate a resolved Recipe Inspect Inventory
   view ingredient [all|layer|layer.name] [options]
-                      View all, one layer, or one Ingredient explicitly
+                      Generate an Ingredient Inspect Inventory
   sync [left] [right] [options]
                       Compare Distribution or Recipe completed states
   list                List Distributions

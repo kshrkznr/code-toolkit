@@ -129,12 +129,12 @@ func commandTree() *cobra.Command {
 	freezeCommit.Flags().Bool("force", false, "replace conflicting Cookbook content")
 	freeze.AddCommand(freezeDraft, freezeCommit)
 
-	view := documentedNode("view [source]", "View a Distribution, Recipe, or Ingredient", "", "Knowledge.contract.workbench.md#view-and-sync")
+	view := documentedNode("view [source]", "Generate a Workspace-local Inspect Inventory", "Writes disposable Artifacts under the Workspace Inspect Workbench.", "Knowledge.contract.workbench.md#view-and-sync")
 	choiceFlag(view, "on-conflict", []string{"abort", "replace"})
 	for _, child := range []*cobra.Command{
-		documentedNode("dist [dist]", "View a Distribution Inventory", "", "Knowledge.contract.workbench.md#view-and-sync"),
-		documentedNode("recipe [recipe]", "View a resolved Recipe Inventory", "", "Knowledge.contract.workbench.md#view-and-sync"),
-		documentedNode("ingredient [all|layer|layer.name]", "View Ingredient content", "", "Knowledge.contract.workbench.md#view-and-sync"),
+		documentedNode("dist [dist]", "Generate a Distribution Inspect Inventory", "Writes disposable Artifacts under the Workspace Inspect Workbench.", "Knowledge.contract.workbench.md#view-and-sync"),
+		documentedNode("recipe [recipe]", "Generate a resolved Recipe Inspect Inventory", "Writes disposable Artifacts under the Workspace Inspect Workbench.", "Knowledge.contract.workbench.md#view-and-sync"),
+		documentedNode("ingredient [all|layer|layer.name]", "Generate an Ingredient Inspect Inventory", "Writes disposable Artifacts under the Workspace Inspect Workbench.", "Knowledge.contract.workbench.md#view-and-sync"),
 	} {
 		choiceFlag(child, "on-conflict", []string{"abort", "replace"})
 		view.AddCommand(child)
