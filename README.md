@@ -481,6 +481,8 @@ your Cookbook evolves.
 ## 1. Activate a Platform
 
 Choose the Platform command whose current environment you want CTK to manage.
+Before changing that environment, review `ctk activate --help` and
+`ctk docs show Knowledge.integration.code-venv.md#platform-activation`.
 
 A Platform command is the CLI entry point for a VS Code-family application.
 For example, use `code` for Visual Studio Code or `kiro` for Kiro.
@@ -623,12 +625,21 @@ The sample is a separate path for exploring CTK without importing or activating
 the editor environment you already use. Initialize it at an explicit path, then
 work inside that new Workspace:
 
+This path does not modify the existing editor environment, but `init` and
+`build` write inside the explicit Workspace and Build may acquire extension
+artifacts. For zero-write exploration, start with `ctk docs` and
+`ctk docs resolve <question>` instead.
+
 ```bash
 ctk init ~/ctk-sample
 cd ~/ctk-sample
 ```
 
 Build the Recipe matching the current OS:
+
+The matching Platform CLI must be installed. This sample installs an extension
+through the Platform repository, so Marketplace and network access are required
+for a complete Build. Build does not import or activate the existing Runtime.
 
 ```bash
 # macOS
@@ -742,7 +753,7 @@ its own boundary in the [Bash Language README](bash/scripts/README.md).
 | freeze commit | Persist cookbook changes | Draft | |
 | build | Generate distributions | Build Lifecycle | |
 | apply | Apply a distribution | Build Lifecycle | |
-| view | Inventory one completed source | Inspect | |
+| view | Generate an Inventory in the Workspace-local Inspect Workbench | Inspect | Writes disposable Inspect Artifacts |
 | sync | Compare two completed sources | Inspect | |
 | workbench | Open an existing Draft or Inspect workbench | Workbench | Selects the area and Inspect viewpoint when omitted |
 

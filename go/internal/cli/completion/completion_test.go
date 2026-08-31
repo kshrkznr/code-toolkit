@@ -85,6 +85,15 @@ func TestHelpShowsCommandSyntaxOptionsAndDocumentation(t *testing.T) {
 			},
 		},
 		{
+			name: "view writes Inspect Artifacts",
+			args: []string{"view", "--help"},
+			expected: []string{
+				"Generate a Workspace-local Inspect Inventory",
+				"Writes disposable Artifacts under the Workspace Inspect Workbench.",
+				"Usage:\n  ctk view [source] [flags]",
+			},
+		},
+		{
 			name: "help command syntax",
 			args: []string{"help", "freeze", "draft"},
 			expected: []string{
