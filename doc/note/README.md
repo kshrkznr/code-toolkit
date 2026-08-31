@@ -53,6 +53,9 @@ Start with the question closest to the current work:
 - How can packaged Knowledge be navigated progressively, searched by metadata,
   and compared with an explicit local source?
   → [Packaged Documentation Navigation](note.packaged-documentation-navigation.md)
+- How does a published CTK Release become reviewable Homebrew and Scoop
+  updates, and where does target-device verification begin?
+  → [Package-manager Delivery](note.package-manager-delivery.md)
 
 These are useful entry points rather than an exhaustive document catalog.
 Search by the current concept when none of these questions fit.

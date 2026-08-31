@@ -1,0 +1,217 @@
+name: Package Delivery
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Existing published stable Release tag
+        required: true
+        type: string
+      create_prs:
+        description: Create package repository Pull Requests
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: package-delivery-${{ github.event_name == 'release' && github.event.release.tag_name || inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  deliver:
+    name: Verify and prepare package updates
+    if: github.event_name != 'release' || github.event.release.prerelease == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Resolve delivery request
+        id: request
+        env:
+          RELEASE_VERSION: ${{ github.event.release.tag_name }}
+          MANUAL_VERSION: ${{ inputs.version }}
+          MANUAL_CREATE_PRS: ${{ inputs.create_prs }}
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" == "release" ]]; then
+            version="$RELEASE_VERSION"
+            create_prs=true
+          else
+            version="$MANUAL_VERSION"
+            create_prs="$MANUAL_CREATE_PRS"
+          fi
+          if [[ ! "$version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Package delivery requires a stable v-prefixed semantic version: $version" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "create-prs=$create_prs" >> "$GITHUB_OUTPUT"
+
+      - name: Check out delivery tooling
+        uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: go/go.mod
+          cache-dependency-path: go/go.sum
+
+      - name: Verify published Release and exact assets
+        env:
+          CTK_VERSION: ${{ steps.request.outputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          release_json="$(gh release view "$CTK_VERSION" --repo "$GITHUB_REPOSITORY" --json tagName,isDraft,isPrerelease,url)"
+          if [[ "$(jq -r .tagName <<<"$release_json")" != "$CTK_VERSION" ||
+                "$(jq -r .isDraft <<<"$release_json")" != "false" ||
+                "$(jq -r .isPrerelease <<<"$release_json")" != "false" ]]; then
+            echo "Package delivery requires an existing published stable Release: $release_json" >&2
+            exit 1
+          fi
+
+          mkdir -p "release/$CTK_VERSION"
+          gh release download "$CTK_VERSION" \
+            --repo "$GITHUB_REPOSITORY" \
+            --dir "release/$CTK_VERSION" \
+            --pattern checksums.txt \
+            --pattern "ctk_${CTK_VERSION}_darwin_arm64.tar.gz" \
+            --pattern "ctk_${CTK_VERSION}_darwin_amd64.tar.gz" \
+            --pattern "ctk_${CTK_VERSION}_windows_amd64.zip"
+
+          release_dir="release/$CTK_VERSION"
+          expected_assets=(
+            "ctk_${CTK_VERSION}_darwin_arm64.tar.gz"
+            "ctk_${CTK_VERSION}_darwin_amd64.tar.gz"
+            "ctk_${CTK_VERSION}_windows_amd64.zip"
+            checksums.txt
+          )
+          for asset in "${expected_assets[@]}"; do
+            test -f "$release_dir/$asset"
+          done
+          (cd "$release_dir" && sha256sum -c checksums.txt)
+
+      - name: Check out package repositories
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir packages
+          gh repo clone kshrkznr/homebrew-tap packages/homebrew-tap -- --depth=1
+          gh repo clone kshrkznr/scoop-bucket packages/scoop-bucket -- --depth=1
+
+      - name: Generate package definitions
+        env:
+          CTK_VERSION: ${{ steps.request.outputs.version }}
+        run: |
+          go -C go run ./cmd/ctk-package-update \
+            -version "$CTK_VERSION" \
+            -checksums "$GITHUB_WORKSPACE/release/$CTK_VERSION/checksums.txt" \
+            -homebrew-formula "$GITHUB_WORKSPACE/packages/homebrew-tap/Formula/ctk.rb" \
+            -scoop-manifest "$GITHUB_WORKSPACE/packages/scoop-bucket/bucket/ctk.json"
+
+          homebrew_changes="$(git -C packages/homebrew-tap diff --name-only)"
+          scoop_changes="$(git -C packages/scoop-bucket diff --name-only)"
+          if [[ -n "$homebrew_changes" && "$homebrew_changes" != "Formula/ctk.rb" ]]; then
+            echo "Unexpected Homebrew changes: $homebrew_changes" >&2
+            exit 1
+          fi
+          if [[ -n "$scoop_changes" && "$scoop_changes" != "bucket/ctk.json" ]]; then
+            echo "Unexpected Scoop changes: $scoop_changes" >&2
+            exit 1
+          fi
+          git -C packages/homebrew-tap diff --check
+          git -C packages/scoop-bucket diff --check
+          git -C packages/homebrew-tap diff
+          git -C packages/scoop-bucket diff
+
+      - name: Require package delivery credential
+        if: steps.request.outputs.create-prs == 'true'
+        env:
+          PACKAGE_DELIVERY_TOKEN: ${{ secrets.PACKAGE_DELIVERY_TOKEN }}
+        run: |
+          if [[ -z "$PACKAGE_DELIVERY_TOKEN" ]]; then
+            echo "PACKAGE_DELIVERY_TOKEN is required to create package Pull Requests" >&2
+            exit 1
+          fi
+
+      - name: Create reviewable package updates
+        if: steps.request.outputs.create-prs == 'true'
+        env:
+          CTK_VERSION: ${{ steps.request.outputs.version }}
+          GH_TOKEN: ${{ secrets.PACKAGE_DELIVERY_TOKEN }}
+        run: |
+          gh auth setup-git
+          branch="update-ctk-$CTK_VERSION"
+          release_url="https://github.com/$GITHUB_REPOSITORY/releases/tag/$CTK_VERSION"
+          run_url="https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+          preflight_update() {
+            local directory="$1"
+            local repository="$2"
+            local target="$3"
+            local label="$4"
+
+            if git -C "$directory" diff --quiet -- "$target"; then
+              echo "$label is already current at $CTK_VERSION"
+              return
+            fi
+
+            if git -C "$directory" ls-remote --exit-code --heads origin "refs/heads/$branch" >/dev/null 2>&1; then
+              git -C "$directory" fetch origin "$branch:refs/remotes/origin/$branch"
+              local branch_changes
+              branch_changes="$(git -C "$directory" diff --name-only origin/main..."origin/$branch")"
+              if [[ "$branch_changes" != "$target" ]]; then
+                echo "Existing $repository branch $branch changes an unexpected scope: $branch_changes" >&2
+                exit 1
+              fi
+              local remote_target="$RUNNER_TEMP/$(basename "$directory")-remote"
+              if ! git -C "$directory" show "origin/$branch:$target" > "$remote_target" ||
+                 ! cmp -s "$directory/$target" "$remote_target"; then
+                echo "Existing $repository branch $branch differs from the deterministic package update" >&2
+                exit 1
+              fi
+            fi
+          }
+
+          publish_update() {
+            local directory="$1"
+            local repository="$2"
+            local target="$3"
+            local label="$4"
+
+            if git -C "$directory" diff --quiet -- "$target"; then
+              return
+            fi
+
+            if ! git -C "$directory" ls-remote --exit-code --heads origin "refs/heads/$branch" >/dev/null 2>&1; then
+              git -C "$directory" switch -c "$branch"
+              git -C "$directory" config user.name "github-actions[bot]"
+              git -C "$directory" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+              git -C "$directory" add "$target"
+              git -C "$directory" commit -m "Update CTK to $CTK_VERSION"
+              git -C "$directory" push -u origin "$branch"
+            fi
+
+            local existing_pr
+            existing_pr="$(gh pr list --repo "$repository" --head "$branch" --state open --json url --jq '.[0].url // empty')"
+            if [[ -n "$existing_pr" ]]; then
+              echo "$label update already has Pull Request: $existing_pr"
+              return
+            fi
+            gh pr create \
+              --repo "$repository" \
+              --base main \
+              --head "$branch" \
+              --title "Update CTK to $CTK_VERSION" \
+              --body "Updates $label from the published [CTK $CTK_VERSION Release]($release_url). Generated from exact Release checksums by [package delivery]($run_url)."
+          }
+
+          preflight_update packages/homebrew-tap kshrkznr/homebrew-tap Formula/ctk.rb Homebrew
+          preflight_update packages/scoop-bucket kshrkznr/scoop-bucket bucket/ctk.json Scoop
+          publish_update packages/homebrew-tap kshrkznr/homebrew-tap Formula/ctk.rb Homebrew
+          publish_update packages/scoop-bucket kshrkznr/scoop-bucket bucket/ctk.json Scoop

@@ -49,17 +49,12 @@ against the same stable conceptual and behavioral boundaries.
 
 ## Package-manager distribution
 
-CTK is implemented as a self-contained Go executable and produces versioned
-macOS and Windows Release Artifacts with checksums. Its Workspace-independent
+CTK publishes versioned macOS and Windows Release Artifacts with checksums.
+Stable Releases now feed reviewable Homebrew Tap and Scoop Bucket updates
+through the current [Package-manager Delivery
+Note](../note/note.package-manager-delivery.md). Its Workspace-independent
 documentation, optional Workspace initializer, and static completion generation
 remove the need for a source checkout from those package installation paths.
-
-The remaining distribution candidate is publication through package managers
-such as:
-
-- Homebrew
-- Scoop
-- WinGet
 
 This candidate does not reopen Workspace ownership or Direct Launcher
 independence. Those boundaries are already defined by the
@@ -67,19 +62,19 @@ independence. Those boundaries are already defined by the
 [Workspace integration rationale](../design-note/design-note.platform-definition-scope.md),
 and [Go Distribution Contract](../../go/doc/contract/contract.distribution.md).
 
-The remaining candidate is the publication and maintenance mechanism itself:
+The remaining candidates are lifecycle and additional-channel questions:
 
-- Homebrew Tap, Scoop Bucket, and possible WinGet package ownership
+- possible WinGet package ownership and publication
 - signing, macOS notarization, and Windows trust presentation
-- checksum publication and verification through package-manager workflows
-- upgrade, rollback, and version-retention policy
+- upgrade, rollback, and version-retention policy after target-device evidence
 
 Executable signing may interact with the appended Documentation Bundle. That
 transport-specific question remains in the packaged documentation follow-ups
 below; it does not create a second owner for package publication.
 
-Reconsider it when CTK is ready to maintain one concrete package channel and
-validate installation, upgrade, rollback, and removal on its target OS.
+Reconsider each lifecycle claim after installation, upgrade, rollback, and
+removal have been observed on the relevant target OS. Reconsider WinGet only
+when maintaining a third channel solves a concrete distribution need.
 
 ## Packaged documentation follow-ups
 
