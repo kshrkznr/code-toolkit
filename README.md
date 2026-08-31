@@ -313,14 +313,14 @@ and place `ctk` on `PATH`:
 
 ```bash
 cd /path/to/downloaded-assets
-shasum -a 256 ctk_v0.5.1_darwin_arm64.tar.gz
-tar -xzf ctk_v0.5.1_darwin_arm64.tar.gz
+shasum -a 256 ctk_v0.5.2_darwin_arm64.tar.gz
+tar -xzf ctk_v0.5.2_darwin_arm64.tar.gz
 mkdir -p "$HOME/.local/bin"
 install -m 0755 ctk "$HOME/.local/bin/ctk"
 ```
 
 Compare the displayed SHA-256 value with the corresponding entry in
-`checksums.txt`. Use `ctk_v0.5.1_darwin_amd64.tar.gz` instead on an Intel Mac.
+`checksums.txt`. Use `ctk_v0.5.2_darwin_amd64.tar.gz` instead on an Intel Mac.
 Add `$HOME/.local/bin` to `PATH` when it is not already available.
 
 ## Windows
@@ -330,8 +330,8 @@ From PowerShell, verify that the displayed hash matches the Windows entry in
 
 ```powershell
 Set-Location C:\path\to\downloaded-assets
-Get-FileHash .\ctk_v0.5.1_windows_amd64.zip -Algorithm SHA256
-Expand-Archive .\ctk_v0.5.1_windows_amd64.zip -DestinationPath "$env:LOCALAPPDATA\CTK\bin"
+Get-FileHash .\ctk_v0.5.2_windows_amd64.zip -Algorithm SHA256
+Expand-Archive .\ctk_v0.5.2_windows_amd64.zip -DestinationPath "$env:LOCALAPPDATA\CTK\bin"
 ```
 
 Add `%LOCALAPPDATA%\CTK\bin` to the user `PATH` when necessary.
