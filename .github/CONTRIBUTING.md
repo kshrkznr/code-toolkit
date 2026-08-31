@@ -24,6 +24,16 @@ builder, verifies the packaged Windows CLI, and creates a Draft GitHub Release.
 A maintainer reviews and publishes that Draft; the workflow does not choose a
 version, create a tag, publish automatically, or update a local binary.
 
+Publishing a stable Release starts Package Delivery. It verifies the exact
+Release archives against `checksums.txt` and opens reviewable Homebrew Tap and
+Scoop Bucket Pull Requests. Package repository checks and maintainer merge are
+still required; automation does not push generated definitions directly to a
+package repository's `main` branch. Manual dispatch verifies an existing
+stable Release without creating Pull Requests unless that action is selected
+explicitly. See [Package-manager
+Delivery](../doc/note/note.package-manager-delivery.md) for the operational
+boundary.
+
 Documentation-only Issues and Pull Requests are welcome. In particular, when
 a CTK document is difficult to discover from its identity, path, Node alias,
 title, or headings, report the question you tried to resolve. Improving that

@@ -157,11 +157,21 @@ Release; Draft creation must be selected explicitly for a manual run.
 Version selection, versioned documentation updates, the release Pull Request,
 and annotated tag creation remain human-owned. After the workflow succeeds, a
 maintainer reviews the generated notes, exact assets, and checksums before
-publishing the Draft. The workflow does not replace a local `ctk` binary or
-publish to package managers.
+publishing the Draft. The Draft Release workflow does not replace a local
+`ctk` binary or publish to package managers.
 
-Repository builds remain the development path. Versioned Releases are the
-intended source for future Homebrew and Scoop distribution.
+Publishing a stable Release starts the separate Package Delivery workflow. It
+verifies the exact published assets and checksums, then opens reviewable updates
+for [`kshrkznr/homebrew-tap`](https://github.com/kshrkznr/homebrew-tap) and
+[`kshrkznr/scoop-bucket`](https://github.com/kshrkznr/scoop-bucket). Package
+repository checks and maintainer merge remain required; the workflow never
+writes directly to their `main` branches. Manual dispatch is verification-only
+by default. See [Package-manager
+Delivery](../doc/note/note.package-manager-delivery.md) for retry, credential,
+and target-device verification boundaries.
+
+Repository builds remain the development path. Published Release archives and
+their `checksums.txt` are the source of truth for Homebrew and Scoop updates.
 
 The module path is `github.com/kshrkznr/code-toolkit/go`, matching the public
 repository and the `go/` module root. Binary Releases and the `ctk` command name
