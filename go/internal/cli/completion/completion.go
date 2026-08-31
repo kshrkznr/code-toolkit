@@ -42,11 +42,16 @@ func Complete(output, diagnostics io.Writer, args []string) error {
 	return err
 }
 
-// IsHelpRequest reports whether args request help for a subcommand. Arguments
-// after -- belong to the launched Platform and are not CTK help requests.
+// IsHelpRequest reports whether args request help for a subcommand. Both
+// "ctk help <command>" and "ctk <command> --help" use the same static command
+// description. Arguments after -- belong to the launched Platform and are not
+// CTK help requests.
 func IsHelpRequest(args []string) bool {
 	if len(args) < 2 {
 		return false
+	}
+	if args[0] == "help" {
+		return isHelpCommandRequest(args)
 	}
 	for _, arg := range args[1:] {
 		if arg == "--" {
@@ -62,6 +67,9 @@ func IsHelpRequest(args []string) bool {
 // Help renders static subcommand help without resolving a CTK Workspace or
 // loading the packaged Documentation Bundle.
 func Help(output, diagnostics io.Writer, args []string) error {
+	if isHelpCommandRequest(args) {
+		args = append(append([]string(nil), args[1:]...), "--help")
+	}
 	root := commandTree()
 	root.SetArgs(args)
 	root.SetOut(output)
@@ -70,6 +78,18 @@ func Help(output, diagnostics io.Writer, args []string) error {
 	root.SilenceUsage = true
 	_, err := root.ExecuteC()
 	return err
+}
+
+func isHelpCommandRequest(args []string) bool {
+	if len(args) < 2 || args[0] != "help" {
+		return false
+	}
+	for _, arg := range args[1:] {
+		if strings.HasPrefix(arg, "-") {
+			return false
+		}
+	}
+	return true
 }
 
 func commandTree() *cobra.Command {
@@ -135,7 +155,13 @@ func commandTree() *cobra.Command {
 	workbench.PersistentFlags().String("editor", "", "editor command")
 	workbench.AddCommand(workbenchDraft, workbenchInspect)
 
-	docs := node("docs", "Navigate documentation packaged with this binary")
+	docs := node("docs [node]", "Navigate documentation packaged with this binary")
+	docs.Long = `Navigate documentation packaged with this binary.
+
+With no operation, docs shows the Concept and resolver Bootstrap. Use resolve
+to find a reference, toc to inspect its headings, and show to read it. Resolve
+searches identities, paths, Node aliases, titles, and headings, not bodies.
+Place --source before the operation to select an explicit local repository.`
 	docs.Flags().String("source", "", "explicit local documentation repository")
 	docsShow := node("show <reference>", "Show a documentation reference")
 	docsShow.Flags().String("depth", "", "heading depth or inclusive range")
@@ -163,7 +189,7 @@ func commandTree() *cobra.Command {
 		launch, workbench, docs,
 		node("select", "Select a command interactively"),
 		node("version", "Show binary version and build provenance"),
-		node("help", "Show help"),
+		node("help [command]", "Show root or command help"),
 		initCommand, completionCommand,
 	)
 	return root

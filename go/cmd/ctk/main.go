@@ -50,15 +50,6 @@ func run(args []string) error {
 		args = []string{"select"}
 	}
 	if ctkcompletion.IsHelpRequest(args) {
-		if args[0] == "docs" {
-			_, docsArgs, err := parseDocsSource(args[1:])
-			if err != nil {
-				return err
-			}
-			if len(docsArgs) == 1 && slices.Contains([]string{"-h", "--help"}, docsArgs[0]) {
-				return writeDocsUsage(os.Stdout)
-			}
-		}
 		return ctkcompletion.Help(os.Stdout, os.Stderr, args)
 	}
 	if handled, err := runSelfDescription(args); handled {
@@ -515,7 +506,7 @@ func runSelfDescription(args []string) (bool, error) {
 			return true, err
 		}
 		if len(docsArgs) == 1 && slices.Contains([]string{"help", "-h", "--help"}, docsArgs[0]) {
-			return true, writeDocsUsage(os.Stdout)
+			return true, ctkcompletion.Help(os.Stdout, os.Stderr, []string{"docs", "--help"})
 		}
 		bundle, err := executableDocumentationBundle()
 		if err != nil {
@@ -615,7 +606,7 @@ func runDocsWithStatus(output io.Writer, bundle *docbundle.Bundle, status docbun
 		if len(args) != 1 {
 			return fmt.Errorf("usage: ctk docs help")
 		}
-		return writeDocsUsage(output)
+		return ctkcompletion.Help(output, io.Discard, []string{"docs", "--help"})
 	case "status":
 		if len(args) != 1 {
 			return fmt.Errorf("usage: ctk docs [--source <repository>] status")
@@ -852,28 +843,6 @@ func parseDocsDepth(value string) (int, int, error) {
 
 func docsNavigationError(bundle *docbundle.Bundle, err error) error {
 	return fmt.Errorf("%w; find bundled references with: ctk docs resolve <terms...>; full repository: %s", err, bundle.RepositoryReference())
-}
-
-func writeDocsUsage(output io.Writer) error {
-	_, err := fmt.Fprint(output, `Usage:
-  ctk docs [--source <repository>] Show packaged or explicitly local documentation
-  ctk docs                         Show the Concept and resolver Bootstrap
-  ctk docs status                  Show source provenance and comparison status
-  ctk docs nodes                   List short navigation Node aliases
-  ctk docs <node>                  Show one Node README (for example: core)
-  ctk docs resolve <terms...>      Rank matching bundled documents
-  ctk docs toc <reference>         Show one document's heading tree
-  ctk docs show <reference>        Show an identity or path, optionally #heading
-    [--depth <N|A..B>]             With #heading, include relative structural levels
-  ctk docs export <directory>      Export the verified Bundle for full-text search
-
-Resolve output is tab-separated. Copy its IDENTITY or PATH into docs show.
-Resolve searches identity, path, Node alias, title, and headings, not bodies.
-TOC links can be copied into docs show. A depth range must contain level 0.
-Place --source before the operation; omitting it always selects packaged docs.
-Repository-only material is linked at this binary's exact tag or commit.
-`)
-	return err
 }
 
 func printActivePlatforms(output io.Writer, distDir string) error {
@@ -2098,5 +2067,5 @@ Commands:
                       Navigate documentation packaged with this binary
   select              Select a command interactively
   version             Show binary version and build provenance
-  help                Show this help`)
+  help [command]      Show root or command help`)
 }

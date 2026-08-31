@@ -9,20 +9,6 @@ Future documents.
 The candidates have different priorities and levels of evidence. None of them
 is an accepted responsibility or implementation commitment.
 
-## Documentation maturity and glossary
-
-Knowledge may intentionally lag behind implementation while a concept is still
-stabilizing. This is preferable to presenting provisional implementation
-behavior as an accepted responsibility.
-
-A glossary may eventually help readers and AI assistants resolve recurring CTK
-terms without loading an entire Concept document. Its responsibility and
-maintenance boundary are not yet clear: it could become a useful navigation
-aid, or it could duplicate definitions already owned by Concept APIs.
-
-Reconsider a glossary when repeated onboarding or review work shows that term
-resolution is a distinct problem rather than a symptom of unclear documents.
-
 ## Workspace and Dev Container Build
 
 Project-owned Workspace and Dev Container content may eventually become Build

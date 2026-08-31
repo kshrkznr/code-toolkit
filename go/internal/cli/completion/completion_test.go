@@ -85,6 +85,14 @@ func TestHelpShowsCommandSyntaxOptionsAndDocumentation(t *testing.T) {
 			},
 		},
 		{
+			name: "help command syntax",
+			args: []string{"help", "freeze", "draft"},
+			expected: []string{
+				"Usage:\n  ctk freeze draft [dist] [flags]",
+				"conflict policy (abort|replace)",
+			},
+		},
+		{
 			name:     "simple command",
 			args:     []string{"list", "--help"},
 			expected: []string{"List Distributions", "Usage:\n  ctk list [flags]"},
@@ -117,6 +125,9 @@ func TestHelpRequestStopsAtForwardedArguments(t *testing.T) {
 	}{
 		{args: []string{"activate", "--help"}, want: true},
 		{args: []string{"freeze", "draft", "-h"}, want: true},
+		{args: []string{"help", "activate"}, want: true},
+		{args: []string{"help", "freeze", "draft"}, want: true},
+		{args: []string{"help", "--help"}, want: false},
 		{args: []string{"--help"}, want: false},
 		{args: []string{"launch", "sample", "--", "--help"}, want: false},
 	} {

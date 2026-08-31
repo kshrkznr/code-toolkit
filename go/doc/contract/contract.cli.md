@@ -45,7 +45,8 @@ by that executable before Workspace discovery and validation.
 
 The current self-description boundary contains:
 
-- `ctk help`, `ctk -h`, and `ctk --help`;
+- `ctk help`, `ctk -h`, `ctk --help`, and `ctk help <command>
+  [subcommand...]`;
 - `ctk version` and `ctk --version`;
 - `ctk docs` and its documentation lookup subcommands.
 
@@ -92,9 +93,9 @@ Contract](contract.documentation-bundle.md).
 Static subcommand Help and two additional commands run before Workspace
 discovery without becoming lifecycle operations:
 
-- `ctk <command> -h|--help` shows concise command syntax, options, and a static
-  `ctk docs show <reference>` hint when the command has a clear conceptual
-  owner;
+- `ctk help <command> [subcommand...]` and `ctk <command> [subcommand...]
+  -h|--help` show the same concise command syntax, options, and a static `ctk
+  docs show <reference>` hint when the command has a clear conceptual owner;
 
 - `ctk init <path> [--exclude-sample]` creates the optional footing defined by
   the [Go Workspace Contract](contract.workspace.md);
@@ -110,6 +111,10 @@ option values. Its hidden shell protocol follows the same Workspace-independent
 boundary. The generated scripts are suitable for direct installation by a
 binary package definition; the command does not modify shell configuration
 itself.
+
+`ctk docs --help`, `ctk help docs`, and `ctk docs help` render the same static
+documentation-command help. Documentation navigation itself remains owned by
+the packaged Documentation Bundle and `ctk docs` operations.
 
 ## Interactive activation bootstrap
 
