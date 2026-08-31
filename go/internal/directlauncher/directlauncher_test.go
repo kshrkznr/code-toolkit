@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -29,9 +30,11 @@ func TestGenerateUnixDirectLauncher(t *testing.T) {
 			t.Fatalf("launcher missing %q:\n%s", want, content)
 		}
 	}
-	info, _ := os.Stat(result.Path)
-	if info.Mode().Perm() != 0o755 {
-		t.Fatalf("mode = %o", info.Mode().Perm())
+	if runtime.GOOS != "windows" {
+		info, _ := os.Stat(result.Path)
+		if info.Mode().Perm() != 0o755 {
+			t.Fatalf("mode = %o", info.Mode().Perm())
+		}
 	}
 }
 
@@ -102,6 +105,9 @@ func TestGenerateReplacesHistoricalCTKLauncher(t *testing.T) {
 }
 
 func TestUnixDirectLauncherStartsPlatformWithoutCTK(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix launcher execution requires a Unix host")
+	}
 	root := t.TempDir()
 	distPath := filepath.Join(root, "dist", "sample")
 	binPath := filepath.Join(root, "platform-bin")
@@ -134,6 +140,9 @@ func TestUnixDirectLauncherStartsPlatformWithoutCTK(t *testing.T) {
 }
 
 func TestUnixDirectLauncherUsesLaunchOverride(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix launcher execution requires a Unix host")
+	}
 	dist := distribution.Distribution{Name: "sample", Path: t.TempDir(), Recipe: recipe.Recipe{OS: "macos", Platform: "code"}}
 	result, err := Generate(dist)
 	if err != nil {
