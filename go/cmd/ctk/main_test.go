@@ -34,7 +34,7 @@ func TestRunDocsNavigatesPackagedBundle(t *testing.T) {
 		args     []string
 		contains []string
 	}{
-		{name: "help", args: []string{"--help"}, contains: []string{"--source <repository>", "ctk docs status", "ctk docs resolve", "ctk docs toc", "--depth <N|A..B>"}},
+		{name: "help", args: []string{"--help"}, contains: []string{"Usage:\n  ctk docs [node] [flags]", "Available Commands:", "resolve", "toc", "--source string"}},
 		{name: "status", args: []string{"status"}, contains: []string{"source: packaged", "source-revision: test-revision", "definition-sha256: ", "content-sha256: ", "repository: https://github.com/kshrkznr/code-toolkit"}},
 		{name: "nodes", args: []string{"nodes"}, contains: []string{"core\tdoc/core/README.md"}},
 		{name: "core", args: []string{"core"}, contains: []string{"# Concept Domain: Core", "doc/core/core.cookbook.md"}},
@@ -267,6 +267,65 @@ func TestRunSubcommandHelpSucceedsWithInvalidWorkspace(t *testing.T) {
 	if strings.Contains(string(output), "Current context:") {
 		t.Fatalf("subcommand help unexpectedly contains current context:\n%s", output)
 	}
+}
+
+func TestRunHelpCommandSupportsNestedCommandsWithoutWorkspace(t *testing.T) {
+	t.Setenv("CTK_HOME", filepath.Join(t.TempDir(), "missing"))
+	output := captureRunOutput(t, []string{"help", "freeze", "draft"})
+	for _, expected := range []string{
+		"Usage:\n  ctk freeze draft [dist] [flags]",
+		"conflict policy (abort|replace)",
+		"ctk docs show Knowledge.contract.workbench.md",
+	} {
+		if !strings.Contains(output, expected) {
+			t.Fatalf("help command does not contain %q:\n%s", expected, output)
+		}
+	}
+	if strings.Contains(output, "Current context:") {
+		t.Fatalf("help command unexpectedly contains current context:\n%s", output)
+	}
+}
+
+func TestRunDocsHelpSpellingsMatch(t *testing.T) {
+	t.Setenv("CTK_HOME", filepath.Join(t.TempDir(), "missing"))
+	var expected string
+	for _, args := range [][]string{
+		{"docs", "--help"},
+		{"help", "docs"},
+		{"docs", "help"},
+	} {
+		output := captureRunOutput(t, args)
+		if expected == "" {
+			expected = output
+			continue
+		}
+		if output != expected {
+			t.Fatalf("run(%v) help differs:\n%s\nwant:\n%s", args, output, expected)
+		}
+	}
+}
+
+func captureRunOutput(t *testing.T, args []string) string {
+	t.Helper()
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldStdout := os.Stdout
+	os.Stdout = writer
+	err = run(args)
+	os.Stdout = oldStdout
+	if closeErr := writer.Close(); err == nil {
+		err = closeErr
+	}
+	output, readErr := io.ReadAll(reader)
+	if err == nil {
+		err = readErr
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(output)
 }
 
 func TestRunInitCreatesExplicitWorkspaceAndWarnsAboutDifferentCTKHome(t *testing.T) {
