@@ -581,10 +581,13 @@ func executableDocumentationBundle() (*docbundle.Bundle, error) {
 	if err != nil {
 		return nil, fmt.Errorf("resolve executable Documentation Bundle: %w", err)
 	}
-	executable, err = filepath.EvalSymlinks(executable)
-	if err != nil {
-		return nil, fmt.Errorf("resolve executable Documentation Bundle symlinks: %w", err)
-	}
+	return openExecutableDocumentationBundle(executable)
+}
+
+func openExecutableDocumentationBundle(executable string) (*docbundle.Bundle, error) {
+	// Open the reported path directly. The operating system follows ordinary
+	// symlinks and package-manager indirection while filepath.EvalSymlinks cannot
+	// resolve the directory junction used by Scoop's apps/<name>/current path.
 	bundle, err := docbundle.OpenExecutable(executable)
 	if err != nil {
 		return nil, fmt.Errorf("load packaged documentation: %w", err)
