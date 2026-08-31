@@ -18,6 +18,12 @@ go/verify.sh
 GitHub Actions repeats that verification and runs the Go tests natively on
 macOS and Windows. The workflow is read-only and does not publish Releases.
 
+Release preparation remains a separate change. After its Pull Request is
+squash-merged, pushing an annotated semantic-version tag runs the Release
+builder, verifies the packaged Windows CLI, and creates a Draft GitHub Release.
+A maintainer reviews and publishes that Draft; the workflow does not choose a
+version, create a tag, publish automatically, or update a local binary.
+
 Documentation-only Issues and Pull Requests are welcome. In particular, when
 a CTK document is difficult to discover from its identity, path, Node alias,
 title, or headings, report the question you tried to resolve. Improving that
