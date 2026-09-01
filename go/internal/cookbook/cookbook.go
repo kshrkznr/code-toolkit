@@ -384,30 +384,90 @@ func (r Repository) extensions(layer string, ingredients []string) ([]string, []
 		if path == "" {
 			continue
 		}
-		file, err := os.Open(path)
+		lines, err := extensionLines(path)
 		if err != nil {
-			return nil, nil, fmt.Errorf("open %s: %w", path, err)
-		}
-		scanner := bufio.NewScanner(file)
-		for scanner.Scan() {
-			if id := strings.TrimSpace(strings.TrimSuffix(scanner.Text(), "\r")); id != "" {
-				if strings.HasPrefix(id, "set:") {
-					_ = file.Close()
-					return nil, nil, fmt.Errorf("reserved Extension Set declaration %q in %s; Extension Sets require CTK v0.7.0 or later", id, path)
-				}
-				ids = append(ids, id)
-			}
-		}
-		scanErr, closeErr := scanner.Err(), file.Close()
-		if scanErr != nil {
-			return nil, nil, fmt.Errorf("read %s: %w", path, scanErr)
-		}
-		if closeErr != nil {
-			return nil, nil, fmt.Errorf("close %s: %w", path, closeErr)
+			return nil, nil, err
 		}
 		sources = append(sources, Source{Layer: layer, Ingredient: ingredient, Path: path})
+		for _, line := range lines {
+			if !strings.HasPrefix(line, "set:") {
+				ids = append(ids, line)
+				continue
+			}
+			name := strings.TrimPrefix(line, "set:")
+			if !validExtensionSetName(name) {
+				return nil, nil, fmt.Errorf("invalid Extension Set declaration %q in %s: name must match [A-Za-z0-9][A-Za-z0-9._-]*", line, path)
+			}
+			members, source, err := r.extensionSet(name)
+			if err != nil {
+				return nil, nil, err
+			}
+			ids = append(ids, members...)
+			if source != nil {
+				sources = append(sources, *source)
+			}
+		}
 	}
 	return uniqueSorted(ids), sources, nil
+}
+
+func (r Repository) extensionSet(name string) ([]string, *Source, error) {
+	path, err := r.one(extensionCandidates(r.Root, "extension-set", name), "extension-set", name, "extensions")
+	if err != nil {
+		return nil, nil, err
+	}
+	if path == "" {
+		return nil, nil, nil
+	}
+	lines, err := extensionLines(path)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, line := range lines {
+		if strings.HasPrefix(line, "set:") {
+			return nil, nil, fmt.Errorf("nested Extension Set declaration %q in %s is not allowed", line, path)
+		}
+	}
+	return lines, &Source{Layer: "extension-set", Ingredient: name, Path: path}, nil
+}
+
+func extensionLines(path string) ([]string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("open %s: %w", path, err)
+	}
+	var lines []string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		if line := strings.TrimSpace(strings.TrimSuffix(scanner.Text(), "\r")); line != "" {
+			lines = append(lines, line)
+		}
+	}
+	scanErr, closeErr := scanner.Err(), file.Close()
+	if scanErr != nil {
+		return nil, fmt.Errorf("read %s: %w", path, scanErr)
+	}
+	if closeErr != nil {
+		return nil, fmt.Errorf("close %s: %w", path, closeErr)
+	}
+	return lines, nil
+}
+
+func validExtensionSetName(name string) bool {
+	if name == "" {
+		return false
+	}
+	for index := 0; index < len(name); index++ {
+		character := name[index]
+		if (character >= 'A' && character <= 'Z') || (character >= 'a' && character <= 'z') || (character >= '0' && character <= '9') {
+			continue
+		}
+		if index > 0 && (character == '.' || character == '_' || character == '-') {
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 func (r Repository) one(candidates []string, layer, ingredient, resource string) (string, error) {
