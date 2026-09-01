@@ -30,6 +30,13 @@ and produces deterministic Extension ordering.
 
 The current line-oriented Resource does not interpret comments.
 
+Go reserves the `set:` prefix in Runtime and Profile Extension Resources. CTK
+v0.6.2 rejects a non-empty line beginning with that prefix during pure Cookbook
+Resolution, before any Platform, Distribution, Workspace, Pool, or Runtime
+mutation. This is a downgrade-safety guard for the Extension Set Kitchen Note
+planned for CTK v0.7.0; it does not resolve Extension Sets or declare that
+Kitchen Note adopted by v0.6.2.
+
 ## Unknown and empty content
 
 Missing Resources contribute valid empty content. Present malformed Resources

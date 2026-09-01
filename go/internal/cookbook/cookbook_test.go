@@ -121,6 +121,30 @@ func TestResolveAllowsMissingResources(t *testing.T) {
 	}
 }
 
+func TestResolveRejectsReservedExtensionSetDeclarations(t *testing.T) {
+	for _, test := range []struct {
+		name       string
+		selection  string
+		layer      string
+		ingredient string
+	}{
+		{name: "runtime", selection: "runtime: [sample]", layer: "runtime", ingredient: "sample"},
+		{name: "profile", selection: "profile: [sample]", layer: "profile", ingredient: "sample"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			root := t.TempDir()
+			recipePath := filepath.Join(root, "recipe", "test.yaml")
+			mustWrite(t, recipePath, "name: test\nos: macos\nplatform: code\n"+test.selection+"\n")
+			mustWrite(t, filepath.Join(root, "ingredient", test.layer+"."+test.ingredient+".extensions"), "valid.extension\nset:shared\n")
+
+			_, err := (Repository{Root: filepath.Join(root, "ingredient")}).Resolve(recipePath)
+			if err == nil || !strings.Contains(err.Error(), `reserved Extension Set declaration "set:shared"`) || !strings.Contains(err.Error(), "CTK v0.7.0 or later") {
+				t.Fatalf("error = %v", err)
+			}
+		})
+	}
+}
+
 func TestResolveRejectsAmbiguousLayout(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(root, "recipe.yaml")

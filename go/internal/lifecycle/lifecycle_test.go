@@ -102,6 +102,29 @@ func TestBuildPublishesCompletedStaging(t *testing.T) {
 	}
 }
 
+func TestBuildRejectsReservedExtensionSetBeforeRuntimeMutation(t *testing.T) {
+	root := t.TempDir()
+	recipePath, ingredients := fixture(t, root, "runtime: [reserved]\n")
+	mustWrite(t, filepath.Join(ingredients, "runtime.reserved.extensions"), "set:shared\n")
+	mustWrite(t, filepath.Join(ingredients, "runtime.reserved.settings.json"), `{"wouldMutate":true}`)
+	runtimeCalled := false
+	service := Service{Cookbook: cookbook.Repository{Root: ingredients}, Runtime: func(distribution.Distribution) (runtimeio.Runtime, error) {
+		runtimeCalled = true
+		return &fakeRuntime{}, nil
+	}}
+	distRoot := filepath.Join(root, "dist")
+	_, err := service.Build(context.Background(), recipePath, distRoot, "sample", false, false)
+	if err == nil || !strings.Contains(err.Error(), `reserved Extension Set declaration "set:shared"`) {
+		t.Fatalf("error = %v", err)
+	}
+	if runtimeCalled {
+		t.Fatal("Runtime factory called after reserved Extension Set declaration")
+	}
+	if _, statErr := os.Stat(distRoot); !os.IsNotExist(statErr) {
+		t.Fatalf("Distribution root changed: %v", statErr)
+	}
+}
+
 func TestBuildStagingPathDoesNotIncludeDistributionName(t *testing.T) {
 	root := t.TempDir()
 	recipePath, ingredients := fixture(t, root, "runtime: [broken]\n")
