@@ -14,9 +14,11 @@ package manager.
 The current channels are:
 
 - [`kshrkznr/homebrew-tap`](https://github.com/kshrkznr/homebrew-tap), with
-  `Formula/ctk.rb` for macOS arm64 and amd64;
+  `Formula/ctk.rb` for macOS arm64 and amd64, including static bash, zsh, and
+  fish completion installed into Homebrew-managed directories;
 - [`kshrkznr/scoop-bucket`](https://github.com/kshrkznr/scoop-bucket), with
-  `bucket/ctk.json` for Windows amd64.
+  `bucket/ctk.json` for Windows amd64, including an install note for adding
+  static CTK completion to the user-owned PowerShell profile.
 
 ## Release-to-package flow
 
@@ -55,11 +57,13 @@ work.
 ## Verification boundary
 
 Repository automation verifies archive integrity and package-definition
-structure. A channel's installation lifecycle is supported only to the extent
-observed on its target OS. Installation, executable provenance, packaged help
-and documentation, Workspace-independent initialization, upgrade, rollback,
-uninstall, and survival of user-owned Workspace state are separate target
-device checks.
+structure. Homebrew owns the installed completion files but does not edit shell
+startup files. Scoop displays the PowerShell completion command but does not
+edit `$PROFILE`. A channel's installation lifecycle is supported only to the
+extent observed on its target OS. Installation, executable provenance,
+completion activation, packaged help and documentation, Workspace-independent
+initialization, upgrade, rollback, uninstall, and survival of user-owned
+Workspace state are separate target device checks.
 
 A network or VPN restriction is evidence about the test environment, not a
 successful or failed package lifecycle. Record the exact stopping point and
