@@ -38,6 +38,9 @@ Start with the question closest to the current work:
   → [Recipe Build Strategy](note.recipe-build-strategy.md)
 - When and how may an implementation extend Resource combination semantics?
   → [Merge Rules as a Kitchen Note](note.merge-rules.md)
+- How can Runtime and Profile Ingredients reuse one named list of concrete
+  editor Extensions without adding a Core Ingredient Layer?
+  → [Extension Set as a Kitchen Note](note.extension-set.md)
 - How are extension artifacts resolved and diagnosed?
   → [Extension Resolution](note.extension-resolve.md)
 - What do Platform-specific failures reveal about CTK integration boundaries?

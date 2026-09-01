@@ -26,9 +26,6 @@ Start with the question closest to the current work:
 - Which broader candidate directions are currently collected for later
   review?
   → [Collected Future Candidates](future.candidates.md)
-- When would a generic Capability Ingredient Layer become clearer than Runtime,
-  Profile, or explicit Recipe composition?
-  → [Capability Layer](future.capability-layer.md)
 - How could a Workspace add a complete Platform definition through the current
   validated Registry?
   → [Workspace Platform Definitions](future.platform-registry.md)

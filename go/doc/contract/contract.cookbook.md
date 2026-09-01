@@ -33,10 +33,18 @@ and produces deterministic Extension ordering.
 The current line-oriented Resource does not interpret comments.
 
 An Extension Set name matches `[A-Za-z0-9][A-Za-z0-9._-]*`; lookup preserves
-case and performs no normalization. Go resolves its Extension Resource from the
-same three compatible flat and directory layouts under the `extension-set`
-namespace. More than one matching layout is an ambiguity error. An absent or
-empty Extension Set Resource is a valid empty contribution.
+case and performs no normalization. For Set `<name>`, Go resolves exactly these
+compatible candidates under the Ingredient root:
+
+```text
+extension-set.<name>.extensions
+extension-set/<name>.extensions
+extension-set/<name>/extensions
+```
+
+More than one matching layout is an ambiguity error. An absent or empty
+Extension Set Resource is a valid empty contribution; the declaration itself
+establishes Set identity and no separate existence manifest is used.
 
 Extension Set Resources contain only concrete Extension IDs. Go rejects nested
 `set:` declarations and does not resolve Extension variants. Runtime and
@@ -48,7 +56,10 @@ maps each concrete ID to every direct or Set Resource that declared it; this
 metadata is not persisted into Runtime, Lock, Distribution, or Archive state.
 
 CTK v0.6.2 reserved `set:` declarations as a downgrade-safety guard. Cookbook
-Sources that use Extension Sets are unsupported by v0.6.1 and earlier.
+Sources that use Extension Sets are unsupported by v0.6.1 and earlier. The
+exact prefix and canonical namespace define the implicit v1 representation;
+an incompatible future interpretation must use a new explicit representation
+rather than silently changing these semantics.
 
 ## Unknown and empty content
 
