@@ -37,6 +37,34 @@ func TestResolveExistingGolangRecipe(t *testing.T) {
 	}
 }
 
+func TestResolveRepresentativeExtensionSetRecipes(t *testing.T) {
+	repositoryRoot := filepath.Join("testdata", "cookbook")
+	for _, osName := range []string{"macos", "windows"} {
+		t.Run(osName, func(t *testing.T) {
+			plan, err := (Repository{Root: filepath.Join(repositoryRoot, "ingredient")}).Resolve(filepath.Join(repositoryRoot, "recipe", "vscode-golang."+osName+".yaml"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if plan.OS != osName || len(plan.Default.Extensions) != 0 {
+				t.Fatalf("identity/default Extensions = %s/%v", plan.OS, plan.Default.Extensions)
+			}
+			if plan.Default.Settings["ctk.fixture.extension-set"] != true {
+				t.Fatalf("Set member Extension Settings missing: %#v", plan.Default.Settings)
+			}
+			want := []string{"golang.go", "openai.chatgpt"}
+			for _, profile := range plan.Profiles {
+				if !slices.Equal(profile.Extensions, want) {
+					t.Fatalf("profile %s Extensions = %v, want %v", profile.Name, profile.Extensions, want)
+				}
+			}
+			core := plan.Profiles[0]
+			if len(core.ExtensionOrigins["openai.chatgpt"]) != 2 {
+				t.Fatalf("direct and Set origins = %#v", core.ExtensionOrigins["openai.chatgpt"])
+			}
+		})
+	}
+}
+
 func TestResolveRejectsUnknownExtensionPoolMode(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(root, "recipe.yaml")
