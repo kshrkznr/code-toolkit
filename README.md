@@ -396,14 +396,14 @@ architecture:
 
 ```bash
 cd /path/to/downloaded-assets
-shasum -a 256 ctk_v0.6.0_darwin_arm64.tar.gz
-tar -xzf ctk_v0.6.0_darwin_arm64.tar.gz
+shasum -a 256 ctk_v0.6.1_darwin_arm64.tar.gz
+tar -xzf ctk_v0.6.1_darwin_arm64.tar.gz
 mkdir -p "$HOME/.local/bin"
 install -m 0755 ctk "$HOME/.local/bin/ctk"
 ```
 
 Compare the displayed SHA-256 value with the corresponding line in
-`checksums.txt`. Use `ctk_v0.6.0_darwin_amd64.tar.gz` on an Intel Mac and add
+`checksums.txt`. Use `ctk_v0.6.1_darwin_amd64.tar.gz` on an Intel Mac and add
 `$HOME/.local/bin` to `PATH` when needed.
 
 On Windows, verify the amd64 archive before extracting it into a directory on
@@ -411,13 +411,13 @@ On Windows, verify the amd64 archive before extracting it into a directory on
 
 ```powershell
 Set-Location C:\path\to\downloaded-assets
-Get-FileHash .\ctk_v0.6.0_windows_amd64.zip -Algorithm SHA256
-Expand-Archive .\ctk_v0.6.0_windows_amd64.zip -DestinationPath "$env:LOCALAPPDATA\CTK\bin"
+Get-FileHash .\ctk_v0.6.1_windows_amd64.zip -Algorithm SHA256
+Expand-Archive .\ctk_v0.6.1_windows_amd64.zip -DestinationPath "$env:LOCALAPPDATA\CTK\bin"
 ```
 
 Compare the displayed hash with `checksums.txt` and add
 `%LOCALAPPDATA%\CTK\bin` to the user `PATH` when needed. The archive names in
-these examples identify the current v0.6.0 Release; keep the archive,
+these examples identify the current v0.6.1 Release; keep the archive,
 `checksums.txt`, and command version identical when selecting another Release.
 
 ## Explicit Workspace initialization
