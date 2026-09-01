@@ -121,7 +121,7 @@ func TestResolveAllowsMissingResources(t *testing.T) {
 	}
 }
 
-func TestResolveRejectsReservedExtensionSetDeclarations(t *testing.T) {
+func TestResolveExtensionSetsFromRuntimeAndProfile(t *testing.T) {
 	for _, test := range []struct {
 		name       string
 		selection  string
@@ -135,10 +135,116 @@ func TestResolveRejectsReservedExtensionSetDeclarations(t *testing.T) {
 			root := t.TempDir()
 			recipePath := filepath.Join(root, "recipe", "test.yaml")
 			mustWrite(t, recipePath, "name: test\nos: macos\nplatform: code\n"+test.selection+"\n")
-			mustWrite(t, filepath.Join(root, "ingredient", test.layer+"."+test.ingredient+".extensions"), "valid.extension\nset:shared\n")
+			ingredients := filepath.Join(root, "ingredient")
+			mustWrite(t, filepath.Join(ingredients, test.layer+"."+test.ingredient+".extensions"), "z.direct\nset:shared\nset:secondary\na.direct\n")
+			setPath := filepath.Join(ingredients, "extension-set.shared.extensions")
+			mustWrite(t, setPath, "z.member\na.member\nz.direct\n")
+			mustWrite(t, filepath.Join(ingredients, "extension-set.secondary.extensions"), "a.member\n")
+			mustWrite(t, filepath.Join(ingredients, "extension.a.member.settings.json"), `{"from-extension-set":true}`)
 
+			plan, err := (Repository{Root: ingredients}).Resolve(recipePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := []string{"a.direct", "a.member", "z.direct", "z.member"}
+			var got []string
+			if test.layer == "runtime" {
+				got = plan.Default.Extensions
+			} else {
+				got = plan.Profiles[0].Extensions
+			}
+			if !slices.Equal(got, want) {
+				t.Fatalf("extensions = %v, want %v", got, want)
+			}
+			if plan.Default.Settings["from-extension-set"] != true {
+				t.Fatalf("expanded Extension Settings were not resolved: %#v", plan.Default.Settings)
+			}
+			if !slices.Contains(plan.Default.Sources, Source{Layer: "extension-set", Ingredient: "shared", Path: setPath}) &&
+				(test.layer != "profile" || !slices.Contains(plan.Profiles[0].Sources, Source{Layer: "extension-set", Ingredient: "shared", Path: setPath})) {
+				t.Fatalf("Extension Set source not preserved: default=%#v profiles=%#v", plan.Default.Sources, plan.Profiles)
+			}
+		})
+	}
+}
+
+func TestResolveExtensionSetLayouts(t *testing.T) {
+	for _, relative := range []string{
+		"extension-set.shared.extensions",
+		filepath.Join("extension-set", "shared.extensions"),
+		filepath.Join("extension-set", "shared", "extensions"),
+	} {
+		t.Run(relative, func(t *testing.T) {
+			root := t.TempDir()
+			ingredients := filepath.Join(root, "ingredient")
+			recipePath := filepath.Join(root, "recipe.yaml")
+			mustWrite(t, recipePath, "name: test\nos: macos\nplatform: code\nruntime: [sample]\n")
+			mustWrite(t, filepath.Join(ingredients, "runtime.sample.extensions"), "set:shared\n")
+			mustWrite(t, filepath.Join(ingredients, relative), "member.extension\n")
+			plan, err := (Repository{Root: ingredients}).Resolve(recipePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !slices.Equal(plan.Default.Extensions, []string{"member.extension"}) {
+				t.Fatalf("extensions = %v", plan.Default.Extensions)
+			}
+		})
+	}
+}
+
+func TestResolveExtensionSetAllowsAbsentAndEmptyResources(t *testing.T) {
+	root := t.TempDir()
+	ingredients := filepath.Join(root, "ingredient")
+	recipePath := filepath.Join(root, "recipe.yaml")
+	mustWrite(t, recipePath, "name: test\nos: macos\nplatform: code\nruntime: [sample]\n")
+	mustWrite(t, filepath.Join(ingredients, "runtime.sample.extensions"), "set:absent\nset:empty\n")
+	mustWrite(t, filepath.Join(ingredients, "extension-set.empty.extensions"), "\n")
+	plan, err := (Repository{Root: ingredients}).Resolve(recipePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(plan.Default.Extensions) != 0 {
+		t.Fatalf("extensions = %v", plan.Default.Extensions)
+	}
+}
+
+func TestResolveExtensionSetRejectsInvalidDeclarations(t *testing.T) {
+	for _, declaration := range []string{"set:", "set:-leading", "set:.leading", "set:with space", "set:path/name", `set:path\name`, "set:nested:name"} {
+		t.Run(declaration, func(t *testing.T) {
+			root := t.TempDir()
+			recipePath := filepath.Join(root, "recipe.yaml")
+			mustWrite(t, recipePath, "name: test\nos: macos\nplatform: code\nruntime: [sample]\n")
+			mustWrite(t, filepath.Join(root, "ingredient", "runtime.sample.extensions"), declaration+"\n")
 			_, err := (Repository{Root: filepath.Join(root, "ingredient")}).Resolve(recipePath)
-			if err == nil || !strings.Contains(err.Error(), `reserved Extension Set declaration "set:shared"`) || !strings.Contains(err.Error(), "CTK v0.7.0 or later") {
+			if err == nil || !strings.Contains(err.Error(), "invalid Extension Set declaration") {
+				t.Fatalf("error = %v", err)
+			}
+		})
+	}
+}
+
+func TestResolveExtensionSetRejectsNestedAndAmbiguousResources(t *testing.T) {
+	for _, test := range []struct {
+		name    string
+		prepare func(string)
+		want    string
+	}{
+		{name: "nested", prepare: func(root string) {
+			mustWrite(t, filepath.Join(root, "extension-set.shared.extensions"), "set:other\n")
+		}, want: "nested Extension Set declaration"},
+		{name: "ambiguous", prepare: func(root string) {
+			mustWrite(t, filepath.Join(root, "extension-set.shared.extensions"), "one.extension\n")
+			mustWrite(t, filepath.Join(root, "extension-set", "shared.extensions"), "two.extension\n")
+		}, want: "ambiguous extensions resource for extension-set.shared"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			root := t.TempDir()
+			ingredients := filepath.Join(root, "ingredient")
+			recipePath := filepath.Join(root, "recipe.yaml")
+			mustWrite(t, recipePath, "name: test\nos: macos\nplatform: code\nruntime: [sample]\n")
+			mustWrite(t, filepath.Join(ingredients, "runtime.sample.extensions"), "set:shared\n")
+			test.prepare(ingredients)
+			_, err := (Repository{Root: ingredients}).Resolve(recipePath)
+			if err == nil || !strings.Contains(err.Error(), test.want) {
 				t.Fatalf("error = %v", err)
 			}
 		})

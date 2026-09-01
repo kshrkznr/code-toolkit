@@ -52,7 +52,10 @@ func (r *archiveRuntime) UninstallExtension(context.Context, runtimeio.Scope, st
 	return nil
 }
 
-type fakeRuntime struct{ installErr error }
+type fakeRuntime struct {
+	installErr error
+	installed  []string
+}
 
 type unresolvedUpdater struct{}
 
@@ -79,7 +82,8 @@ func (*fakeRuntime) WriteSettings(context.Context, runtimeio.Scope, settings.Doc
 func (*fakeRuntime) Extensions(context.Context, runtimeio.Scope) ([]runtimeio.Extension, error) {
 	return []runtimeio.Extension{}, nil
 }
-func (f *fakeRuntime) InstallExtension(context.Context, runtimeio.Scope, string) error {
+func (f *fakeRuntime) InstallExtension(_ context.Context, _ runtimeio.Scope, id string) error {
+	f.installed = append(f.installed, id)
 	return f.installErr
 }
 func (*fakeRuntime) UninstallExtension(context.Context, runtimeio.Scope, string) error { return nil }
@@ -102,11 +106,33 @@ func TestBuildPublishesCompletedStaging(t *testing.T) {
 	}
 }
 
-func TestBuildRejectsReservedExtensionSetBeforeRuntimeMutation(t *testing.T) {
+func TestBuildResolvesExtensionSetBeforeRuntimeMutation(t *testing.T) {
 	root := t.TempDir()
 	recipePath, ingredients := fixture(t, root, "runtime: [reserved]\n")
 	mustWrite(t, filepath.Join(ingredients, "runtime.reserved.extensions"), "set:shared\n")
+	mustWrite(t, filepath.Join(ingredients, "extension-set.shared.extensions"), "shared.extension\n")
 	mustWrite(t, filepath.Join(ingredients, "runtime.reserved.settings.json"), `{"wouldMutate":true}`)
+	runtimeCalled := false
+	runtime := &fakeRuntime{}
+	service := Service{Cookbook: cookbook.Repository{Root: ingredients}, Runtime: func(distribution.Distribution) (runtimeio.Runtime, error) {
+		runtimeCalled = true
+		return runtime, nil
+	}}
+	distRoot := filepath.Join(root, "dist")
+	_, err := service.Build(context.Background(), recipePath, distRoot, "sample", false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !runtimeCalled || len(runtime.installed) != 1 || runtime.installed[0] != "shared.extension" {
+		t.Fatalf("Runtime called=%t installed=%v", runtimeCalled, runtime.installed)
+	}
+}
+
+func TestBuildRejectsNestedExtensionSetBeforeRuntimeMutation(t *testing.T) {
+	root := t.TempDir()
+	recipePath, ingredients := fixture(t, root, "runtime: [reserved]\n")
+	mustWrite(t, filepath.Join(ingredients, "runtime.reserved.extensions"), "set:shared\n")
+	mustWrite(t, filepath.Join(ingredients, "extension-set.shared.extensions"), "set:nested\n")
 	runtimeCalled := false
 	service := Service{Cookbook: cookbook.Repository{Root: ingredients}, Runtime: func(distribution.Distribution) (runtimeio.Runtime, error) {
 		runtimeCalled = true
@@ -114,11 +140,11 @@ func TestBuildRejectsReservedExtensionSetBeforeRuntimeMutation(t *testing.T) {
 	}}
 	distRoot := filepath.Join(root, "dist")
 	_, err := service.Build(context.Background(), recipePath, distRoot, "sample", false, false)
-	if err == nil || !strings.Contains(err.Error(), `reserved Extension Set declaration "set:shared"`) {
+	if err == nil || !strings.Contains(err.Error(), `nested Extension Set declaration "set:nested"`) {
 		t.Fatalf("error = %v", err)
 	}
 	if runtimeCalled {
-		t.Fatal("Runtime factory called after reserved Extension Set declaration")
+		t.Fatal("Runtime factory called after nested Extension Set declaration")
 	}
 	if _, statErr := os.Stat(distRoot); !os.IsNotExist(statErr) {
 		t.Fatalf("Distribution root changed: %v", statErr)

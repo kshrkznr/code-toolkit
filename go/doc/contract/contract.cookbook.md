@@ -24,18 +24,29 @@ an ambiguity error rather than selecting one by search order.
 
 ## Extension Resources
 
-Go ignores empty lines, treats every non-empty line as an exact Extension ID,
-preserves spelling and letter case, removes duplicate IDs after composition,
+Go ignores empty lines and interprets every non-empty Runtime and Profile
+Extension Resource line as either an exact Extension ID or an Extension Set
+declaration with the exact, case-sensitive `set:<name>` form. Extension IDs
+preserve spelling and letter case. Go removes duplicate IDs after composition
 and produces deterministic Extension ordering.
 
 The current line-oriented Resource does not interpret comments.
 
-Go reserves the `set:` prefix in Runtime and Profile Extension Resources. CTK
-v0.6.2 rejects a non-empty line beginning with that prefix during pure Cookbook
-Resolution, before any Platform, Distribution, Workspace, Pool, or Runtime
-mutation. This is a downgrade-safety guard for the Extension Set Kitchen Note
-planned for CTK v0.7.0; it does not resolve Extension Sets or declare that
-Kitchen Note adopted by v0.6.2.
+An Extension Set name matches `[A-Za-z0-9][A-Za-z0-9._-]*`; lookup preserves
+case and performs no normalization. Go resolves its Extension Resource from the
+same three compatible flat and directory layouts under the `extension-set`
+namespace. More than one matching layout is an ambiguity error. An absent or
+empty Extension Set Resource is a valid empty contribution.
+
+Extension Set Resources contain only concrete Extension IDs. Go rejects nested
+`set:` declarations and does not resolve Extension variants. Runtime and
+Profile declarations expand one level, after which concrete IDs use the normal
+Extension Ingredient resolution path. The Runtime Plan remains concrete-only
+and records both the declaring Runtime or Profile Resource and each present
+Extension Set Resource as Sources.
+
+CTK v0.6.2 reserved `set:` declarations as a downgrade-safety guard. Cookbook
+Sources that use Extension Sets are unsupported by v0.6.1 and earlier.
 
 ## Unknown and empty content
 
