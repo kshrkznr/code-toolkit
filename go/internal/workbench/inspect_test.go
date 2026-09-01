@@ -102,6 +102,34 @@ func TestDisplayPathPreservesSourcesOutsideWorkspace(t *testing.T) {
 	}
 }
 
+func TestRepresentativeExtensionSetRecipeViews(t *testing.T) {
+	cookbookRoot := filepath.Join("..", "cookbook", "testdata", "cookbook")
+	for _, osName := range []string{"macos", "windows"} {
+		t.Run(osName, func(t *testing.T) {
+			workbench := t.TempDir()
+			recipePath := filepath.Join(cookbookRoot, "recipe", "vscode-golang."+osName+".yaml")
+			service := Service{CookbookRoot: cookbookRoot, WorkbenchRoot: workbench}
+			source, err := service.RecipeSource(recipePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			result, err := service.GenerateRecipeView(source, "replace")
+			if err != nil {
+				t.Fatal(err)
+			}
+			summary, err := os.ReadFile(filepath.Join(result.Path, "summary.md"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, want := range []string{"OS: `" + osName + "`", "openai.chatgpt", "extension-set.editor-core.extensions", "profile.core.extensions", "runtime.golang.extensions"} {
+				if !strings.Contains(string(summary), want) {
+					t.Fatalf("Recipe View missing %q: %s", want, summary)
+				}
+			}
+		})
+	}
+}
+
 func TestRecipeViewReadsExternalCookbookAndWritesWorkspaceInspect(t *testing.T) {
 	workspace := t.TempDir()
 	source := t.TempDir()

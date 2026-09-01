@@ -1,0 +1,19 @@
+name: vscode-golang
+os: windows
+platform: code
+
+runtime:
+  - theme
+  - golang
+
+profile:
+  - core
+  - inspect
+  - ops
+  - review
+  - struct
+
+config:
+  dist-strategy:
+    default-profile:
+      extensions: clean

@@ -113,31 +113,37 @@ func TestBuildPublishesCompletedStaging(t *testing.T) {
 }
 
 func TestBuildResolvesExtensionSetBeforeRuntimeMutation(t *testing.T) {
-	root := t.TempDir()
-	recipePath, ingredients := fixture(t, root, "runtime: [reserved]\n")
-	mustWrite(t, filepath.Join(ingredients, "runtime.reserved.extensions"), "set:shared\n")
-	mustWrite(t, filepath.Join(ingredients, "extension-set.shared.extensions"), "shared.extension\n")
-	mustWrite(t, filepath.Join(ingredients, "runtime.reserved.settings.json"), `{"wouldMutate":true}`)
-	runtimeCalled := false
-	runtime := &fakeRuntime{}
-	service := Service{Cookbook: cookbook.Repository{Root: ingredients}, Runtime: func(distribution.Distribution) (runtimeio.Runtime, error) {
-		runtimeCalled = true
-		return runtime, nil
-	}}
-	distRoot := filepath.Join(root, "dist")
-	result, err := service.Build(context.Background(), recipePath, distRoot, "sample", false, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !runtimeCalled || len(runtime.installed) != 1 || runtime.installed[0] != "shared.extension" {
-		t.Fatalf("Runtime called=%t installed=%v", runtimeCalled, runtime.installed)
-	}
-	lockData, err := os.ReadFile(filepath.Join(result.Distribution.Path, ".lock", "runtime.extensions.lock"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(string(lockData), "shared.extension") || strings.Contains(string(lockData), "set:") {
-		t.Fatalf("Lock must remain concrete-only: %s", lockData)
+	for _, osName := range []string{"macos", "windows"} {
+		t.Run(osName, func(t *testing.T) {
+			root := t.TempDir()
+			recipePath := filepath.Join(root, "recipe", "sample.yaml")
+			ingredients := filepath.Join(root, "ingredient")
+			mustWrite(t, recipePath, "name: sample\nos: "+osName+"\nplatform: code\nruntime: [reserved]\n")
+			mustWrite(t, filepath.Join(ingredients, "runtime.reserved.extensions"), "set:shared\n")
+			mustWrite(t, filepath.Join(ingredients, "extension-set.shared.extensions"), "shared.extension\n")
+			mustWrite(t, filepath.Join(ingredients, "runtime.reserved.settings.json"), `{"wouldMutate":true}`)
+			runtimeCalled := false
+			runtime := &fakeRuntime{}
+			service := Service{Cookbook: cookbook.Repository{Root: ingredients}, Runtime: func(distribution.Distribution) (runtimeio.Runtime, error) {
+				runtimeCalled = true
+				return runtime, nil
+			}}
+			distRoot := filepath.Join(root, "dist")
+			result, err := service.Build(context.Background(), recipePath, distRoot, "sample", false, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !runtimeCalled || len(runtime.installed) != 1 || runtime.installed[0] != "shared.extension" {
+				t.Fatalf("Runtime called=%t installed=%v", runtimeCalled, runtime.installed)
+			}
+			lockData, err := os.ReadFile(filepath.Join(result.Distribution.Path, ".lock", "runtime.extensions.lock"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(string(lockData), "shared.extension") || strings.Contains(string(lockData), "set:") {
+				t.Fatalf("Lock must remain concrete-only: %s", lockData)
+			}
+		})
 	}
 }
 
