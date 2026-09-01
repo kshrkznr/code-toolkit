@@ -42,7 +42,10 @@ func TestGenerateFreezeDraftFromReusedLock(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(cookbookRoot, "ingredient", "runtime.golang.settings.json"), []byte("{\"editor.fontSize\": 14}\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(cookbookRoot, "ingredient", "runtime.golang.extensions"), []byte("golang.go\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(cookbookRoot, "ingredient", "runtime.golang.extensions"), []byte("set:golang\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(cookbookRoot, "ingredient", "extension-set.golang.extensions"), []byte("golang.go\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -55,6 +58,12 @@ func TestGenerateFreezeDraftFromReusedLock(t *testing.T) {
 		ObservedAt: time.Date(2026, 7, 23, 1, 2, 3, 0, time.UTC),
 		Default:    runtimelock.ScopeSnapshot{Settings: settings.Document{"editor.fontSize": float64(16)}, Extensions: []runtimeio.Extension{{ID: "golang.go", Version: "1.2.3"}}},
 		Profiles:   []runtimelock.ScopeSnapshot{{Name: "work", Settings: settings.Document{}, Extensions: []runtimeio.Extension{{ID: "golang.go", Version: "1.2.3"}}, Inheritance: cookbook.Inheritance{Settings: true, Keybindings: true, Tasks: true, MCP: true, Snippets: true}}},
+	}
+	changedSnapshot := snapshot
+	changedSnapshot.Default.Extensions = append(append([]runtimeio.Extension(nil), snapshot.Default.Extensions...), runtimeio.Extension{ID: "manual.extension", Version: "1.0.0"})
+	extensionsDraft, extensionResult := renderExtensions(&plan, changedSnapshot)
+	if extensionResult.Status != "DIFFERENT" || !strings.Contains(extensionsDraft, "### runtime.draft.extensions") || strings.Contains(extensionsDraft, "extension-set.golang.extensions") {
+		t.Fatalf("Freeze must keep concrete draft targets without reverse Set inference:\n%s", extensionsDraft)
 	}
 	if err := (runtimelock.Store{}).Seal(distPath, recipePath, snapshot, plan); err != nil {
 		t.Fatal(err)
@@ -82,7 +91,7 @@ func TestGenerateFreezeDraftFromReusedLock(t *testing.T) {
 		t.Fatalf("inherited physical Profile Settings must not differ:\n%s", settingsDraft)
 	}
 	summary := readTestFile(t, filepath.Join(result.Path, "summary.md"))
-	for _, expected := range []string{"# Freeze Draft Summary", "| Recipe | SAME |", "| Settings | DIFFERENT | 0 | 0 | 1 |", "`reuse`", "`1.2.3`"} {
+	for _, expected := range []string{"# Freeze Draft Summary", "| Recipe | SAME |", "| Settings | DIFFERENT | 0 | 0 | 1 |", "`reuse`", "`1.2.3`", "extension-set.golang.extensions"} {
 		if !strings.Contains(summary, expected) {
 			t.Fatalf("summary missing %q:\n%s", expected, summary)
 		}
@@ -120,6 +129,9 @@ func TestGenerateFreezeDraftFromReusedLock(t *testing.T) {
 		t.Fatalf("View must render observations against an empty reference:\n%s", viewExtensions)
 	}
 	viewSummary := readTestFile(t, filepath.Join(viewPath, "summary.md"))
+	if strings.Contains(viewSummary, "Extension Declaration Sources") || strings.Contains(viewSummary, "extension-set.golang.extensions") {
+		t.Fatalf("Distribution View must not retain Cookbook-only Set provenance:\n%s", viewSummary)
+	}
 	for _, forbidden := range []string{"Recipe Difference", "Ingredient Context", "Available but Unused"} {
 		if strings.Contains(viewSummary, forbidden) {
 			t.Fatalf("View must not compare with current Cookbook (%s):\n%s", forbidden, viewSummary)

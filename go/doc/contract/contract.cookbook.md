@@ -43,7 +43,9 @@ Extension Set Resources contain only concrete Extension IDs. Go rejects nested
 Profile declarations expand one level, after which concrete IDs use the normal
 Extension Ingredient resolution path. The Runtime Plan remains concrete-only
 and records both the declaring Runtime or Profile Resource and each present
-Extension Set Resource as Sources.
+Extension Set Resource as Sources. Its review-only Extension origin metadata
+maps each concrete ID to every direct or Set Resource that declared it; this
+metadata is not persisted into Runtime, Lock, Distribution, or Archive state.
 
 CTK v0.6.2 reserved `set:` declarations as a downgrade-safety guard. Cookbook
 Sources that use Extension Sets are unsupported by v0.6.1 and earlier.

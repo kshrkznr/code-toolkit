@@ -372,6 +372,20 @@ func inspectSummary(title string, source CompletedSource, settingsResult, extens
 	}
 	output.WriteString("\n## Extensions Used by Recipe\n\n")
 	writeMarkdownList(&output, sortedKeys(extensions))
+	output.WriteString("\n## Extension Declaration Sources\n\n")
+	if source.Kind != "recipe" {
+		output.WriteString("- Unavailable for concrete Distribution observation.\n")
+	} else {
+		origins := resolvedExtensionOrigins(source.Plan)
+		if len(origins) == 0 {
+			output.WriteString("- None\n")
+		} else {
+			output.WriteString("| Extension | Scopes | Declaration Source |\n| --- | --- | --- |\n")
+			for _, origin := range origins {
+				fmt.Fprintf(&output, "| `%s` | %s | `%s` |\n", origin.ID, strings.Join(origin.Scopes, ", "), origin.Source)
+			}
+		}
+	}
 	output.WriteString("\n## Resolved Ingredient Resources\n\n")
 	resources := resolvedResources(source.Plan)
 	if len(resources) == 0 {
@@ -388,6 +402,45 @@ func inspectSummary(title string, source CompletedSource, settingsResult, extens
 type resolvedResource struct {
 	Name, Layer, Ingredient, Variant string
 	Scopes                           []string
+}
+
+type resolvedExtensionOrigin struct {
+	ID, Source string
+	Scopes     []string
+}
+
+func resolvedExtensionOrigins(plan cookbook.Plan) []resolvedExtensionOrigin {
+	type value struct {
+		id, source string
+		scopes     map[string]bool
+	}
+	found := map[string]*value{}
+	collect := func(scope string, origins map[string][]cookbook.Source) {
+		for id, sources := range origins {
+			for _, source := range sources {
+				key := id + "\x00" + source.Path
+				if found[key] == nil {
+					found[key] = &value{id: id, source: ingredientResourceName(source.Path), scopes: map[string]bool{}}
+				}
+				found[key].scopes[scope] = true
+			}
+		}
+	}
+	collect("default", plan.Default.ExtensionOrigins)
+	for _, scope := range plan.Profiles {
+		collect(scope.Name, scope.ExtensionOrigins)
+	}
+	keys := make([]string, 0, len(found))
+	for key := range found {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	result := make([]resolvedExtensionOrigin, 0, len(keys))
+	for _, key := range keys {
+		item := found[key]
+		result = append(result, resolvedExtensionOrigin{ID: item.id, Source: item.source, Scopes: sortedKeys(item.scopes)})
+	}
+	return result
 }
 
 func resolvedResources(plan cookbook.Plan) []resolvedResource {

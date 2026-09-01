@@ -14,7 +14,8 @@ func TestRecipeAndIngredientViewUseExistingResolvers(t *testing.T) {
 	writeInspectTest(t, recipePath, "name: sample\nos: macos\nplatform: code\nruntime: [sample]\n")
 	writeInspectTest(t, filepath.Join(root, "ingredient", "runtime.sample.settings.json"), `{"editor.fontSize":14}`)
 	writeInspectTest(t, filepath.Join(root, "ingredient", "runtime.sample.macos.settings.jsonc"), `{/* variant */"editor.fontSize":16}`)
-	writeInspectTest(t, filepath.Join(root, "ingredient", "runtime.sample.extensions"), "one.extension\n")
+	writeInspectTest(t, filepath.Join(root, "ingredient", "runtime.sample.extensions"), "one.extension\nset:shared\n")
+	writeInspectTest(t, filepath.Join(root, "ingredient", "extension-set.shared.extensions"), "set.extension\n")
 	writeInspectTest(t, filepath.Join(root, "ingredient", "profile.work.extensions"), "profile.extension\n")
 	service := Service{CookbookRoot: root}
 	source, err := service.RecipeSource(recipePath)
@@ -36,13 +37,13 @@ func TestRecipeAndIngredientViewUseExistingResolvers(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"## Result", "## Profiles", "## Extensions Used by Recipe", "one.extension", "## Resolved Ingredient Resources", "runtime.sample.macos.settings.jsonc", "## Resolution", "Recipe source: `$CTK_HOME/cookbook/recipe/sample.yaml`", "Generated:"} {
+	for _, want := range []string{"## Result", "## Profiles", "## Extensions Used by Recipe", "one.extension", "set.extension", "## Extension Declaration Sources", "| `one.extension` | default | `runtime.sample.extensions` |", "| `set.extension` | default | `extension-set.shared.extensions` |", "## Resolved Ingredient Resources", "runtime.sample.macos.settings.jsonc", "extension-set.shared.extensions", "## Resolution", "Recipe source: `$CTK_HOME/cookbook/recipe/sample.yaml`", "Generated:"} {
 		if !strings.Contains(string(summaryData), want) {
 			t.Fatalf("Recipe summary missing %q: %s", want, summaryData)
 		}
 	}
-	if strings.Count(string(summaryData), "one.extension") != 1 {
-		t.Fatalf("Recipe summary Extensions must be unique: %s", summaryData)
+	if strings.Count(string(summaryData), "one.extension") != 2 {
+		t.Fatalf("Recipe summary must list the Extension once and its provenance once: %s", summaryData)
 	}
 	ingredientResult, err := service.GenerateIngredientView("runtime.sample", "replace")
 	if err != nil {
@@ -76,7 +77,7 @@ func TestRecipeAndIngredientViewUseExistingResolvers(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"one.extension", "profile.extension"} {
+	for _, want := range []string{"one.extension", "set.extension", "profile.extension"} {
 		if !strings.Contains(string(allExtensions), want) {
 			t.Fatalf("all View missing %s: %s", want, allExtensions)
 		}
