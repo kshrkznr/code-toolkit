@@ -39,3 +39,9 @@ Settings composition:
 
 This section is the Bash implementation's declaration of applied Kitchen
 Notes. Notes not declared here are not part of Bash Cookbook interpretation.
+
+The historical Bash implementation does not adopt the [Extension Set Kitchen
+Note](../../doc/note/note.extension-set.md). It provides no behavior guarantee
+for Extension Set declarations. Because Kitchen Notes are optional and Bash is
+retained as reference evidence, Bash does not need Go's strict `set:`
+reserved-prefix guard.

@@ -48,8 +48,18 @@ they distinguish kinds of responsibility that recur across Recipes.
 
 The current Core therefore does not include Capability as an accepted Layer.
 File movement, renaming, and Runtime/Profile composition remain sufficient for
-current Recipes. Capability remains a Future candidate if a concrete reuse
-problem later requires it.
+most current Recipes.
+
+One observed reuse problem did require a narrower answer: Runtime and Profile
+Ingredients needed to share named lists of concrete editor Extensions. The Go
+implementation adopted [Extension Set composition](../note/note.extension-set.md)
+as an optional Kitchen Note. Its direction is fixed to Runtime/Profile → Set →
+concrete Extension, so it solves that reuse without creating a generic Layer
+or a second Recipe hierarchy.
+
+There is no standing Capability Future after that implementation. Open a new
+Future candidate only when a concrete requirement must compose non-Extension
+Ingredients and can state a clear resolution and review model.
 
 ## Layers express intent that files cannot
 

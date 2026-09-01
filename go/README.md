@@ -37,15 +37,17 @@ Settings composition:
   `union` through `cookbook/kitchen-notes/go.merge-rules.yaml`.
 - Merge Rules are not selected per Recipe.
 
-The Go implementation also adopts the Extension Set Kitchen Note:
+The Go implementation also adopts the [Extension Set Kitchen
+Note](../doc/note/note.extension-set.md):
 
 - Runtime and Profile `.extensions` Resources may use `set:<name>` to include a
   reusable list of concrete Extension IDs.
 - Extension Sets are one-level composition only. They cannot contain Set
   references, and a missing or empty Set `.extensions` Resource contributes an
   empty list.
-- The Go Cookbook Contract owns the exact declaration grammar, compatible
-  layouts, errors, and resolution behavior.
+- The [Go Cookbook Contract](doc/contract/contract.cookbook.md#extension-resources)
+  owns the exact declaration grammar, compatible layouts, errors, and
+  resolution behavior.
 
 Notes not declared here are not part of Go Cookbook interpretation.
 

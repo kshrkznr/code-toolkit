@@ -46,13 +46,16 @@ Note may explicitly declare that it describes a Kitchen Note. If the collection
 grows, a repository may organize those Notes into a Kitchen Notes category or
 directory without changing the concept.
 
-At present, Merge Rules are the only defined example of Kitchen Notes. Variant
-selection and precedence remain Cookbook Core behavior and are not Kitchen
-Notes.
+Merge Rules and Extension Set composition are the current defined examples of
+Kitchen Notes. Variant selection and precedence remain Cookbook Core behavior
+and are not Kitchen Notes.
 
 See [Merge Rules as a Kitchen Note](../note/note.merge-rules.md) for the
 reusable rationale and the boundary between Core resolution and
 implementation-specific combination semantics.
+
+See [Extension Set as a Kitchen Note](../note/note.extension-set.md) for the
+one-level concrete Extension reuse boundary and current Go adoption.
 
 Project documentation may identify a currently recommended language
 implementation based on its adopted Kitchen Notes and overall maturity. That
