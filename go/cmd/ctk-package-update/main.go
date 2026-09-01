@@ -170,6 +170,7 @@ func renderHomebrewFormula(value release) string {
   def install
     bin.install "ctk"
     doc.install "LICENSE", "THIRD_PARTY_NOTICES"
+    generate_completions_from_executable bin/"ctk", shell_parameter_format: :cobra, shells: [:bash, :zsh, :fish]
   end
 
   test do
@@ -188,6 +189,7 @@ type scoopManifest struct {
 	License      string            `json:"license"`
 	Architecture scoopArchitecture `json:"architecture"`
 	Bin          string            `json:"bin"`
+	Notes        []string          `json:"notes,omitempty"`
 	Checkver     scoopCheckver     `json:"checkver"`
 	Autoupdate   scoopAutoupdate   `json:"autoupdate"`
 }
@@ -219,7 +221,12 @@ func renderScoopManifest(value release) ([]byte, error) {
 			URL:  fmt.Sprintf("https://github.com/kshrkznr/code-toolkit/releases/download/%s/ctk_%s_windows_amd64.zip", value.Tag, value.Tag),
 			Hash: value.WindowsAMD64,
 		}},
-		Bin:      "ctk.exe",
+		Bin: "ctk.exe",
+		Notes: []string{
+			"PowerShell completion is available but is not added to $PROFILE automatically.",
+			"To enable it for future sessions, add this line to $PROFILE:",
+			"ctk completion powershell | Out-String | Invoke-Expression",
+		},
 		Checkver: scoopCheckver{GitHub: "https://github.com/kshrkznr/code-toolkit"},
 		Autoupdate: scoopAutoupdate{Architecture: scoopArchitecture{AMD64: scoopDownload{
 			URL: "https://github.com/kshrkznr/code-toolkit/releases/download/v$version/ctk_v$version_windows_amd64.zip",

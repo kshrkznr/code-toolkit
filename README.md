@@ -312,7 +312,10 @@ brew install kshrkznr/tap/ctk
 ```
 
 The Formula selects the macOS arm64 or amd64 archive for the current Mac and
-verifies its published SHA-256 value.
+verifies its published SHA-256 value. It also installs static bash, zsh, and
+fish completion into Homebrew-managed completion directories. A new shell uses
+them when its normal Homebrew completion initialization is enabled; the Formula
+does not edit shell startup files.
 
 ## Windows with Scoop
 
@@ -325,7 +328,15 @@ scoop install ctk
 
 The current Scoop package targets Windows amd64 and verifies the published
 archive hash. The Bucket-qualified install spelling is
-`scoop install kshrkznr/ctk`.
+`scoop install kshrkznr/ctk`. After installation, Scoop prints the following
+line for users who want to enable CTK completion in future PowerShell sessions:
+
+```powershell
+ctk completion powershell | Out-String | Invoke-Expression
+```
+
+Add that line to `$PROFILE`, then start a new PowerShell session. The manifest
+does not modify the profile automatically.
 
 ## Confirm the CLI before choosing a Workspace
 

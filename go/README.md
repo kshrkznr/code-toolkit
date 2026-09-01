@@ -172,6 +172,10 @@ and target-device verification boundaries.
 
 Repository builds remain the development path. Published Release archives and
 their `checksums.txt` are the source of truth for Homebrew and Scoop updates.
+The generated Homebrew Formula installs static bash, zsh, and fish completion
+into Homebrew-managed directories. The generated Scoop manifest leaves the
+PowerShell profile user-owned and prints the command that can be added to
+`$PROFILE` to enable completion in future sessions.
 
 The module path is `github.com/kshrkznr/code-toolkit/go`, matching the public
 repository and the `go/` module root. Binary Releases and the `ctk` command name

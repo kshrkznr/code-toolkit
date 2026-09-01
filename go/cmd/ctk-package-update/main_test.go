@@ -40,7 +40,12 @@ func TestRunUpdatesBothPackageDefinitions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, expected := range []string{"v1.2.3", strings.Repeat("a", 64), strings.Repeat("b", 64)} {
+	for _, expected := range []string{
+		"v1.2.3",
+		strings.Repeat("a", 64),
+		strings.Repeat("b", 64),
+		`generate_completions_from_executable bin/"ctk", shell_parameter_format: :cobra, shells: [:bash, :zsh, :fish]`,
+	} {
 		if !strings.Contains(string(formulaContent), expected) {
 			t.Fatalf("formula does not contain %q", expected)
 		}
@@ -49,7 +54,14 @@ func TestRunUpdatesBothPackageDefinitions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, expected := range []string{`"version": "1.2.3"`, "ctk_v1.2.3_windows_amd64.zip", strings.Repeat("c", 64)} {
+	for _, expected := range []string{
+		`"version": "1.2.3"`,
+		"ctk_v1.2.3_windows_amd64.zip",
+		strings.Repeat("c", 64),
+		`"PowerShell completion is available but is not added to $PROFILE automatically."`,
+		`"To enable it for future sessions, add this line to $PROFILE:"`,
+		`"ctk completion powershell | Out-String | Invoke-Expression"`,
+	} {
 		if !strings.Contains(string(manifestContent), expected) {
 			t.Fatalf("manifest does not contain %q", expected)
 		}
