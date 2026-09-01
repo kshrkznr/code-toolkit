@@ -159,6 +159,15 @@ func TestResolveExtensionSetsFromRuntimeAndProfile(t *testing.T) {
 			if plan.Default.Settings["from-extension-set"] != true {
 				t.Fatalf("expanded Extension Settings were not resolved: %#v", plan.Default.Settings)
 			}
+			var origins map[string][]Source
+			if test.layer == "runtime" {
+				origins = plan.Default.ExtensionOrigins
+			} else {
+				origins = plan.Profiles[0].ExtensionOrigins
+			}
+			if len(origins["a.member"]) != 2 || len(origins["z.direct"]) != 2 {
+				t.Fatalf("Extension origins = %#v", origins)
+			}
 			if !slices.Contains(plan.Default.Sources, Source{Layer: "extension-set", Ingredient: "shared", Path: setPath}) &&
 				(test.layer != "profile" || !slices.Contains(plan.Profiles[0].Sources, Source{Layer: "extension-set", Ingredient: "shared", Path: setPath})) {
 				t.Fatalf("Extension Set source not preserved: default=%#v profiles=%#v", plan.Default.Sources, plan.Profiles)

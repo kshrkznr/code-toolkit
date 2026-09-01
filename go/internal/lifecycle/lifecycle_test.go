@@ -79,11 +79,17 @@ func (*fakeRuntime) ReadSettings(context.Context, runtimeio.Scope) (settings.Doc
 func (*fakeRuntime) WriteSettings(context.Context, runtimeio.Scope, settings.Document) error {
 	return nil
 }
-func (*fakeRuntime) Extensions(context.Context, runtimeio.Scope) ([]runtimeio.Extension, error) {
-	return []runtimeio.Extension{}, nil
+func (f *fakeRuntime) Extensions(context.Context, runtimeio.Scope) ([]runtimeio.Extension, error) {
+	extensions := make([]runtimeio.Extension, 0, len(f.installed))
+	for _, id := range f.installed {
+		extensions = append(extensions, runtimeio.Extension{ID: id, Version: "test"})
+	}
+	return extensions, nil
 }
 func (f *fakeRuntime) InstallExtension(_ context.Context, _ runtimeio.Scope, id string) error {
-	f.installed = append(f.installed, id)
+	if f.installErr == nil {
+		f.installed = append(f.installed, id)
+	}
 	return f.installErr
 }
 func (*fakeRuntime) UninstallExtension(context.Context, runtimeio.Scope, string) error { return nil }
@@ -119,12 +125,19 @@ func TestBuildResolvesExtensionSetBeforeRuntimeMutation(t *testing.T) {
 		return runtime, nil
 	}}
 	distRoot := filepath.Join(root, "dist")
-	_, err := service.Build(context.Background(), recipePath, distRoot, "sample", false, false)
+	result, err := service.Build(context.Background(), recipePath, distRoot, "sample", false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !runtimeCalled || len(runtime.installed) != 1 || runtime.installed[0] != "shared.extension" {
 		t.Fatalf("Runtime called=%t installed=%v", runtimeCalled, runtime.installed)
+	}
+	lockData, err := os.ReadFile(filepath.Join(result.Distribution.Path, ".lock", "runtime.extensions.lock"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(lockData), "shared.extension") || strings.Contains(string(lockData), "set:") {
+		t.Fatalf("Lock must remain concrete-only: %s", lockData)
 	}
 }
 

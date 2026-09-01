@@ -430,7 +430,7 @@ func ingredientInventory(root string, plan cookbook.Plan, definition recipe.Reci
 	usedSet := map[string]bool{}
 	for _, scope := range append([]cookbook.ScopePlan{plan.Default}, plan.Profiles...) {
 		for _, source := range scope.Sources {
-			if !direct[source.Layer+"\x00"+source.Ingredient] {
+			if source.Layer != "extension-set" && !direct[source.Layer+"\x00"+source.Ingredient] {
 				continue
 			}
 			relative, err := filepath.Rel(root, source.Path)

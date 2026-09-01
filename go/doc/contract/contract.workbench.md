@@ -74,6 +74,14 @@ review material portable and avoids publishing a host-local absolute path.
 Sources outside the Workspace retain their supplied path because CTK cannot
 assign them a Workspace identity.
 
+Recipe View maps each concrete Extension requirement to its direct Runtime or
+Profile declaration Resource or to the Extension Set Resource that contributed
+it. This source mapping is review metadata and does not appear in Distribution
+View, whose source is a concrete Runtime observation. Freeze Draft lists used
+Extension Set Resources as Ingredient context, but Extension differences keep
+their concrete Runtime/Profile draft targets. Freeze Commit therefore never
+infers, creates, or silently rewrites Set membership.
+
 Settings assignments use the optional CTK JSON Flat Format. Extensions remain
 exact line-oriented IDs. Other Runtime Artifacts retain the JSON or named-file
 structure defined by their shared Artifact Contract.

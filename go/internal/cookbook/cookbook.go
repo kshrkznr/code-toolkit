@@ -36,15 +36,16 @@ type Plan struct {
 }
 
 type ScopePlan struct {
-	Name        string
-	Settings    settings.Document
-	Keybindings runtimeartifact.Array
-	Tasks       runtimeartifact.Object
-	MCP         runtimeartifact.Object
-	Snippets    runtimeartifact.Snippets
-	Extensions  []string
-	Inheritance Inheritance
-	Sources     []Source
+	Name             string
+	Settings         settings.Document
+	Keybindings      runtimeartifact.Array
+	Tasks            runtimeartifact.Object
+	MCP              runtimeartifact.Object
+	Snippets         runtimeartifact.Snippets
+	Extensions       []string
+	ExtensionOrigins map[string][]Source
+	Inheritance      Inheritance
+	Sources          []Source
 }
 
 type Inheritance struct {
@@ -72,7 +73,7 @@ func (r Repository) Resolve(recipePath string) (Plan, error) {
 		return Plan{}, err
 	}
 
-	runtimeExtensions, runtimeExtensionSources, err := r.extensions("runtime", definition.Runtime)
+	runtimeExtensions, runtimeExtensionSources, runtimeExtensionOrigins, err := r.extensions("runtime", definition.Runtime)
 	if err != nil {
 		return Plan{}, err
 	}
@@ -107,12 +108,14 @@ func (r Repository) Resolve(recipePath string) (Plan, error) {
 
 	profileExtensions := make(map[string][]string, len(definition.Profile))
 	profileExtensionSources := make(map[string][]Source, len(definition.Profile))
+	profileExtensionOrigins := make(map[string]map[string][]Source, len(definition.Profile))
 	for _, name := range definition.Profile {
-		extensions, sources, err := r.extensions("profile", []string{name})
+		extensions, sources, origins, err := r.extensions("profile", []string{name})
 		if err != nil {
 			return Plan{}, err
 		}
 		profileExtensions[name], profileExtensionSources[name] = extensions, sources
+		profileExtensionOrigins[name] = origins
 		if definition.ProfileContent(name).Settings == "default" {
 			for _, id := range extensions {
 				if err := appendSettings("extension", id); err != nil {
@@ -162,7 +165,7 @@ func (r Repository) Resolve(recipePath string) (Plan, error) {
 		RecipePath: recipePath, Name: definition.Name, OS: definition.OS, Platform: definition.Platform,
 		ExtensionMarketplace: definition.ExtensionMarketplace(), ExtensionPool: definition.ExtensionPoolMode(), LockMode: definition.LockMode(),
 		Default: ScopePlan{
-			Name: "", Extensions: append([]string(nil), defaultExtensions...), Sources: append(defaultSources, runtimeExtensionSources...),
+			Name: "", Extensions: append([]string(nil), defaultExtensions...), ExtensionOrigins: selectExtensionOrigins(runtimeExtensionOrigins, defaultExtensions), Sources: append(defaultSources, runtimeExtensionSources...),
 			Inheritance: Inheritance{Unmanaged: map[string]bool{}},
 		},
 	}
@@ -276,7 +279,7 @@ func (r Repository) Resolve(recipePath string) (Plan, error) {
 			return Plan{}, err
 		}
 		profilePlan := ScopePlan{
-			Name: name, Settings: merged, Extensions: extensions,
+			Name: name, Settings: merged, Extensions: extensions, ExtensionOrigins: selectExtensionOrigins(mergeExtensionOrigins(runtimeExtensionOrigins, profileExtensionOrigins[name]), extensions),
 			Inheritance: Inheritance{Settings: strategy.Settings == "default", Keybindings: strategy.Keybindings == "default", Tasks: strategy.Tasks == "default", MCP: strategy.MCP == "default", Snippets: strategy.Snippets == "default", Unmanaged: map[string]bool{}},
 			Sources:     append(sources, profileExtensionSources[name]...),
 		}
@@ -373,42 +376,80 @@ func (r Repository) settingVariants(layer, ingredient, osName, platform string) 
 	return documents, sources, nil
 }
 
-func (r Repository) extensions(layer string, ingredients []string) ([]string, []Source, error) {
+func (r Repository) extensions(layer string, ingredients []string) ([]string, []Source, map[string][]Source, error) {
 	var ids []string
 	var sources []Source
+	origins := map[string][]Source{}
 	for _, ingredient := range ingredients {
 		path, err := r.one(extensionCandidates(r.Root, layer, ingredient), layer, ingredient, "extensions")
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		if path == "" {
 			continue
 		}
 		lines, err := extensionLines(path)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
-		sources = append(sources, Source{Layer: layer, Ingredient: ingredient, Path: path})
+		owner := Source{Layer: layer, Ingredient: ingredient, Path: path}
+		sources = append(sources, owner)
 		for _, line := range lines {
 			if !strings.HasPrefix(line, "set:") {
 				ids = append(ids, line)
+				addExtensionOrigin(origins, line, owner)
 				continue
 			}
 			name := strings.TrimPrefix(line, "set:")
 			if !validExtensionSetName(name) {
-				return nil, nil, fmt.Errorf("invalid Extension Set declaration %q in %s: name must match [A-Za-z0-9][A-Za-z0-9._-]*", line, path)
+				return nil, nil, nil, fmt.Errorf("invalid Extension Set declaration %q in %s: name must match [A-Za-z0-9][A-Za-z0-9._-]*", line, path)
 			}
 			members, source, err := r.extensionSet(name)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 			ids = append(ids, members...)
 			if source != nil {
 				sources = append(sources, *source)
+				for _, member := range members {
+					addExtensionOrigin(origins, member, *source)
+				}
 			}
 		}
 	}
-	return uniqueSorted(ids), sources, nil
+	return uniqueSorted(ids), sources, origins, nil
+}
+
+func addExtensionOrigin(origins map[string][]Source, id string, source Source) {
+	for _, existing := range origins[id] {
+		if existing == source {
+			return
+		}
+	}
+	origins[id] = append(origins[id], source)
+}
+
+func mergeExtensionOrigins(values ...map[string][]Source) map[string][]Source {
+	result := map[string][]Source{}
+	for _, origins := range values {
+		for id, sources := range origins {
+			for _, source := range sources {
+				addExtensionOrigin(result, id, source)
+			}
+		}
+	}
+	return result
+}
+
+func selectExtensionOrigins(origins map[string][]Source, ids []string) map[string][]Source {
+	if len(ids) == 0 {
+		return nil
+	}
+	result := make(map[string][]Source, len(ids))
+	for _, id := range ids {
+		result[id] = append([]Source(nil), origins[id]...)
+	}
+	return result
 }
 
 func (r Repository) extensionSet(name string) ([]string, *Source, error) {
