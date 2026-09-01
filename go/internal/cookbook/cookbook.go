@@ -391,6 +391,10 @@ func (r Repository) extensions(layer string, ingredients []string) ([]string, []
 		scanner := bufio.NewScanner(file)
 		for scanner.Scan() {
 			if id := strings.TrimSpace(strings.TrimSuffix(scanner.Text(), "\r")); id != "" {
+				if strings.HasPrefix(id, "set:") {
+					_ = file.Close()
+					return nil, nil, fmt.Errorf("reserved Extension Set declaration %q in %s; Extension Sets require CTK v0.7.0 or later", id, path)
+				}
 				ids = append(ids, id)
 			}
 		}
