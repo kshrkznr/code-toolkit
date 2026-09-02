@@ -55,11 +55,40 @@ Extension Set Resource as Sources. Its review-only Extension origin metadata
 maps each concrete ID to every direct or Set Resource that declared it; this
 metadata is not persisted into Runtime, Lock, Distribution, or Archive state.
 
-CTK v0.6.2 reserved `set:` declarations as a downgrade-safety guard. Cookbook
-Sources that use Extension Sets are unsupported by v0.6.1 and earlier. The
-exact prefix and canonical namespace define the implicit v1 representation;
-an incompatible future interpretation must use a new explicit representation
-rather than silently changing these semantics.
+The same Set namespace may provide companion Settings, Keybindings, Snippets,
+Tasks, and MCP Resources through all shared compatible Ingredient layouts:
+
+```text
+extension-set.<name>.<resource>
+extension-set/<name>.<resource>
+extension-set/<name>/<resource>
+```
+
+JSON/JSONC parsing, Snippet filename identity, Base → OS → Platform Variants,
+and ambiguity errors are identical to the corresponding Runtime and Profile
+Resource. Missing companion Resources are valid empty participation.
+
+For each effective scope, Go preserves this order:
+
+```text
+Runtime Extension
+  → Runtime Extension Set
+  → Runtime Ingredient
+  → Profile Extension
+  → Profile Extension Set
+  → Profile Ingredient
+```
+
+Repeated concrete Extension and Set references contribute their Resources only
+at the first applicable position. Set Resources follow the existing ownership
+strategy for each Artifact; unmanaged content is not parsed or recorded as a
+resolved Source.
+
+CTK v0.6.2 reserved `set:` declarations as a downgrade-safety guard, and
+v0.7.0 adopted membership resolution. Cookbook Sources that use Extension Sets
+are unsupported by v0.6.1 and earlier. v0.7.0 ignores companion Set Resources
+while continuing to resolve membership; v0.7.x accepts that partial downgrade
+for this additive extension instead of changing the declaration syntax.
 
 ## Unknown and empty content
 

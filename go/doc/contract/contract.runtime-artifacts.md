@@ -26,6 +26,29 @@ I/O is confirmed. It is reported as unsupported rather than valid empty content.
 Go supports the compatible shared layout families and rejects multiple physical
 definitions of the same logical Resource.
 
+## Extension Set companion Artifacts
+
+A referenced Extension Set may provide managed Settings, Keybindings,
+Snippets, Tasks, and MCP Resources. Go applies their existing Artifact
+composition rules without Set-specific merge semantics.
+
+Within an effective scope, resolution proceeds:
+
+```text
+Runtime Extension Resources
+  → Runtime Extension Set Resources
+  → Runtime Ingredient Resources
+  → Profile Extension Resources
+  → Profile Extension Set Resources
+  → Profile Ingredient Resources
+```
+
+Repeated concrete Extension and Set references contribute Resources only at
+their first applicable position. Set companion Resources follow the Artifact's
+existing Default and named-Profile ownership strategy. An unmanaged Artifact
+is not resolved, including a malformed companion Resource that would otherwise
+participate.
+
 ## Snippet Commit behavior
 
 Runtime observation represents a rename as old-name absence plus new-name

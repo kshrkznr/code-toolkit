@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "ctk-extension-set-fixture": {
+      "type": "stdio",
+      "command": "ctk-extension-set-fixture"
+    }
+  }
+}

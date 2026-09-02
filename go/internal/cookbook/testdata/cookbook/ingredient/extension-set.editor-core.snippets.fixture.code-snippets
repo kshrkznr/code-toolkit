@@ -1,0 +1,8 @@
+{
+  "CTK Extension Set Fixture": {
+    "prefix": "ctk-extension-set-fixture",
+    "body": [
+      "ctk-extension-set-fixture"
+    ]
+  }
+}

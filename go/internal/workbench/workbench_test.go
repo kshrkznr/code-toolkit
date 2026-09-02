@@ -48,6 +48,9 @@ func TestGenerateFreezeDraftFromReusedLock(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(cookbookRoot, "ingredient", "extension-set.golang.extensions"), []byte("golang.go\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(filepath.Join(cookbookRoot, "ingredient", "extension-set.golang.settings.json"), []byte("{\"set.enabled\":true}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	plan, err := (cookbook.Repository{Root: filepath.Join(cookbookRoot, "ingredient")}).Resolve(recipePath)
 	if err != nil {
@@ -56,7 +59,7 @@ func TestGenerateFreezeDraftFromReusedLock(t *testing.T) {
 	snapshot := runtimelock.Snapshot{
 		FormatVersion: runtimelock.FormatVersion, RecipeName: "demo", Platform: "code",
 		ObservedAt: time.Date(2026, 7, 23, 1, 2, 3, 0, time.UTC),
-		Default:    runtimelock.ScopeSnapshot{Settings: settings.Document{"editor.fontSize": float64(16)}, Extensions: []runtimeio.Extension{{ID: "golang.go", Version: "1.2.3"}}},
+		Default:    runtimelock.ScopeSnapshot{Settings: settings.Document{"editor.fontSize": float64(16), "set.enabled": true}, Extensions: []runtimeio.Extension{{ID: "golang.go", Version: "1.2.3"}}},
 		Profiles:   []runtimelock.ScopeSnapshot{{Name: "work", Settings: settings.Document{}, Extensions: []runtimeio.Extension{{ID: "golang.go", Version: "1.2.3"}}, Inheritance: cookbook.Inheritance{Settings: true, Keybindings: true, Tasks: true, MCP: true, Snippets: true}}},
 	}
 	changedSnapshot := snapshot
@@ -82,7 +85,7 @@ func TestGenerateFreezeDraftFromReusedLock(t *testing.T) {
 	}
 
 	settingsDraft := readTestFile(t, filepath.Join(result.Path, "settings.draft.md"))
-	for _, expected := range []string{"## Inventory: Used by Recipe", "## Inventory: Available but Unused", "## Difference", `- ["editor.fontSize"]=14`, `+ ["editor.fontSize"]=16`, "### runtime.draft.settings.json", "### runtime.golang.settings.json"} {
+	for _, expected := range []string{"## Inventory: Used by Recipe", "## Inventory: Available but Unused", "## Difference", `- ["editor.fontSize"]=14`, `+ ["editor.fontSize"]=16`, "### runtime.draft.settings.json", "### runtime.golang.settings.json", "### extension-set.golang.settings.json"} {
 		if !strings.Contains(settingsDraft, expected) {
 			t.Fatalf("settings Draft missing %q:\n%s", expected, settingsDraft)
 		}

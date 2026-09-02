@@ -1,0 +1,6 @@
+[
+  {
+    "key": "ctrl+alt+c",
+    "command": "ctk.fixture.extension-set"
+  }
+]

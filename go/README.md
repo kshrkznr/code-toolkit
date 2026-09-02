@@ -45,6 +45,12 @@ Note](../doc/note/note.extension-set.md):
 - Extension Sets are one-level composition only. They cannot contain Set
   references, and a missing or empty Set `.extensions` Resource contributes an
   empty list.
+- A referenced Set may contribute Settings, Keybindings, Snippets, Tasks, and
+  MCP Resources through the same layouts, Variants, ownership strategies, and
+  Artifact composition semantics used by Runtime and Profile Ingredients.
+- Resolution order is Runtime Extension → Runtime Set → Runtime → Profile
+  Extension → Profile Set → Profile; repeated references contribute once per
+  effective scope.
 - The [Go Cookbook Contract](doc/contract/contract.cookbook.md#extension-resources)
   owns the exact declaration grammar, compatible layouts, errors, and
   resolution behavior.
