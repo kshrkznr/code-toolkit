@@ -386,6 +386,20 @@ func inspectSummary(title string, source CompletedSource, settingsResult, extens
 			}
 		}
 	}
+	output.WriteString("\n## Extension Set References\n\n")
+	if source.Kind != "recipe" {
+		output.WriteString("- Unavailable for concrete Distribution observation.\n")
+	} else {
+		refs := resolvedExtensionSetReferences(source.Plan)
+		if len(refs) == 0 {
+			output.WriteString("- None\n")
+		} else {
+			output.WriteString("| Extension Set | Scopes | Declaration Source |\n| --- | --- | --- |\n")
+			for _, ref := range refs {
+				fmt.Fprintf(&output, "| `%s` | %s | `%s` |\n", ref.Name, strings.Join(ref.Scopes, ", "), ref.Declaration)
+			}
+		}
+	}
 	output.WriteString("\n## Resolved Ingredient Resources\n\n")
 	resources := resolvedResources(source.Plan)
 	if len(resources) == 0 {
@@ -407,6 +421,11 @@ type resolvedResource struct {
 type resolvedExtensionOrigin struct {
 	ID, Source string
 	Scopes     []string
+}
+
+type resolvedExtensionSetReference struct {
+	Name, Declaration string
+	Scopes            []string
 }
 
 func resolvedExtensionOrigins(plan cookbook.Plan) []resolvedExtensionOrigin {
@@ -439,6 +458,39 @@ func resolvedExtensionOrigins(plan cookbook.Plan) []resolvedExtensionOrigin {
 	for _, key := range keys {
 		item := found[key]
 		result = append(result, resolvedExtensionOrigin{ID: item.id, Source: item.source, Scopes: sortedKeys(item.scopes)})
+	}
+	return result
+}
+
+func resolvedExtensionSetReferences(plan cookbook.Plan) []resolvedExtensionSetReference {
+	type value struct {
+		name, declaration string
+		scopes            map[string]bool
+	}
+	found := map[string]*value{}
+	collect := func(scope string, refs []cookbook.ExtensionSetReference) {
+		for _, ref := range refs {
+			declaration := ingredientResourceName(ref.Declaration.Path)
+			key := ref.Name + "\x00" + declaration
+			if found[key] == nil {
+				found[key] = &value{name: ref.Name, declaration: declaration, scopes: map[string]bool{}}
+			}
+			found[key].scopes[scope] = true
+		}
+	}
+	collect("default", plan.Default.ExtensionSets)
+	for _, scope := range plan.Profiles {
+		collect(scope.Name, scope.ExtensionSets)
+	}
+	keys := make([]string, 0, len(found))
+	for key := range found {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	result := make([]resolvedExtensionSetReference, 0, len(keys))
+	for _, key := range keys {
+		item := found[key]
+		result = append(result, resolvedExtensionSetReference{Name: item.name, Declaration: item.declaration, Scopes: sortedKeys(item.scopes)})
 	}
 	return result
 }

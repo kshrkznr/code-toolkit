@@ -76,11 +76,13 @@ assign them a Workspace identity.
 
 Recipe View maps each concrete Extension requirement to its direct Runtime or
 Profile declaration Resource or to the Extension Set Resource that contributed
-it. This source mapping is review metadata and does not appear in Distribution
+it. It also lists each Set reference with its declaring Runtime/Profile
+Resource and includes resolved companion Set Resources in the Resource view.
+This source mapping is review metadata and does not appear in Distribution
 View, whose source is a concrete Runtime observation. Freeze Draft lists used
-Extension Set Resources as Ingredient context, but Extension differences keep
+Extension Set Resources as Ingredient context, but Runtime differences keep
 their concrete Runtime/Profile draft targets. Freeze Commit therefore never
-infers, creates, or silently rewrites Set membership.
+infers, creates, or silently rewrites Set membership or companion Resources.
 
 Settings assignments use the optional CTK JSON Flat Format. Extensions remain
 exact line-oriented IDs. Other Runtime Artifacts retain the JSON or named-file

@@ -110,6 +110,28 @@ Runtime Ingredient Settings
 Profile content assigned to the default Runtime
 ```
 
+An implementation that adopts Extension Set companion Artifacts inserts the
+Set Resources between the concrete Extension Resources and their declaring
+Runtime or Profile Ingredient:
+
+```text
+Runtime Extension
+  ↓
+Runtime Extension Set
+  ↓
+Runtime Ingredient
+  ↓
+Profile Extension
+  ↓
+Profile Extension Set
+  ↓
+Profile Ingredient
+```
+
+Repeated Extension or Set references do not repeat their Resource contribution
+within one effective scope. This ordering extends the source stream without
+changing an Artifact's composition semantics.
+
 A Profile-local Settings stream begins with resolved default Settings and then
 applies that Profile's Extension Settings and Profile Settings.
 

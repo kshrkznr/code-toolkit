@@ -1,0 +1,10 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "ctk-extension-set-fixture",
+      "type": "shell",
+      "command": "echo ctk-extension-set-fixture"
+    }
+  ]
+}

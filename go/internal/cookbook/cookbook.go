@@ -44,8 +44,21 @@ type ScopePlan struct {
 	Snippets         runtimeartifact.Snippets
 	Extensions       []string
 	ExtensionOrigins map[string][]Source
+	ExtensionSets    []ExtensionSetReference
 	Inheritance      Inheritance
 	Sources          []Source
+}
+
+type ExtensionSetReference struct {
+	Name        string
+	Declaration Source
+}
+
+type extensionSelection struct {
+	IDs     []string
+	Sources []Source
+	Origins map[string][]Source
+	SetRefs []ExtensionSetReference
 }
 
 type Inheritance struct {
@@ -73,11 +86,16 @@ func (r Repository) Resolve(recipePath string) (Plan, error) {
 		return Plan{}, err
 	}
 
-	runtimeExtensions, runtimeExtensionSources, runtimeExtensionOrigins, err := r.extensions("runtime", definition.Runtime)
+	runtimeSelection, err := r.extensions("runtime", definition.Runtime)
 	if err != nil {
 		return Plan{}, err
 	}
+	runtimeExtensions := runtimeSelection.IDs
 
+	defaultSettingsMode := definition.DefaultContent("settings")
+	if defaultSettingsMode != "runtime" && defaultSettingsMode != "clean" && defaultSettingsMode != "unmanaged" {
+		return Plan{}, fmt.Errorf("unsupported default-profile.settings %q", defaultSettingsMode)
+	}
 	defaultDocuments := []settings.Document{}
 	defaultSources := []Source{}
 	appendSettings := func(layer, ingredient string) error {
@@ -89,36 +107,52 @@ func (r Repository) Resolve(recipePath string) (Plan, error) {
 		defaultSources = append(defaultSources, sources...)
 		return nil
 	}
-	if err := appendSettings("os", definition.OS); err != nil {
-		return Plan{}, err
-	}
-	if err := appendSettings("platform", definition.Platform); err != nil {
-		return Plan{}, err
-	}
-	for _, id := range runtimeExtensions {
-		if err := appendSettings("extension", id); err != nil {
+	defaultSettingExtensions := map[string]bool{}
+	defaultSettingSets := map[string]bool{}
+	if defaultSettingsMode == "runtime" {
+		if err := appendSettings("os", definition.OS); err != nil {
 			return Plan{}, err
 		}
-	}
-	for _, ingredient := range definition.Runtime {
-		if err := appendSettings("runtime", ingredient); err != nil {
+		if err := appendSettings("platform", definition.Platform); err != nil {
 			return Plan{}, err
+		}
+		for _, id := range runtimeExtensions {
+			if err := appendSettings("extension", id); err != nil {
+				return Plan{}, err
+			}
+			defaultSettingExtensions[id] = true
+		}
+		for _, set := range uniqueExtensionSetReferences(runtimeSelection.SetRefs, defaultSettingSets) {
+			if err := appendSettings("extension-set", set.Name); err != nil {
+				return Plan{}, err
+			}
+		}
+		for _, ingredient := range definition.Runtime {
+			if err := appendSettings("runtime", ingredient); err != nil {
+				return Plan{}, err
+			}
 		}
 	}
 
-	profileExtensions := make(map[string][]string, len(definition.Profile))
-	profileExtensionSources := make(map[string][]Source, len(definition.Profile))
-	profileExtensionOrigins := make(map[string]map[string][]Source, len(definition.Profile))
+	profileSelections := make(map[string]extensionSelection, len(definition.Profile))
 	for _, name := range definition.Profile {
-		extensions, sources, origins, err := r.extensions("profile", []string{name})
+		selection, err := r.extensions("profile", []string{name})
 		if err != nil {
 			return Plan{}, err
 		}
-		profileExtensions[name], profileExtensionSources[name] = extensions, sources
-		profileExtensionOrigins[name] = origins
-		if definition.ProfileContent(name).Settings == "default" {
-			for _, id := range extensions {
+		profileSelections[name] = selection
+		if defaultSettingsMode == "runtime" && definition.ProfileContent(name).Settings == "default" {
+			for _, id := range selection.IDs {
+				if defaultSettingExtensions[id] {
+					continue
+				}
+				defaultSettingExtensions[id] = true
 				if err := appendSettings("extension", id); err != nil {
+					return Plan{}, err
+				}
+			}
+			for _, set := range uniqueExtensionSetReferences(selection.SetRefs, defaultSettingSets) {
+				if err := appendSettings("extension-set", set.Name); err != nil {
 					return Plan{}, err
 				}
 			}
@@ -128,27 +162,43 @@ func (r Repository) Resolve(recipePath string) (Plan, error) {
 		}
 	}
 	baseArtifactRefs := []ingredientRef{{"os", definition.OS}, {"platform", definition.Platform}}
+	baseArtifactExtensions := map[string]bool{}
 	for _, id := range runtimeExtensions {
 		baseArtifactRefs = append(baseArtifactRefs, ingredientRef{"extension", id})
+		baseArtifactExtensions[id] = true
+	}
+	baseArtifactSets := map[string]bool{}
+	for _, set := range uniqueExtensionSetReferences(runtimeSelection.SetRefs, baseArtifactSets) {
+		baseArtifactRefs = append(baseArtifactRefs, ingredientRef{"extension-set", set.Name})
 	}
 	for _, name := range definition.Runtime {
 		baseArtifactRefs = append(baseArtifactRefs, ingredientRef{"runtime", name})
 	}
-	defaultArtifactRefs := func(kind string) ([]ingredientRef, error) {
+	defaultArtifactRefs := func(kind string) ([]ingredientRef, map[string]bool, map[string]bool, error) {
 		refs := append([]ingredientRef(nil), baseArtifactRefs...)
+		extensionIDs := copyStringSet(baseArtifactExtensions)
+		setNames := copyStringSet(baseArtifactSets)
 		for _, name := range definition.Profile {
 			strategy := definition.ProfileContent(name).Content(kind)
 			if strategy != "default" && strategy != "profile" && strategy != "unmanaged" {
-				return nil, fmt.Errorf("unsupported profile %q %s strategy %q", name, kind, strategy)
+				return nil, nil, nil, fmt.Errorf("unsupported profile %q %s strategy %q", name, kind, strategy)
 			}
 			if strategy == "default" {
-				for _, id := range profileExtensions[name] {
+				selection := profileSelections[name]
+				for _, id := range selection.IDs {
+					if extensionIDs[id] {
+						continue
+					}
+					extensionIDs[id] = true
 					refs = append(refs, ingredientRef{"extension", id})
+				}
+				for _, set := range uniqueExtensionSetReferences(selection.SetRefs, setNames) {
+					refs = append(refs, ingredientRef{"extension-set", set.Name})
 				}
 				refs = append(refs, ingredientRef{"profile", name})
 			}
 		}
-		return refs, nil
+		return refs, extensionIDs, setNames, nil
 	}
 
 	defaultExtensions := runtimeExtensions
@@ -165,13 +215,15 @@ func (r Repository) Resolve(recipePath string) (Plan, error) {
 		RecipePath: recipePath, Name: definition.Name, OS: definition.OS, Platform: definition.Platform,
 		ExtensionMarketplace: definition.ExtensionMarketplace(), ExtensionPool: definition.ExtensionPoolMode(), LockMode: definition.LockMode(),
 		Default: ScopePlan{
-			Name: "", Extensions: append([]string(nil), defaultExtensions...), ExtensionOrigins: selectExtensionOrigins(runtimeExtensionOrigins, defaultExtensions), Sources: append(defaultSources, runtimeExtensionSources...),
+			Name: "", Extensions: append([]string(nil), defaultExtensions...), ExtensionOrigins: selectExtensionOrigins(runtimeSelection.Origins, defaultExtensions), ExtensionSets: append([]ExtensionSetReference(nil), runtimeSelection.SetRefs...), Sources: append(defaultSources, runtimeSelection.Sources...),
 			Inheritance: Inheritance{Unmanaged: map[string]bool{}},
 		},
 	}
 	if definition.DefaultExtensionMode() == "unmanaged" {
 		plan.Default.Inheritance.Unmanaged["extensions"] = true
 	}
+	defaultArtifactExtensions := map[string]map[string]bool{}
+	defaultArtifactSets := map[string]map[string]bool{}
 	for _, kind := range []string{"keybindings", "tasks", "mcp"} {
 		mode := definition.DefaultContent(kind)
 		if mode != "runtime" && mode != "clean" && mode != "unmanaged" {
@@ -184,10 +236,12 @@ func (r Repository) Resolve(recipePath string) (Plan, error) {
 		var value runtimeartifact.Value
 		var sources []Source
 		if mode == "runtime" {
-			refs, err := defaultArtifactRefs(kind)
+			refs, extensionIDs, setNames, err := defaultArtifactRefs(kind)
 			if err != nil {
 				return Plan{}, err
 			}
+			defaultArtifactExtensions[kind] = extensionIDs
+			defaultArtifactSets[kind] = setNames
 			value, sources, err = r.resolveArtifact(kind, definition.OS, definition.Platform, refs)
 			if err != nil {
 				return Plan{}, err
@@ -222,10 +276,12 @@ func (r Repository) Resolve(recipePath string) (Plan, error) {
 	if snippetMode != "unmanaged" {
 		plan.Default.Snippets = runtimeartifact.Snippets{}
 		if snippetMode == "runtime" {
-			refs, err := defaultArtifactRefs("snippets")
+			refs, extensionIDs, setNames, err := defaultArtifactRefs("snippets")
 			if err != nil {
 				return Plan{}, err
 			}
+			defaultArtifactExtensions["snippets"] = extensionIDs
+			defaultArtifactSets["snippets"] = setNames
 			plan.Default.Snippets, defaultSources, err = r.resolveSnippets(definition.OS, definition.Platform, refs)
 			if err != nil {
 				return Plan{}, err
@@ -240,10 +296,6 @@ func (r Repository) Resolve(recipePath string) (Plan, error) {
 		return Plan{}, err
 	}
 	resolvedDefaultSettings := plan.Default.Settings
-	defaultSettingsMode := definition.DefaultContent("settings")
-	if defaultSettingsMode != "runtime" && defaultSettingsMode != "clean" && defaultSettingsMode != "unmanaged" {
-		return Plan{}, fmt.Errorf("unsupported default-profile.settings %q", defaultSettingsMode)
-	}
 	if defaultSettingsMode == "clean" {
 		plan.Default.Settings = settings.Document{}
 	}
@@ -253,11 +305,26 @@ func (r Repository) Resolve(recipePath string) (Plan, error) {
 	}
 	for _, name := range definition.Profile {
 		strategy := definition.ProfileContent(name)
-		documents := []settings.Document{resolvedDefaultSettings}
+		profileSelection := profileSelections[name]
+		var documents []settings.Document
+		if defaultSettingsMode == "runtime" {
+			documents = []settings.Document{resolvedDefaultSettings}
+		}
 		sources := append([]Source(nil), plan.Default.Sources...)
 		if strategy.Settings == "profile" {
-			for _, id := range profileExtensions[name] {
+			for _, id := range profileSelection.IDs {
+				if defaultSettingExtensions[id] {
+					continue
+				}
 				resolved, found, err := r.settingVariants("extension", id, definition.OS, definition.Platform)
+				if err != nil {
+					return Plan{}, err
+				}
+				documents, sources = append(documents, resolved...), append(sources, found...)
+			}
+			profileSettingSets := copyStringSet(defaultSettingSets)
+			for _, set := range uniqueExtensionSetReferences(profileSelection.SetRefs, profileSettingSets) {
+				resolved, found, err := r.settingVariants("extension-set", set.Name, definition.OS, definition.Platform)
 				if err != nil {
 					return Plan{}, err
 				}
@@ -273,15 +340,18 @@ func (r Repository) Resolve(recipePath string) (Plan, error) {
 		} else if strategy.Settings != "default" {
 			return Plan{}, fmt.Errorf("unsupported profile %q settings strategy %q", name, strategy.Settings)
 		}
-		extensions := uniqueSorted(append(append([]string{}, runtimeExtensions...), profileExtensions[name]...))
+		extensions := uniqueSorted(append(append([]string{}, runtimeExtensions...), profileSelection.IDs...))
 		merged, err := settings.MergeWithRules(rules, documents...)
 		if err != nil {
 			return Plan{}, err
 		}
+		if strategy.Settings == "default" {
+			merged = plan.Default.Settings
+		}
 		profilePlan := ScopePlan{
-			Name: name, Settings: merged, Extensions: extensions, ExtensionOrigins: selectExtensionOrigins(mergeExtensionOrigins(runtimeExtensionOrigins, profileExtensionOrigins[name]), extensions),
+			Name: name, Settings: merged, Extensions: extensions, ExtensionOrigins: selectExtensionOrigins(mergeExtensionOrigins(runtimeSelection.Origins, profileSelection.Origins), extensions), ExtensionSets: mergeExtensionSetReferences(runtimeSelection.SetRefs, profileSelection.SetRefs),
 			Inheritance: Inheritance{Settings: strategy.Settings == "default", Keybindings: strategy.Keybindings == "default", Tasks: strategy.Tasks == "default", MCP: strategy.MCP == "default", Snippets: strategy.Snippets == "default", Unmanaged: map[string]bool{}},
-			Sources:     append(sources, profileExtensionSources[name]...),
+			Sources:     append(sources, profileSelection.Sources...),
 		}
 		if strategy.Settings == "unmanaged" {
 			profilePlan.Settings = nil
@@ -297,8 +367,17 @@ func (r Repository) Resolve(recipePath string) (Plan, error) {
 				continue
 			}
 			refs := []ingredientRef{}
-			for _, id := range profileExtensions[name] {
+			extensionIDs := copyStringSet(defaultArtifactExtensions[kind])
+			for _, id := range profileSelection.IDs {
+				if extensionIDs[id] {
+					continue
+				}
+				extensionIDs[id] = true
 				refs = append(refs, ingredientRef{"extension", id})
+			}
+			setNames := copyStringSet(defaultArtifactSets[kind])
+			for _, set := range uniqueExtensionSetReferences(profileSelection.SetRefs, setNames) {
+				refs = append(refs, ingredientRef{"extension-set", set.Name})
 			}
 			refs = append(refs, ingredientRef{"profile", name})
 			value, found, err := r.resolveArtifact(kind, definition.OS, definition.Platform, refs)
@@ -325,8 +404,17 @@ func (r Repository) Resolve(recipePath string) (Plan, error) {
 			profilePlan.Inheritance.Unmanaged["snippets"] = true
 		} else if strategy.Snippets == "profile" {
 			refs := []ingredientRef{}
-			for _, id := range profileExtensions[name] {
+			extensionIDs := copyStringSet(defaultArtifactExtensions["snippets"])
+			for _, id := range profileSelection.IDs {
+				if extensionIDs[id] {
+					continue
+				}
+				extensionIDs[id] = true
 				refs = append(refs, ingredientRef{"extension", id})
+			}
+			setNames := copyStringSet(defaultArtifactSets["snippets"])
+			for _, set := range uniqueExtensionSetReferences(profileSelection.SetRefs, setNames) {
+				refs = append(refs, ingredientRef{"extension-set", set.Name})
 			}
 			refs = append(refs, ingredientRef{"profile", name})
 			local, found, err := r.resolveSnippets(definition.OS, definition.Platform, refs)
@@ -376,21 +464,23 @@ func (r Repository) settingVariants(layer, ingredient, osName, platform string) 
 	return documents, sources, nil
 }
 
-func (r Repository) extensions(layer string, ingredients []string) ([]string, []Source, map[string][]Source, error) {
+func (r Repository) extensions(layer string, ingredients []string) (extensionSelection, error) {
 	var ids []string
 	var sources []Source
 	origins := map[string][]Source{}
+	var setRefs []ExtensionSetReference
+	seenSets := map[string]bool{}
 	for _, ingredient := range ingredients {
 		path, err := r.one(extensionCandidates(r.Root, layer, ingredient), layer, ingredient, "extensions")
 		if err != nil {
-			return nil, nil, nil, err
+			return extensionSelection{}, err
 		}
 		if path == "" {
 			continue
 		}
 		lines, err := extensionLines(path)
 		if err != nil {
-			return nil, nil, nil, err
+			return extensionSelection{}, err
 		}
 		owner := Source{Layer: layer, Ingredient: ingredient, Path: path}
 		sources = append(sources, owner)
@@ -402,11 +492,15 @@ func (r Repository) extensions(layer string, ingredients []string) ([]string, []
 			}
 			name := strings.TrimPrefix(line, "set:")
 			if !validExtensionSetName(name) {
-				return nil, nil, nil, fmt.Errorf("invalid Extension Set declaration %q in %s: name must match [A-Za-z0-9][A-Za-z0-9._-]*", line, path)
+				return extensionSelection{}, fmt.Errorf("invalid Extension Set declaration %q in %s: name must match [A-Za-z0-9][A-Za-z0-9._-]*", line, path)
+			}
+			if !seenSets[name] {
+				seenSets[name] = true
+				setRefs = append(setRefs, ExtensionSetReference{Name: name, Declaration: owner})
 			}
 			members, source, err := r.extensionSet(name)
 			if err != nil {
-				return nil, nil, nil, err
+				return extensionSelection{}, err
 			}
 			ids = append(ids, members...)
 			if source != nil {
@@ -417,7 +511,43 @@ func (r Repository) extensions(layer string, ingredients []string) ([]string, []
 			}
 		}
 	}
-	return uniqueSorted(ids), sources, origins, nil
+	return extensionSelection{IDs: uniqueSorted(ids), Sources: sources, Origins: origins, SetRefs: setRefs}, nil
+}
+
+func uniqueExtensionSetReferences(values []ExtensionSetReference, seen map[string]bool) []ExtensionSetReference {
+	var result []ExtensionSetReference
+	for _, value := range values {
+		if seen[value.Name] {
+			continue
+		}
+		seen[value.Name] = true
+		result = append(result, value)
+	}
+	return result
+}
+
+func mergeExtensionSetReferences(values ...[]ExtensionSetReference) []ExtensionSetReference {
+	seen := map[string]bool{}
+	var result []ExtensionSetReference
+	for _, refs := range values {
+		for _, ref := range refs {
+			key := ref.Name + "\x00" + ref.Declaration.Path
+			if seen[key] {
+				continue
+			}
+			seen[key] = true
+			result = append(result, ref)
+		}
+	}
+	return result
+}
+
+func copyStringSet(value map[string]bool) map[string]bool {
+	result := map[string]bool{}
+	for name := range value {
+		result[name] = true
+	}
+	return result
 }
 
 func addExtensionOrigin(origins map[string][]Source, id string, source Source) {

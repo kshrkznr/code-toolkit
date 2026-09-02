@@ -17,20 +17,22 @@ compatibility behavior.
 ## Observed need
 
 Runtime and Profile Ingredients sometimes need the same group of editor
-Extensions. Copying those IDs into every `.extensions` Resource obscures that
-the lists express one reusable responsibility and makes membership changes
-easy to apply inconsistently.
+Extensions. The group may also need shared Settings, Snippets, Keybindings,
+Tasks, or MCP content to work as one capability. Copying those Resources into
+every referring Ingredient obscures the reusable responsibility and makes its
+configuration easy to evolve inconsistently.
 
-An Extension Set gives that list a Cookbook-local name. An adopting resolver
-may then let Runtime and Profile Extension Resources include the named list in
-addition to declaring concrete Extension IDs directly.
+An Extension Set gives that responsibility a Cookbook-local name. An adopting
+resolver may let Runtime and Profile Extension Resources include the named Set
+in addition to declaring concrete Extension IDs directly. The Set expands to
+concrete IDs and may contribute companion Runtime Artifacts.
 
 ```text
 Runtime or Profile
         ↓ includes
 Extension Set
-        ↓ contains
-concrete editor Extensions
+        ├── contains concrete editor Extensions
+        └── contributes companion Runtime Artifacts
 ```
 
 The Set is deliberately one level above concrete Extensions. It does not
@@ -56,6 +58,13 @@ the existing concrete Extension path, including Extension-owned Settings and
 other Resources. Direct and Set-derived IDs are deduplicated into the same
 deterministic concrete result.
 
+A referenced Set may also contribute Settings, Keybindings, Snippets, Tasks,
+and MCP Resources. These companion Resources use the existing compatible
+Ingredient layouts, Artifact composition semantics, ownership strategies, and
+Base → OS → Platform Variant order. Set membership itself remains
+non-variant. Within one effective scope, repeated Set and concrete Extension
+references contribute their Resources only at the first applicable position.
+
 The [Go Cookbook Contract](../../go/doc/contract/contract.cookbook.md) owns the
 exact name grammar, compatible layouts, error behavior, source provenance, and
 downgrade boundary. The [Go implementation
@@ -64,14 +73,16 @@ README](../../go/README.md#applied-kitchen-notes) is the adoption declaration.
 ## Review and reverse composition
 
 Extension Set identity is Cookbook Source provenance, not Runtime state.
-Recipe review can show which direct declaration or Set Resource contributed a
-concrete Extension. Distribution, Lock, Archive, Apply, and Recovery continue
-to operate on concrete observed Extensions.
+Recipe review can show the declaring Runtime or Profile Resource, the Set
+Resources it selected, and which direct declaration or membership Resource
+contributed a concrete Extension. Distribution, Lock, Archive, Apply, and
+Recovery continue to operate on concrete resolved or observed Artifacts.
 
-Freeze can therefore show a used Set as context but cannot infer whether a
-Runtime difference should update that Set, another Set, or a direct
-declaration. That choice remains explicit user or AI review. Freeze Commit
-must not create or silently rewrite Set membership.
+Freeze can therefore show used Set Resources as context but cannot infer
+whether a Runtime difference should update that Set, another Set, or a direct
+Runtime/Profile Resource. That choice remains explicit user or AI review.
+Freeze Commit must not create or silently rewrite Set membership or companion
+Resources.
 
 ## Compatibility boundary
 
@@ -80,21 +91,27 @@ implementations that declare adoption. Go v0.6.2 reserves the `set:` form and
 fails safely before mutation; Go v0.7.0 adds the adopted interpretation. Go
 v0.6.1 and earlier are unsupported for Sources using Extension Sets.
 
+Go v0.7.0 resolves only Set membership. A v0.7.x Cookbook that adds companion
+Set Resources remains partially usable there: concrete Extensions resolve, but
+the unrecognized companion Resources are ignored. The v0.7.x compatibility
+policy accepts that partial downgrade instead of adding a new versioned Set
+declaration.
+
 The retained Bash implementation does not adopt this Kitchen Note and makes no
 Extension Set behavior guarantee. Optional non-adoption does not require Bash
 to emulate Go's reserved-prefix guard.
 
-## Boundary and later Resources
+## Artifact and Layer boundary
 
-The initial Extension Set owns only its concrete `.extensions` membership.
-Membership does not use Variants. This keeps the implemented behavior aligned
-with the observed reuse problem rather than speculating about OS or Platform
-differences that have not appeared.
+The Set still represents an Extension group. A Resource specific to one member
+belongs to `extension.<id>`, while purpose-wide content belongs to the owning
+Runtime or Profile Ingredient. Set companion Resources own only configuration
+that makes the Extension group work together.
 
-If a concrete need later gives a Set another Resource such as Settings, that
-Resource may use the existing Variant model when its behavior is specified.
-That possibility does not broaden the current Kitchen Note and does not imply
-a generic Capability Layer.
+The selection direction remains Runtime/Profile → Set → concrete Extension.
+A Set does not select another Set, Runtime, or Profile, and a Recipe does not
+select Sets directly. Companion Artifacts therefore do not imply a generic
+Capability Layer or a second Recipe composition hierarchy.
 
 ## Related documents
 

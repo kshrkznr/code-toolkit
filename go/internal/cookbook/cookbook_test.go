@@ -51,6 +51,9 @@ func TestResolveRepresentativeExtensionSetRecipes(t *testing.T) {
 			if plan.Default.Settings["ctk.fixture.extension-set"] != true {
 				t.Fatalf("Set member Extension Settings missing: %#v", plan.Default.Settings)
 			}
+			if plan.Default.Settings["ctk.fixture.extension-set.companion"] != true || len(plan.Default.Keybindings) != 1 || len(plan.Default.Tasks["tasks"].([]any)) != 1 || len(plan.Default.MCP["servers"].(map[string]any)) != 1 || len(plan.Default.Snippets["fixture.code-snippets"]) != 1 {
+				t.Fatalf("Set companion Artifacts missing or duplicated: %#v", plan.Default)
+			}
 			want := []string{"golang.go", "openai.chatgpt"}
 			for _, profile := range plan.Profiles {
 				if !slices.Equal(profile.Extensions, want) {
@@ -241,6 +244,182 @@ func TestResolveExtensionSetAllowsAbsentAndEmptyResources(t *testing.T) {
 	}
 	if len(plan.Default.Extensions) != 0 {
 		t.Fatalf("extensions = %v", plan.Default.Extensions)
+	}
+}
+
+func TestResolveExtensionSetCompanionArtifactsInRuntimeAndProfileOrder(t *testing.T) {
+	root := t.TempDir()
+	ingredients := filepath.Join(root, "ingredient")
+	recipePath := filepath.Join(root, "recipe.yaml")
+	mustWrite(t, recipePath, "name: test\nos: macos\nplatform: code\nruntime: [base]\nprofile: [work]\nconfig:\n  dist-strategy:\n    default-profile:\n      mcp: runtime\n")
+	mustWrite(t, filepath.Join(ingredients, "runtime.base.extensions"), "member.runtime\nset:shared\nset:empty\n")
+	mustWrite(t, filepath.Join(ingredients, "profile.work.extensions"), "member.profile\nset:shared\nset:profile\n")
+	mustWrite(t, filepath.Join(ingredients, "extension-set.shared.extensions"), "member.runtime\n")
+	mustWrite(t, filepath.Join(ingredients, "extension-set.profile.extensions"), "member.profile\n")
+
+	stages := []struct {
+		prefix string
+		name   string
+	}{
+		{"extension.member.runtime", "runtime-extension"},
+		{"extension-set.shared", "runtime-set"},
+		{"extension-set.empty", "empty-runtime-set"},
+		{"runtime.base", "runtime"},
+		{"extension.member.profile", "profile-extension"},
+		{"extension-set.profile", "profile-set"},
+		{"profile.work", "profile"},
+	}
+	for _, stage := range stages {
+		mustWrite(t, filepath.Join(ingredients, stage.prefix+".settings.json"), `{"order":"`+stage.name+`","`+stage.name+`":true}`)
+		mustWrite(t, filepath.Join(ingredients, stage.prefix+".keybindings.json"), `[{"key":"same","command":"`+stage.name+`"}]`)
+		mustWrite(t, filepath.Join(ingredients, stage.prefix+".tasks.json"), `{"version":"2.0.0","tasks":[{"label":"`+stage.name+`"}]}`)
+		mustWrite(t, filepath.Join(ingredients, stage.prefix+".mcp.json"), `{"servers":{"winner":{"url":"`+stage.name+`"}},"inputs":[{"id":"`+stage.name+`"}]}`)
+		mustWrite(t, filepath.Join(ingredients, stage.prefix+".snippets.go.json"), `{"`+stage.name+`":{"prefix":"`+stage.name+`","body":["`+stage.name+`"]},"Winner":{"prefix":"`+stage.name+`"}}`)
+	}
+	mustWrite(t, filepath.Join(ingredients, "extension-set.shared.macos.settings.json"), `{"runtime-set-os":true}`)
+	mustWrite(t, filepath.Join(ingredients, "extension-set.shared.code.settings.json"), `{"runtime-set-platform":true}`)
+
+	plan, err := (Repository{Root: ingredients}).Resolve(recipePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.Default.Settings["order"] != "profile" || plan.Default.Settings["runtime-set-os"] != true || plan.Default.Settings["runtime-set-platform"] != true {
+		t.Fatalf("settings = %#v", plan.Default.Settings)
+	}
+	for _, stage := range stages {
+		if plan.Default.Settings[stage.name] != true {
+			t.Fatalf("settings missing %q: %#v", stage.name, plan.Default.Settings)
+		}
+	}
+	var settingSources []string
+	for _, source := range plan.Default.Sources {
+		if strings.Contains(filepath.Base(source.Path), "settings.") {
+			settingSources = append(settingSources, filepath.Base(source.Path))
+		}
+	}
+	wantSettingSources := []string{
+		"extension.member.runtime.settings.json",
+		"extension-set.shared.settings.json",
+		"extension-set.shared.macos.settings.json",
+		"extension-set.shared.code.settings.json",
+		"extension-set.empty.settings.json",
+		"runtime.base.settings.json",
+		"extension.member.profile.settings.json",
+		"extension-set.profile.settings.json",
+		"profile.work.settings.json",
+	}
+	if !slices.Equal(settingSources, wantSettingSources) {
+		t.Fatalf("Settings Sources = %v, want %v", settingSources, wantSettingSources)
+	}
+	if len(plan.Default.Keybindings) != len(stages) {
+		t.Fatalf("keybindings = %#v", plan.Default.Keybindings)
+	}
+	for index, stage := range stages {
+		binding := plan.Default.Keybindings[index].(map[string]any)
+		if binding["command"] != stage.name {
+			t.Fatalf("keybindings[%d] = %#v, want %s", index, binding, stage.name)
+		}
+	}
+	if len(plan.Default.Tasks["tasks"].([]any)) != len(stages) {
+		t.Fatalf("tasks = %#v", plan.Default.Tasks)
+	}
+	if len(plan.Default.MCP["inputs"].([]any)) != len(stages) || plan.Default.MCP["servers"].(map[string]any)["winner"].(map[string]any)["url"] != "profile" {
+		t.Fatalf("mcp = %#v", plan.Default.MCP)
+	}
+	if len(plan.Default.Snippets["go.json"]) != len(stages)+1 || plan.Default.Snippets["go.json"]["Winner"].(map[string]any)["prefix"] != "profile" {
+		t.Fatalf("snippets = %#v", plan.Default.Snippets)
+	}
+	if !slices.Equal(plan.Default.Extensions, []string{"member.runtime"}) || !slices.Equal(plan.Profiles[0].Extensions, []string{"member.profile", "member.runtime"}) {
+		t.Fatalf("extensions default=%v profile=%v", plan.Default.Extensions, plan.Profiles[0].Extensions)
+	}
+	if len(plan.Profiles[0].ExtensionSets) != 4 {
+		t.Fatalf("Set declaration provenance = %#v", plan.Profiles[0].ExtensionSets)
+	}
+}
+
+func TestResolveExtensionSetCompanionLayouts(t *testing.T) {
+	tests := []struct {
+		name, settings, snippets string
+	}{
+		{"flat", "extension-set.shared.settings.json", "extension-set.shared.snippets.go.json"},
+		{"middle", filepath.Join("extension-set", "shared.settings.json"), filepath.Join("extension-set", "shared.snippets.go.json")},
+		{"directory", filepath.Join("extension-set", "shared", "settings.json"), filepath.Join("extension-set", "shared", "snippets", "go.json")},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := t.TempDir()
+			ingredients := filepath.Join(root, "ingredient")
+			recipePath := filepath.Join(root, "recipe.yaml")
+			mustWrite(t, recipePath, "name: test\nos: macos\nplatform: code\nruntime: [sample]\n")
+			mustWrite(t, filepath.Join(ingredients, "runtime.sample.extensions"), "set:shared\n")
+			mustWrite(t, filepath.Join(ingredients, test.settings), `{"layout":"`+test.name+`"}`)
+			mustWrite(t, filepath.Join(ingredients, test.snippets), `{"Layout":{"prefix":"`+test.name+`"}}`)
+			plan, err := (Repository{Root: ingredients}).Resolve(recipePath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if plan.Default.Settings["layout"] != test.name || plan.Default.Snippets["go.json"]["Layout"].(map[string]any)["prefix"] != test.name {
+				t.Fatalf("plan = %#v", plan.Default)
+			}
+		})
+	}
+}
+
+func TestResolveExtensionSetCompanionOwnership(t *testing.T) {
+	t.Run("default unmanaged does not resolve companion Resources", func(t *testing.T) {
+		root := t.TempDir()
+		ingredients := filepath.Join(root, "ingredient")
+		recipePath := filepath.Join(root, "recipe.yaml")
+		mustWrite(t, recipePath, "name: test\nos: macos\nplatform: code\nruntime: [sample]\nconfig:\n  dist-strategy:\n    default-profile:\n      settings: unmanaged\n      mcp: unmanaged\n")
+		mustWrite(t, filepath.Join(ingredients, "runtime.sample.extensions"), "set:shared\n")
+		settingsPath := filepath.Join(ingredients, "extension-set.shared.settings.json")
+		mcpPath := filepath.Join(ingredients, "extension-set.shared.mcp.json")
+		mustWrite(t, settingsPath, `{malformed`)
+		mustWrite(t, mcpPath, `{malformed`)
+		plan, err := (Repository{Root: ingredients}).Resolve(recipePath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if plan.Default.Settings != nil || plan.Default.MCP != nil {
+			t.Fatalf("unmanaged Artifacts = settings:%#v mcp:%#v", plan.Default.Settings, plan.Default.MCP)
+		}
+		for _, source := range plan.Default.Sources {
+			if source.Path == settingsPath || source.Path == mcpPath {
+				t.Fatalf("unmanaged companion was resolved: %#v", source)
+			}
+		}
+	})
+
+	t.Run("profile ownership resolves companion over unmanaged default", func(t *testing.T) {
+		root := t.TempDir()
+		ingredients := filepath.Join(root, "ingredient")
+		recipePath := filepath.Join(root, "recipe.yaml")
+		mustWrite(t, recipePath, "name: test\nos: macos\nplatform: code\nprofile: [work]\nconfig:\n  dist-strategy:\n    default-profile:\n      settings: unmanaged\n      mcp: unmanaged\n  profile-strategy:\n    work:\n      settings: profile\n      mcp: profile\n")
+		mustWrite(t, filepath.Join(ingredients, "profile.work.extensions"), "set:shared\n")
+		mustWrite(t, filepath.Join(ingredients, "extension-set.shared.settings.json"), `{"owned":"profile"}`)
+		mustWrite(t, filepath.Join(ingredients, "extension-set.shared.mcp.json"), `{"servers":{"owned":{"url":"profile"}}}`)
+		plan, err := (Repository{Root: ingredients}).Resolve(recipePath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		profile := plan.Profiles[0]
+		if profile.Settings["owned"] != "profile" || profile.MCP["servers"].(map[string]any)["owned"].(map[string]any)["url"] != "profile" {
+			t.Fatalf("profile Artifacts = settings:%#v mcp:%#v", profile.Settings, profile.MCP)
+		}
+	})
+}
+
+func TestResolveExtensionSetRejectsAmbiguousCompanionResource(t *testing.T) {
+	root := t.TempDir()
+	ingredients := filepath.Join(root, "ingredient")
+	recipePath := filepath.Join(root, "recipe.yaml")
+	mustWrite(t, recipePath, "name: test\nos: macos\nplatform: code\nruntime: [sample]\n")
+	mustWrite(t, filepath.Join(ingredients, "runtime.sample.extensions"), "set:shared\n")
+	mustWrite(t, filepath.Join(ingredients, "extension-set.shared.settings.json"), `{}`)
+	mustWrite(t, filepath.Join(ingredients, "extension-set", "shared.settings.json"), `{}`)
+	_, err := (Repository{Root: ingredients}).Resolve(recipePath)
+	if err == nil || !strings.Contains(err.Error(), "ambiguous settings") {
+		t.Fatalf("error = %v", err)
 	}
 }
 

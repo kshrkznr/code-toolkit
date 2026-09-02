@@ -45,6 +45,8 @@ Cookbook source principles as Settings:
 - deterministic Cookbook Core layer and Recipe array order
 - Runtime, Profile, Extension, OS, and Platform Ingredient participation when
   applicable
+- Extension Set participation when an adopting Kitchen Note selects a Set
+  through a Runtime or Profile Extension Resource
 - missing Resources are valid empty participation
 - malformed present Resources are errors
 - competing compatible layouts remain an implementation-defined ambiguity

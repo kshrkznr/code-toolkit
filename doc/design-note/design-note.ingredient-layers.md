@@ -51,11 +51,12 @@ File movement, renaming, and Runtime/Profile composition remain sufficient for
 most current Recipes.
 
 One observed reuse problem did require a narrower answer: Runtime and Profile
-Ingredients needed to share named lists of concrete editor Extensions. The Go
+Ingredients needed to share named groups of concrete editor Extensions and
+the companion Runtime Artifacts that make each group work together. The Go
 implementation adopted [Extension Set composition](../note/note.extension-set.md)
-as an optional Kitchen Note. Its direction is fixed to Runtime/Profile → Set →
-concrete Extension, so it solves that reuse without creating a generic Layer
-or a second Recipe hierarchy.
+as an optional Kitchen Note. Its selection direction remains fixed to
+Runtime/Profile → Set → concrete Extension, so companion Artifacts solve that
+reuse without creating a generic Layer or a second Recipe hierarchy.
 
 There is no standing Capability Future after that implementation. Open a new
 Future candidate only when a concrete requirement must compose non-Extension

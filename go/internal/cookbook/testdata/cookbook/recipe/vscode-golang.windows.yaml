@@ -17,3 +17,4 @@ config:
   dist-strategy:
     default-profile:
       extensions: clean
+      mcp: runtime
